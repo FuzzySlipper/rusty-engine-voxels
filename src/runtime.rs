@@ -283,8 +283,8 @@ fn projection_instance<'a>(
         visible: true,
         material_overrides: Vec::new(),
         metadata: RenderMetadata {
-            source_entity: None,
-            source_scene_node: None,
+            source_entity: Some(instance.entity_id),
+            source_scene_node: Some(instance.entity_id),
             tags: vec!["voxel-object".to_owned()],
             label: Some(instance.instance_id.clone()),
         },

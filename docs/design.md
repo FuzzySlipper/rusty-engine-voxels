@@ -16,7 +16,9 @@ mechanisms remain owned by Rusty Engine.
    selected default or clip frame.
 5. Rusty Engine's renderer-neutral projection defines the material and voxel object and creates the
    selected instance. Studio supplies the Three renderer and authoring UI.
-6. Studio may retain one disposable applied-instance player in this adapter. Closed commands carry
+6. Each applied instance is owned by one explicit project entity repeated in Studio hierarchy,
+   entity inspection, object readout, and renderer metadata.
+7. Studio may retain one disposable applied-instance player in this adapter. Closed commands carry
    explicit time; Rust selects the visible frame and returns a complete neutral projection while the
    project's saved initial pose and both project/object bytes remain unchanged.
 
@@ -36,10 +38,15 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 8 only as an
-explicit host boundary; protocol 8 is not the voxel project schema and is not an industry voxel
+cadence, and visual presentation. The project adapter implements Studio protocol 9 only as an
+explicit host boundary; protocol 9 is not the voxel project schema and is not an industry voxel
 standard. The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/
 mutation/close, and never serializes its posture into this project's durable instance frame.
+
+Project schema 2 assigns every voxel-object instance a stable entity ID. The selected entity owns
+the typed Voxel Object capability and its durable initial pose; Studio's entity-inspector controls
+only the disposable player posture. This project-specific entity record proves the explicit owner
+link without requiring a generic downstream component schema.
 
 ## Provider pin
 

@@ -8,10 +8,10 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
 const initialRequests = [
-  { type: 'describe', protocolVersion: 8, requestId: 'describe-smoke' },
+  { type: 'describe', protocolVersion: 9, requestId: 'describe-smoke' },
   {
     type: 'openProject',
-    protocolVersion: 8,
+    protocolVersion: 9,
     requestId: 'open-smoke',
     root,
     projectFile: 'content/projects/voxel-lab.project.json',
@@ -36,6 +36,8 @@ if (described?.type !== 'described' || opened?.type !== 'projectOpened') {
 if (opened.project.projection.ops.length !== 3
   || opened.project.voxelObjectAuthoring.assets.length !== 1
   || opened.project.voxelObjectAuthoring.instances.length !== 1
+  || opened.project.voxelObjectAuthoring.instances[0]?.ownerEntityId !== 1
+  || opened.project.sceneHierarchy.nodes[0]?.entityId !== 1
   || opened.project.animatedMeshResources[0]?.clipIds.join(',') !== 'idle,run,jump') {
   throw new Error('Studio open response omitted the checked voxel object projection');
 }
@@ -44,7 +46,7 @@ const inspectRequests = [
   initialRequests[1],
   {
     type: 'inspectVoxelObjectSource',
-    protocolVersion: 8,
+    protocolVersion: 9,
     requestId: 'inspect-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sourceKind: 'animated',
@@ -77,7 +79,7 @@ const playbackRequests = [
   initialRequests[1],
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 8,
+    protocolVersion: 9,
     requestId: 'scrub-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -87,7 +89,7 @@ const playbackRequests = [
   },
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 8,
+    protocolVersion: 9,
     requestId: 'play-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -97,7 +99,7 @@ const playbackRequests = [
   },
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 8,
+    protocolVersion: 9,
     requestId: 'sample-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -135,6 +137,7 @@ console.log(JSON.stringify({
   projectionOperations: opened.project.projection.ops.length,
   voxelObjects: opened.project.voxelObjectAuthoring.assets.length,
   voxelInstances: opened.project.voxelObjectAuthoring.instances.length,
+  ownerEntityId: opened.project.voxelObjectAuthoring.instances[0]?.ownerEntityId,
   sourceClips: inspection.inspection.clips.map((clip) => clip.name),
   playbackFrames: [scrubbed.playback.runtimeFrame, sampled.playback.runtimeFrame],
 }));

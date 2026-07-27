@@ -13,13 +13,18 @@ shared-renderer frame through `render-projection`.
 ## First experiment
 
 The checked Kenney source contains 1,029 vertices, 1,604 triangles, and the `idle`, `run`, and
-`jump` clips. At a 12 × 18 × 12 conversion grid and six samples per second, the experiment:
+`jump` clips. At a 24 × 36 × 24 conversion grid, 0.125-unit cells, and six samples per second, the
+experiment:
 
-- sampled 16 source poses and stored 13 runtime frames;
-- deduplicated those frames to 12 unique voxel meshes;
-- produced 2,265 aggregate conversion voxels in a 137,748-byte canonical object;
+- sampled 16 source poses and stored 15 runtime frames;
+- deduplicated those frames to 14 unique voxel meshes;
+- produced 9,650 aggregate conversion voxels in a 656,537-byte canonical object;
 - loaded the object with all three clips through the strict runtime admission path; and
 - projected one selected `run` frame as a real shared-renderer voxel-object instance.
+
+This replaces the initial 12 × 18 × 12, 0.25-unit proof. Its four `run` poses contained
+135–145 voxels each; the finer artifact contains 603–616 per pose, giving the deformation roughly
+four times as many occupied cells with which to express motion.
 
 The exact identities, per-clip counts, and explicit-time playback samples are checked in
 `evidence/initial-animated-voxel-report.json`. Machine-specific timings are evidence, not pass/fail
@@ -59,7 +64,7 @@ The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,
 reading, inspecting sources, preparing/previewing/applying/discarding voxel-object conversions,
 attaching transformed voxel-object instances, and transiently playing reopened applied instances.
-Other protocol-8 operations fail with a typed
+Other protocol-9 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
 Conversion publication is content-addressed and idempotent. Rebuilding identical source and

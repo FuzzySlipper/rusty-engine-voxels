@@ -31,9 +31,9 @@ fn checked_animated_conversion_is_deterministic() {
     assert_eq!(candidate.canonical_json, checked);
     assert_eq!(candidate.content_hash, object.expected_content_hash);
     assert_eq!(candidate.sampled_frames, 16);
-    assert_eq!(candidate.stored_frames, 13);
+    assert_eq!(candidate.stored_frames, 15);
     assert_eq!(candidate.clips.len(), 3);
-    assert_eq!(candidate.aggregate_voxels, 2_265);
+    assert_eq!(candidate.aggregate_voxels, 9_650);
 }
 
 #[test]
@@ -41,9 +41,9 @@ fn checked_object_loads_plays_and_projects() {
     let evidence = verify_runtime_project(&root(), DEFAULT_PROJECT_FILE)
         .expect("checked voxel object should load through the runtime");
 
-    assert_eq!(evidence.frame_count, 13);
+    assert_eq!(evidence.frame_count, 15);
     assert_eq!(evidence.clip_count, 3);
-    assert_eq!(evidence.unique_mesh_count, 12);
+    assert_eq!(evidence.unique_mesh_count, 14);
     assert_eq!(evidence.projection_operation_count, 3);
     assert_eq!(evidence.defined_voxel_objects, 1);
     assert_eq!(evidence.created_voxel_instances, 1);
@@ -71,6 +71,14 @@ fn project_rejects_unsafe_content_paths_and_dangling_instances() {
     let mut dangling = loaded.project;
     dangling.instances[0].voxel_object_asset_id = "voxel-object/missing".to_owned();
     assert!(dangling.validate().is_err());
+
+    let loaded = load_project(&root(), DEFAULT_PROJECT_FILE).expect("checked project should load");
+    let mut duplicate_owner = loaded.project;
+    duplicate_owner
+        .instances
+        .push(duplicate_owner.instances[0].clone());
+    duplicate_owner.instances[1].instance_id = "retro-character-copy".to_owned();
+    assert!(duplicate_owner.validate().is_err());
 }
 
 #[test]
@@ -79,7 +87,7 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
     let described = adapter
         .dispatch(json!({
             "type": "describe",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "describe-test",
         }))
         .expect("describe should succeed");
@@ -89,7 +97,7 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
     let opened = adapter
         .dispatch(json!({
             "type": "openProject",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "open-test",
             "root": root(),
             "projectFile": DEFAULT_PROJECT_FILE,
@@ -101,6 +109,22 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
             .as_array()
             .map(Vec::len),
         Some(1)
+    );
+    assert_eq!(
+        opened["project"]["voxelObjectAuthoring"]["instances"][0]["ownerEntityId"],
+        1
+    );
+    assert_eq!(
+        opened["project"]["sceneHierarchy"]["nodes"][0]["entityId"],
+        1
+    );
+    assert_eq!(
+        opened["project"]["inspections"]["entityState"]["capabilities"][0],
+        json!({ "name": "voxelObject", "count": 1 })
+    );
+    assert_eq!(
+        opened["project"]["projection"]["ops"][2]["instance"]["metadata"]["sourceEntity"],
+        1
     );
     assert_eq!(
         opened["project"]["projection"]["ops"]
@@ -115,7 +139,7 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
 
     let unsupported = adapter.dispatch(json!({
         "type": "createSceneObject",
-        "protocolVersion": 8,
+        "protocolVersion": 9,
         "requestId": "unsupported-test",
     }));
     assert!(unsupported.is_err());
@@ -138,7 +162,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     adapter
         .dispatch(json!({
             "type": "openProject",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-open-one",
             "root": root(),
             "projectFile": DEFAULT_PROJECT_FILE,
@@ -147,14 +171,14 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     adapter
         .dispatch(json!({
             "type": "closeProject",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-close",
         }))
         .expect("close should discard transient state");
     adapter
         .dispatch(json!({
             "type": "openProject",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-open-two",
             "root": root(),
             "projectFile": DEFAULT_PROJECT_FILE,
@@ -163,7 +187,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
 
     let unselected = adapter.dispatch(json!({
         "type": "previewVoxelObjectInstance",
-        "protocolVersion": 8,
+        "protocolVersion": 9,
         "requestId": "playback-unselected",
         "expectedProjectHash": project_hash,
         "sceneId": "scene/voxel-lab",
@@ -177,7 +201,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     );
     let ambient_field = adapter.dispatch(json!({
         "type": "previewVoxelObjectInstance",
-        "protocolVersion": 8,
+        "protocolVersion": 9,
         "requestId": "playback-ambient-field",
         "expectedProjectHash": project_hash,
         "sceneId": "scene/voxel-lab",
@@ -196,7 +220,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let scrubbed = adapter
         .dispatch(json!({
             "type": "previewVoxelObjectInstance",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-scrub",
             "expectedProjectHash": project_hash,
             "sceneId": "scene/voxel-lab",
@@ -230,7 +254,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let playing = adapter
         .dispatch(json!({
             "type": "previewVoxelObjectInstance",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-play",
             "expectedProjectHash": project_hash,
             "sceneId": "scene/voxel-lab",
@@ -244,7 +268,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let sampled = adapter
         .dispatch(json!({
             "type": "previewVoxelObjectInstance",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-sample",
             "expectedProjectHash": project_hash,
             "sceneId": "scene/voxel-lab",
@@ -262,7 +286,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let stopped = adapter
         .dispatch(json!({
             "type": "previewVoxelObjectInstance",
-            "protocolVersion": 8,
+            "protocolVersion": 9,
             "requestId": "playback-stop",
             "expectedProjectHash": project_hash,
             "sceneId": "scene/voxel-lab",

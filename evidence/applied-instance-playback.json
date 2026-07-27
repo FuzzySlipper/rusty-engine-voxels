@@ -1,30 +1,42 @@
 {
-  "capturedAt": "2026-07-27T00:32:14-07:00",
-  "engineRevision": "5b1dd5bb26cbba3fd4f3cde726714e2461849c58",
-  "studioProtocolVersion": 8,
+  "capturedAt": "2026-07-27T03:01:22-07:00",
+  "engineRevision": "48d14507cc22c5e97c633ec599945c788d2406c0",
+  "studioProtocolVersion": 9,
   "browser": "headless Chromium",
   "project": {
     "path": "content/projects/voxel-lab.project.json",
-    "revision": 2,
-    "sha256": "d1a20b35b2a0588b858891d93ee4ee2ed0c9c27ac8047da4d4e84db9a4d7100c"
+    "revision": 3,
+    "sha256": "0bbcb8725d8e21e672c1703b9b428ece64572cbc3bd975ecb8ac5b4ef192edfa"
   },
   "object": {
     "assetId": "voxel-object/retro-character",
-    "contentHash": "sha256:1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de",
-    "artifactSha256": "653b5aeb2bc29b5047c87fe6f64fd6bf1c0e89794cc69db3db7ea8c2e73ad62a"
+    "contentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c",
+    "artifactSha256": "5350de67a299cde54619fef51b009f9f1b0746937a2203ccbc4f12529f7e8ee2",
+    "resolution": [24, 36, 24],
+    "cellSize": 0.125,
+    "aggregateVoxels": 9650
+  },
+  "entityCapability": {
+    "ownerEntityId": 1,
+    "componentVisible": true,
+    "controlsInsideInspector": true,
+    "controlsNonOverlapping": true,
+    "controlsHitTestable": true,
+    "restoreClicked": true
   },
   "playback": {
     "instanceId": "retro-character",
     "savedInitialPose": "clip/run frame 0",
     "firstTransientPose": "clip/run frame 1",
-    "secondTransientPose": "clip/run frame 2",
+    "pausedPose": "clip/run frame 3",
     "pausedAfterPlayback": true,
     "pauseEnabledDuringInFlightSample": true,
     "rendererAvailable": true
   },
   "renderedCanvas": {
-    "firstPngSha256": "ec217310f66886cd666acfe2f7c4ec0708a663c5ae24197cf00e1bbfe95a8b08",
-    "secondPngSha256": "75857830506ba2096a885ad0cc18092296e41cfc456561dbaa9a7edd8027ae04",
+    "firstPngSha256": "b5eea3c3e419f5d7d695845cfe81ce70cddbcac514fa15c50abc59fbe2edfaca",
+    "secondPngSha256": "b342881754aadb01c60e1de1fbce8761110cd86dcfe7e4c1db6e079a14629345",
     "distinct": true
-  }
+  },
+  "pageErrors": []
 }

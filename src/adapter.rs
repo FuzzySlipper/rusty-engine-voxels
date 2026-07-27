@@ -28,7 +28,7 @@ use crate::runtime::{
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
-const PROTOCOL_VERSION: u64 = 8;
+const PROTOCOL_VERSION: u64 = 9;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 
 const OPERATIONS: &[&str] = &[
@@ -539,10 +539,27 @@ impl StudioAdapter {
             })?;
         resolve_frame(object, &input.instance.frame).map_err(AdapterError::project)?;
         let mut project = loaded.project.clone();
+        let owner_entity_id = project
+            .instances
+            .iter()
+            .find(|entry| entry.instance_id == input.instance.instance_id)
+            .map_or_else(
+                || {
+                    project
+                        .instances
+                        .iter()
+                        .map(|entry| entry.entity_id)
+                        .max()
+                        .unwrap_or(0)
+                        .saturating_add(1)
+                },
+                |entry| entry.entity_id,
+            );
         project
             .instances
             .retain(|entry| entry.instance_id != input.instance.instance_id);
         project.instances.push(ProjectVoxelObjectInstance {
+            entity_id: owner_entity_id,
             instance_id: input.instance.instance_id.clone(),
             voxel_object_asset_id: input.instance.voxel_object_asset_id.clone(),
             frame: input.instance.frame.clone(),
@@ -1041,7 +1058,13 @@ pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
         .project
         .instances
         .iter()
-        .map(|instance| json!({ "sceneId": loaded.project.entry_scene, "instance": studio_instance(instance) }))
+        .map(|instance| {
+            json!({
+                "sceneId": loaded.project.entry_scene,
+                "ownerEntityId": instance.entity_id,
+                "instance": studio_instance(instance),
+            })
+        })
         .collect::<Vec<_>>();
     let mut assets = vec![json!({
         "assetId": loaded.project.conversion.source_asset_id,
@@ -1115,8 +1138,8 @@ pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
             "projectId": loaded.project.project_id,
             "name": loaded.project.name,
             "entryScene": loaded.project.entry_scene,
-            "sourceSchemaVersion": 1,
-            "currentSchemaVersion": 1,
+            "sourceSchemaVersion": crate::model::PROJECT_SCHEMA_VERSION,
+            "currentSchemaVersion": crate::model::PROJECT_SCHEMA_VERSION,
             "projectHash": loaded.project_hash,
             "sceneRevision": loaded.project.revision,
             "relativeProjectFile": loaded.relative_path,
@@ -1147,18 +1170,18 @@ pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
                 "nodeCount": loaded.project.instances.len(),
                 "rootCount": loaded.project.instances.len(),
                 "dependencyCount": loaded.project.voxel_objects.len(),
-                "nodeKinds": [{ "name": "marker", "count": loaded.project.instances.len() }],
+                "nodeKinds": [{ "name": "entityInstance", "count": loaded.project.instances.len() }],
                 "diagnostics": { "diagnostics": [] },
             },
             "entityState": {
                 "schemaVersion": 1,
                 "revision": loaded.project.revision,
-                "entityCount": 0,
-                "lifecycle": [],
-                "sources": [],
-                "capabilities": [],
+                "entityCount": loaded.project.instances.len(),
+                "lifecycle": [{ "name": "active", "count": loaded.project.instances.len() }],
+                "sources": [{ "name": "project", "count": loaded.project.instances.len() }],
+                "capabilities": [{ "name": "voxelObject", "count": loaded.project.instances.len() }],
                 "relationships": [],
-                "entityIds": [],
+                "entityIds": loaded.project.instances.iter().map(|instance| instance.entity_id).collect::<Vec<_>>(),
                 "diagnostics": { "diagnostics": [] },
             },
             "persistence": {
@@ -1184,7 +1207,7 @@ pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
         }],
         "loadingBay": {
             "sceneName": "Voxel Lab",
-            "entityCount": 0,
+            "entityCount": loaded.project.instances.len(),
             "doorCount": 0,
             "switchCount": 0,
             "enemyCount": 0,
@@ -1204,7 +1227,7 @@ fn projection_readout(source_revision: u64, instances: usize) -> Value {
     json!({
         "frameKind": "complete",
         "sourceRevision": source_revision,
-        "retainedEntities": 0,
+        "retainedEntities": instances,
         "retainedLights": 0,
         "retainedVoxelInstances": instances,
         "retainedVoxelChunks": 0,
@@ -1225,16 +1248,16 @@ fn hierarchy_readout(loaded: &LoadedProject) -> Value {
                 "scale": instance.scale,
             });
             json!({
-                "nodeId": index + 1,
+                "nodeId": instance.entity_id,
                 "parentNodeId": null,
                 "childOrder": index,
                 "displayOrder": index,
                 "depth": 0,
-                "nodeKind": "marker",
+                "nodeKind": "entityInstance",
                 "label": instance.instance_id,
                 "tags": ["voxel-object"],
                 "asset": instance.voxel_object_asset_id,
-                "entityId": null,
+                "entityId": instance.entity_id,
                 "localTransform": transform,
                 "worldTransform": transform,
             })
@@ -1244,7 +1267,7 @@ fn hierarchy_readout(loaded: &LoadedProject) -> Value {
         "sceneId": 1,
         "revision": loaded.project.revision,
         "name": "Voxel Lab",
-        "rootNodeIds": (1..=nodes.len()).collect::<Vec<_>>(),
+        "rootNodeIds": loaded.project.instances.iter().map(|instance| instance.entity_id).collect::<Vec<_>>(),
         "nodes": nodes,
     })
 }

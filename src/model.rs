@@ -4,7 +4,7 @@ use std::path::{Component, Path};
 use serde::{Deserialize, Serialize};
 use voxel_convert::{AnimationAnchorPolicy, AnimationEndPolicy};
 
-pub const PROJECT_SCHEMA_VERSION: u32 = 1;
+pub const PROJECT_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -71,6 +71,7 @@ pub struct ProjectVoxelObject {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProjectVoxelObjectInstance {
+    pub entity_id: u64,
     pub instance_id: String,
     pub voxel_object_asset_id: String,
     pub frame: ProjectFrameSelection,
@@ -199,7 +200,14 @@ impl VoxelLabProject {
                 .map(|value| value.instance_id.as_str()),
             "instance",
         )?;
+        let mut entity_ids = BTreeSet::new();
         for instance in &self.instances {
+            if instance.entity_id == 0 || !entity_ids.insert(instance.entity_id) {
+                return Err(format!(
+                    "instance {} has an invalid or duplicate entity id {}",
+                    instance.instance_id, instance.entity_id
+                ));
+            }
             require_identity(&instance.instance_id, "instances.instanceId")?;
             if !object_ids.contains(instance.voxel_object_asset_id.as_str()) {
                 return Err(format!(

@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "projectId": "rusty-engine-voxels",
   "name": "Rusty Engine Voxel Lab",
   "entryScene": "scene/voxel-lab",
-  "revision": 2,
+  "revision": 3,
   "conversion": {
     "sourceAssetId": "mesh-animation/retro-character",
     "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
@@ -12,16 +12,16 @@
     "targetAssetId": "voxel-object/retro-character",
     "objectDirectory": "content/voxel-objects",
     "resolution": [
-      12,
-      18,
-      12
+      24,
+      36,
+      24
     ],
-    "cellSize": 0.25,
+    "cellSize": 0.125,
     "chunkSize": 16,
     "pivot": [
-      5.5,
+      11.5,
       0.0,
-      5.5
+      11.5
     ],
     "anchorPolicy": {
       "kind": "preserveSourceSpace"
@@ -70,12 +70,13 @@
   "voxelObjects": [
     {
       "assetId": "voxel-object/retro-character",
-      "path": "content/voxel-objects/retro-character-1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de.voxel-object.json",
-      "expectedContentHash": "sha256:1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de"
+      "path": "content/voxel-objects/retro-character-900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c.voxel-object.json",
+      "expectedContentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c"
     }
   ],
   "instances": [
     {
+      "entityId": 1,
       "instanceId": "retro-character",
       "voxelObjectAssetId": "voxel-object/retro-character",
       "frame": {
