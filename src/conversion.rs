@@ -19,7 +19,7 @@ use crate::project::{
     MAX_SOURCE_BYTES,
 };
 
-pub const ENGINE_REVISION: &str = "677476e7e62296585e5fb28a1169a839c05ed1b8";
+pub const ENGINE_REVISION: &str = "bf3110c05dc27b7b1e5eeda173fb68857b06749c";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]

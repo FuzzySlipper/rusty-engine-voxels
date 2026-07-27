@@ -165,13 +165,25 @@ pub fn verify_runtime_project(
 pub fn complete_projection(
     runtime: &RuntimeProject,
 ) -> Result<render_model::RenderFrameDiff, String> {
+    complete_projection_with_instance_frame(runtime, None)
+}
+
+pub(crate) fn complete_projection_with_instance_frame(
+    runtime: &RuntimeProject,
+    frame_override: Option<(&str, u32)>,
+) -> Result<render_model::RenderFrameDiff, String> {
     let mut projector = VoxelObjectRenderProjector::new();
     let instances = runtime
         .loaded
         .project
         .instances
         .iter()
-        .map(|instance| projection_instance(runtime, instance))
+        .map(|instance| {
+            let frame = frame_override
+                .filter(|(instance_id, _)| *instance_id == instance.instance_id)
+                .map(|(_, frame)| frame);
+            projection_instance(runtime, instance, frame)
+        })
         .collect::<Result<Vec<_>, String>>()?;
     projector
         .project(
@@ -253,6 +265,7 @@ pub fn resolve_frame(
 fn projection_instance<'a>(
     runtime: &'a RuntimeProject,
     instance: &ProjectVoxelObjectInstance,
+    frame_override: Option<u32>,
 ) -> Result<VoxelObjectProjectionInstance<'a>, String> {
     let object = runtime
         .objects
@@ -261,7 +274,7 @@ fn projection_instance<'a>(
     Ok(VoxelObjectProjectionInstance {
         instance_id: instance.instance_id.clone(),
         object,
-        frame: resolve_frame(object, &instance.frame)?,
+        frame: frame_override.unwrap_or(resolve_frame(object, &instance.frame)?),
         transform: Transform {
             translation: instance.translation,
             rotation: instance.rotation,

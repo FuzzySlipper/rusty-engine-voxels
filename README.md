@@ -58,7 +58,8 @@ without an operational sibling checkout or a copy of Studio source.
 The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,
 reading, inspecting sources, preparing/previewing/applying/discarding voxel-object conversions,
-and attaching transformed voxel-object instances. Other protocol-7 operations fail with a typed
+attaching transformed voxel-object instances, and transiently playing reopened applied instances.
+Other protocol-8 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
 Conversion publication is content-addressed and idempotent. Rebuilding identical source and
@@ -71,7 +72,8 @@ result is written immutably first; the project document then atomically moves it
   schedules, and collision policy.
 - Rusty Engine owns source parsing, animation deformation, voxelization, canonical object bytes,
   runtime admission, explicit-time playback, mesh construction, and renderer-neutral frames.
-- Studio owns transient forms, candidate selection, scrubbing, and presentation.
+- Studio owns transient forms, candidate selection, sampling cadence, scrubbing controls, and
+  presentation; Rust owns applied-instance clip timing and frame selection.
 
 The initial source asset and license live together under
 `content/sources/kenney-retro-character/`.

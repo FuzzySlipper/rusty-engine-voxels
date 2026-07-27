@@ -26,8 +26,9 @@ use crate::project::{
 use crate::runtime::{
     complete_projection, load_runtime_project, projection_for_object, resolve_frame,
 };
+use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
-const PROTOCOL_VERSION: u64 = 7;
+const PROTOCOL_VERSION: u64 = 8;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 
 const OPERATIONS: &[&str] = &[
@@ -88,6 +89,7 @@ const OPERATIONS: &[&str] = &[
     "applyVoxelObjectConversion",
     "discardVoxelObjectConversion",
     "attachVoxelObjectInstance",
+    "previewVoxelObjectInstance",
     "closeProject",
 ];
 
@@ -127,6 +129,7 @@ pub fn run_stdio() -> Result<(), String> {
 pub struct StudioAdapter {
     open: Option<LoadedProject>,
     prepared: Option<PreparedCandidate>,
+    playback: StudioVoxelObjectPlayback,
     last_request_id: Option<String>,
 }
 
@@ -168,9 +171,11 @@ impl StudioAdapter {
             "applyVoxelObjectConversion" => self.apply_conversion(&request_id, request),
             "discardVoxelObjectConversion" => self.discard_conversion(&request_id, request),
             "attachVoxelObjectInstance" => self.attach_instance(&request_id, request),
+            "previewVoxelObjectInstance" => self.preview_instance(&request_id, request),
             "closeProject" => {
                 self.open = None;
                 self.prepared = None;
+                self.playback.clear();
                 Ok(response("projectClosed", &request_id, json!({})))
             }
             _ => Err(AdapterError::at(
@@ -206,6 +211,7 @@ impl StudioAdapter {
         let readout = project_readout(&loaded).map_err(AdapterError::project)?;
         self.open = Some(loaded);
         self.prepared = None;
+        self.playback.clear();
         Ok(response(
             "projectOpened",
             request_id,
@@ -219,6 +225,7 @@ impl StudioAdapter {
             load_project(&current.root, &current.relative_path).map_err(AdapterError::project)?;
         let readout = project_readout(&loaded).map_err(AdapterError::project)?;
         self.open = Some(loaded);
+        self.playback.clear();
         Ok(response(
             "projectRead",
             request_id,
@@ -447,6 +454,7 @@ impl StudioAdapter {
         let readout = project_readout(&loaded).map_err(AdapterError::project)?;
         self.open = Some(loaded);
         self.prepared = None;
+        self.playback.clear();
         Ok(response(
             "projectMutationApplied",
             request_id,
@@ -550,6 +558,7 @@ impl StudioAdapter {
         let saved = save_project(&loaded, &project).map_err(AdapterError::project)?;
         let readout = project_readout(&saved).map_err(AdapterError::project)?;
         self.open = Some(saved);
+        self.playback.clear();
         Ok(response(
             "projectMutationApplied",
             request_id,
@@ -565,6 +574,50 @@ impl StudioAdapter {
                     },
                 },
                 "project": readout,
+            }),
+        ))
+    }
+
+    fn preview_instance(
+        &mut self,
+        request_id: &str,
+        request: Value,
+    ) -> Result<Value, AdapterError> {
+        let input: PreviewInstanceRequest = decode_request(request)?;
+        self.ensure_project_hash(&input.expected_project_hash)?;
+        let loaded = self.require_open()?.clone();
+        let runtime = load_runtime_project(&loaded.root, &loaded.relative_path)
+            .map_err(AdapterError::project)?;
+        if runtime.loaded.project_hash != input.expected_project_hash {
+            return Err(AdapterError::at(
+                "project.staleHash",
+                "expectedProjectHash",
+                format!(
+                    "expected {}, current project is {}",
+                    input.expected_project_hash, runtime.loaded.project_hash
+                ),
+            ));
+        }
+        let presentation = self
+            .playback
+            .present(
+                &runtime,
+                &input.scene_id,
+                &input.instance_id,
+                input.now_microseconds,
+                &input.command,
+            )
+            .map_err(AdapterError::studio_playback)?;
+        Ok(response(
+            "voxelObjectInstancePreviewed",
+            request_id,
+            json!({
+                "playback": presentation.readout,
+                "projection": presentation.projection,
+                "projectionReadout": projection_readout(
+                    loaded.project.revision,
+                    loaded.project.instances.len(),
+                ),
             }),
         ))
     }
@@ -650,6 +703,37 @@ impl AdapterError {
             diagnostic.path.clone(),
             diagnostic.message.clone(),
         )
+    }
+
+    fn studio_playback(error: StudioPlaybackError) -> Self {
+        match error {
+            StudioPlaybackError::UnknownScene => Self::at(
+                "project.unknownScene",
+                "sceneId",
+                "scene is not the voxel lab entry scene",
+            ),
+            StudioPlaybackError::UnknownInstance => Self::at(
+                "project.unknownInstance",
+                "instanceId",
+                "voxel-object instance is not loaded",
+            ),
+            StudioPlaybackError::UnknownAsset => Self::at(
+                "project.unknownAsset",
+                "instanceId",
+                "voxel-object instance asset is not loaded",
+            ),
+            StudioPlaybackError::Runtime(message) => Self::project(message),
+            StudioPlaybackError::Player(error) => Self::new("playback.rejected", error.to_string()),
+            StudioPlaybackError::NotSelected => Self::new(
+                "playback.notSelected",
+                "scrub an applied voxel-object clip before controlling playback",
+            ),
+            StudioPlaybackError::TargetMismatch => Self::at(
+                "playback.targetMismatch",
+                "instanceId",
+                "playback command does not name the retained transient target",
+            ),
+        }
     }
 }
 
@@ -822,6 +906,22 @@ struct AttachInstanceRequest {
     expected_project_hash: String,
     scene_id: String,
     instance: AttachInstance,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PreviewInstanceRequest {
+    #[serde(rename = "type")]
+    _type: String,
+    #[serde(rename = "protocolVersion")]
+    _protocol_version: u64,
+    #[serde(rename = "requestId")]
+    _request_id: String,
+    expected_project_hash: String,
+    scene_id: String,
+    instance_id: String,
+    now_microseconds: u64,
+    command: PlaybackCommand,
 }
 
 #[derive(Deserialize)]

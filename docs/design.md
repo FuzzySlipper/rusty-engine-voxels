@@ -16,6 +16,9 @@ mechanisms remain owned by Rusty Engine.
    selected default or clip frame.
 5. Rusty Engine's renderer-neutral projection defines the material and voxel object and creates the
    selected instance. Studio supplies the Three renderer and authoring UI.
+6. Studio may retain one disposable applied-instance player in this adapter. Closed commands carry
+   explicit time; Rust selects the visible frame and returns a complete neutral projection while the
+   project's saved initial pose and both project/object bytes remain unchanged.
 
 The checked object is deliberately separate from both the project document and a transient Studio
 conversion candidate. A failed or discarded candidate cannot mutate project authority. A newly
@@ -32,9 +35,11 @@ canonical voxel-object encoding, admission limits, playback, mesh construction, 
 renderer-neutral diff production. Experiments should expose gaps in those owners rather than copy
 their implementations locally.
 
-Studio owns transient forms, filesystem selection, candidate preview, viewport input, and visual
-presentation. The project adapter implements Studio protocol 7 only as an explicit host boundary;
-protocol 7 is not the voxel project schema and is not an industry voxel standard.
+Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
+cadence, and visual presentation. The project adapter implements Studio protocol 8 only as an
+explicit host boundary; protocol 8 is not the voxel project schema and is not an industry voxel
+standard. The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/
+mutation/close, and never serializes its posture into this project's durable instance frame.
 
 ## Provider pin
 

@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-07-26T23:38:43-07:00",
+  "engineRevision": "bf3110c05dc27b7b1e5eeda173fb68857b06749c",
+  "studioProtocolVersion": 8,
+  "browser": "headless Chromium",
+  "project": {
+    "path": "content/projects/voxel-lab.project.json",
+    "revision": 2,
+    "sha256": "d1a20b35b2a0588b858891d93ee4ee2ed0c9c27ac8047da4d4e84db9a4d7100c"
+  },
+  "object": {
+    "assetId": "voxel-object/retro-character",
+    "contentHash": "sha256:1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de",
+    "artifactSha256": "653b5aeb2bc29b5047c87fe6f64fd6bf1c0e89794cc69db3db7ea8c2e73ad62a"
+  },
+  "playback": {
+    "instanceId": "retro-character",
+    "savedInitialPose": "clip/run frame 0",
+    "firstTransientPose": "clip/run frame 1",
+    "secondTransientPose": "clip/run frame 2",
+    "pausedAfterPlayback": true,
+    "pauseEnabledDuringInFlightSample": true,
+    "rendererAvailable": true
+  },
+  "renderedCanvas": {
+    "firstPngSha256": "f2d649227ff15202e0f7deea280e024a390cf07d897a106da88e0b3f6605ff8a",
+    "secondPngSha256": "b77a49ca3aedf13d678b3331bb20daf57fbf00fbb18a6e0ff71cfb6e97631359",
+    "distinct": true
+  }
+}
