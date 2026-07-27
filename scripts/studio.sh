@@ -47,7 +47,7 @@ VOXEL_ENCODED_ROOT="$(
 VOXEL_QUERY="root=$VOXEL_ENCODED_ROOT&project=content%2Fprojects%2Fvoxel-lab.project.json"
 VOXEL_DISPLAY_HOST="$VOXEL_BIND_HOST"
 if [[ "$VOXEL_DISPLAY_HOST" == "0.0.0.0" ]]; then
-  VOXEL_DISPLAY_HOST="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  VOXEL_DISPLAY_HOST="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
   VOXEL_DISPLAY_HOST="${VOXEL_DISPLAY_HOST:-127.0.0.1}"
 fi
 
