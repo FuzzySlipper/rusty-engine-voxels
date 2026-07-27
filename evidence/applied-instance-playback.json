@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-07-26T23:38:43-07:00",
-  "engineRevision": "bf3110c05dc27b7b1e5eeda173fb68857b06749c",
+  "capturedAt": "2026-07-27T00:32:14-07:00",
+  "engineRevision": "5b1dd5bb26cbba3fd4f3cde726714e2461849c58",
   "studioProtocolVersion": 8,
   "browser": "headless Chromium",
   "project": {
@@ -23,8 +23,8 @@
     "rendererAvailable": true
   },
   "renderedCanvas": {
-    "firstPngSha256": "f2d649227ff15202e0f7deea280e024a390cf07d897a106da88e0b3f6605ff8a",
-    "secondPngSha256": "b77a49ca3aedf13d678b3331bb20daf57fbf00fbb18a6e0ff71cfb6e97631359",
+    "firstPngSha256": "ec217310f66886cd666acfe2f7c4ec0708a663c5ae24197cf00e1bbfe95a8b08",
+    "secondPngSha256": "75857830506ba2096a885ad0cc18092296e41cfc456561dbaa9a7edd8027ae04",
     "distinct": true
   }
 }
