@@ -1,0 +1,13 @@
+{
+  "project": "rusty-engine-voxels",
+  "serve": {
+    "command": "bash scripts/studio.sh --host {host} --port {port}",
+    "preferredPort": 4310,
+    "healthUrl": "/health",
+    "readyText": "\"project\":\"rusty-engine-studio\"",
+    "identityHeader": "X-Den-Project",
+    "identityHeaderValue": "rusty-engine-studio",
+    "reusePolicy": "broker_owned",
+    "startupTimeout": "180s"
+  }
+}

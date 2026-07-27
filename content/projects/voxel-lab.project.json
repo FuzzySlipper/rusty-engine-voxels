@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "projectId": "rusty-engine-voxels",
+  "name": "Rusty Engine Voxel Lab",
+  "entryScene": "scene/voxel-lab",
+  "revision": 2,
+  "conversion": {
+    "sourceAssetId": "mesh-animation/retro-character",
+    "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
+    "expectedSourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
+    "licensePath": "content/sources/kenney-retro-character/LICENSE.txt",
+    "targetAssetId": "voxel-object/retro-character",
+    "objectDirectory": "content/voxel-objects",
+    "resolution": [
+      12,
+      18,
+      12
+    ],
+    "cellSize": 0.25,
+    "chunkSize": 16,
+    "pivot": [
+      5.5,
+      0.0,
+      5.5
+    ],
+    "anchorPolicy": {
+      "kind": "preserveSourceSpace"
+    },
+    "clips": [
+      {
+        "sourceClipName": "idle",
+        "outputClipId": "clip/idle",
+        "outputName": "Idle",
+        "sampleRateHz": 6,
+        "startMicroseconds": 0,
+        "endPolicy": "excludeLoopSeam"
+      },
+      {
+        "sourceClipName": "run",
+        "outputClipId": "clip/run",
+        "outputName": "Run",
+        "sampleRateHz": 6,
+        "startMicroseconds": 0,
+        "endPolicy": "excludeLoopSeam"
+      },
+      {
+        "sourceClipName": "jump",
+        "outputClipId": "clip/jump",
+        "outputName": "Jump",
+        "sampleRateHz": 6,
+        "startMicroseconds": 0,
+        "endPolicy": "includeClipEnd"
+      }
+    ],
+    "defaultClip": "clip/idle"
+  },
+  "materials": [
+    {
+      "assetId": "material/retro-slot-0",
+      "displayName": "skin",
+      "color": [
+        0.86,
+        0.42,
+        0.24,
+        1.0
+      ],
+      "roughness": 0.82
+    }
+  ],
+  "voxelObjects": [
+    {
+      "assetId": "voxel-object/retro-character",
+      "path": "content/voxel-objects/retro-character-1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de.voxel-object.json",
+      "expectedContentHash": "sha256:1e5fc62c72761671d61af380d0adc944fb3ba796247d4e0c3ea9e45974cdf6de"
+    }
+  ],
+  "instances": [
+    {
+      "instanceId": "retro-character",
+      "voxelObjectAssetId": "voxel-object/retro-character",
+      "frame": {
+        "kind": "clip",
+        "clipId": "clip/run",
+        "frameIndex": 0
+      },
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "collisionPolicy": {
+        "kind": "none"
+      }
+    }
+  ]
+}
