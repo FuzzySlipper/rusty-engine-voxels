@@ -12,8 +12,8 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.85
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.89
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
