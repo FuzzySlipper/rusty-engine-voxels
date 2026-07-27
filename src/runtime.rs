@@ -173,6 +173,14 @@ pub(crate) fn complete_projection_with_instance_frame(
     frame_override: Option<(&str, u32)>,
 ) -> Result<render_model::RenderFrameDiff, String> {
     let mut projector = VoxelObjectRenderProjector::new();
+    project_runtime_with_instance_frame(runtime, &mut projector, frame_override)
+}
+
+pub(crate) fn project_runtime_with_instance_frame(
+    runtime: &RuntimeProject,
+    projector: &mut VoxelObjectRenderProjector,
+    frame_override: Option<(&str, u32)>,
+) -> Result<render_model::RenderFrameDiff, String> {
     let instances = runtime
         .loaded
         .project

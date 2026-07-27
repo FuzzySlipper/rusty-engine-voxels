@@ -1,10 +1,11 @@
+use render_projection::VoxelObjectRenderProjector;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use voxel_object_runtime::{
     VoxelObjectLoopMode, VoxelObjectPlaybackStatus, VoxelObjectPlayer, VoxelObjectPlayerError,
 };
 
-use crate::runtime::{complete_projection_with_instance_frame, resolve_frame, RuntimeProject};
+use crate::runtime::{project_runtime_with_instance_frame, resolve_frame, RuntimeProject};
 
 #[derive(Default)]
 pub(crate) struct StudioVoxelObjectPlayback {
@@ -61,6 +62,7 @@ impl StudioVoxelObjectPlayback {
     pub fn present(
         &mut self,
         runtime: &RuntimeProject,
+        projector: &mut VoxelObjectRenderProjector,
         scene_id: &str,
         instance_id: &str,
         now_microseconds: u64,
@@ -100,11 +102,31 @@ impl StudioVoxelObjectPlayback {
                     player,
                 });
             }
-            PlaybackCommand::Play => self
-                .require_target_mut(scene_id, instance_id)?
-                .player
-                .resume(now_microseconds)
-                .map_err(StudioPlaybackError::Player)?,
+            PlaybackCommand::Play => {
+                let session = self.require_target_mut(scene_id, instance_id)?;
+                let current = session
+                    .player
+                    .sample_at(object, now_microseconds)
+                    .map_err(StudioPlaybackError::Player)?;
+                if current.ended && current.loop_mode == VoxelObjectLoopMode::Once {
+                    let clip = current
+                        .clip
+                        .ok_or_else(|| {
+                            StudioPlaybackError::Runtime(
+                                "ended voxel-object playback has no clip".to_owned(),
+                            )
+                        })?
+                        .to_owned();
+                    session
+                        .player
+                        .scrub(object, &clip, 0, VoxelObjectLoopMode::Once)
+                        .map_err(StudioPlaybackError::Player)?;
+                }
+                session
+                    .player
+                    .resume(now_microseconds)
+                    .map_err(StudioPlaybackError::Player)?;
+            }
             PlaybackCommand::Pause => self
                 .require_target_mut(scene_id, instance_id)?
                 .player
@@ -119,7 +141,22 @@ impl StudioVoxelObjectPlayback {
             }
         }
 
-        let (readout, runtime_frame) = if let Some(session) = self.session.as_ref() {
+        let (readout, runtime_frame) = if let Some(session) = self.session.as_mut() {
+            let should_finish_once = {
+                let sample = session
+                    .player
+                    .sample_at(object, now_microseconds)
+                    .map_err(StudioPlaybackError::Player)?;
+                sample.status == VoxelObjectPlaybackStatus::Playing
+                    && sample.loop_mode == VoxelObjectLoopMode::Once
+                    && sample.ended
+            };
+            if should_finish_once {
+                session
+                    .player
+                    .pause(now_microseconds)
+                    .map_err(StudioPlaybackError::Player)?;
+            }
             let sample = session
                 .player
                 .sample_at(object, now_microseconds)
@@ -164,9 +201,12 @@ impl StudioVoxelObjectPlayback {
                 durable_runtime_frame,
             )
         };
-        let projection =
-            complete_projection_with_instance_frame(runtime, Some((instance_id, runtime_frame)))
-                .map_err(StudioPlaybackError::Runtime)?;
+        let projection = project_runtime_with_instance_frame(
+            runtime,
+            projector,
+            Some((instance_id, runtime_frame)),
+        )
+        .map_err(StudioPlaybackError::Runtime)?;
         Ok(PlaybackPresentation {
             readout,
             projection,

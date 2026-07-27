@@ -1,6 +1,6 @@
 {
   "conversion": {
-    "engineRevision": "48d14507cc22c5e97c633ec599945c788d2406c0",
+    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
     "sourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
     "planHash": "sha256:f5f0ffdc7cb5e1a6f1f2a2dbdde95fb2a9ca3af5970cc5924f86137968d09408",
     "settingsSha256": "sha256:be4b5287d989a5b24d05a4061011d514525938dd9ed17497d487f3080ef48aae",
@@ -15,7 +15,7 @@
     "artifactBytes": 656537,
     "outputPath": "content/voxel-objects/retro-character-900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c.voxel-object.json",
     "projectHash": "sha256:0bbcb8725d8e21e672c1703b9b428ece64572cbc3bd975ecb8ac5b4ef192edfa",
-    "elapsedMilliseconds": 779,
+    "elapsedMilliseconds": 776,
     "clips": [
       {
         "clipId": "clip/idle",
@@ -41,7 +41,7 @@
     ]
   },
   "runtime": {
-    "engineRevision": "48d14507cc22c5e97c633ec599945c788d2406c0",
+    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
     "projectHash": "sha256:0bbcb8725d8e21e672c1703b9b428ece64572cbc3bd975ecb8ac5b4ef192edfa",
     "assetId": "voxel-object/retro-character",
     "contentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c",
@@ -53,7 +53,7 @@
     "definedVoxelObjects": 1,
     "createdVoxelInstances": 1,
     "projectionJsonBytes": 2397928,
-    "loadMilliseconds": 242,
+    "loadMilliseconds": 234,
     "playbackClip": "clip/idle",
     "playbackSamples": [
       {

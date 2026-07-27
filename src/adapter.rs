@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
+use render_projection::VoxelObjectRenderProjector;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use voxel_asset::{represented_voxel_count, VoxelObjectAsset, VoxelObjectProvenanceKind};
@@ -20,11 +21,10 @@ use crate::model::{
     experiment_color, ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial,
     ProjectVoxelObjectInstance,
 };
-use crate::project::{
-    load_project, read_bounded, safe_join, save_project, LoadedProject, MAX_SOURCE_BYTES,
-};
+use crate::project::{read_bounded, safe_join, save_project, LoadedProject, MAX_SOURCE_BYTES};
 use crate::runtime::{
-    complete_projection, load_runtime_project, projection_for_object, resolve_frame,
+    complete_projection, load_runtime_project, project_runtime_with_instance_frame,
+    projection_for_object, resolve_frame, RuntimeProject,
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
@@ -128,6 +128,8 @@ pub fn run_stdio() -> Result<(), String> {
 #[derive(Default)]
 pub struct StudioAdapter {
     open: Option<LoadedProject>,
+    runtime: Option<RuntimeProject>,
+    projector: VoxelObjectRenderProjector,
     prepared: Option<PreparedCandidate>,
     playback: StudioVoxelObjectPlayback,
     last_request_id: Option<String>,
@@ -174,6 +176,8 @@ impl StudioAdapter {
             "previewVoxelObjectInstance" => self.preview_instance(&request_id, request),
             "closeProject" => {
                 self.open = None;
+                self.runtime = None;
+                self.projector = VoxelObjectRenderProjector::new();
                 self.prepared = None;
                 self.playback.clear();
                 Ok(response("projectClosed", &request_id, json!({})))
@@ -206,12 +210,10 @@ impl StudioAdapter {
     fn open_project(&mut self, request_id: &str, request: &Value) -> Result<Value, AdapterError> {
         let root = required_string(request, "root")?;
         let project_file = required_string(request, "projectFile")?;
-        let loaded =
-            load_project(Path::new(&root), &project_file).map_err(AdapterError::project)?;
-        let readout = project_readout(&loaded).map_err(AdapterError::project)?;
-        self.open = Some(loaded);
+        let runtime =
+            load_runtime_project(Path::new(&root), &project_file).map_err(AdapterError::project)?;
+        let readout = self.accept_runtime_project(runtime)?;
         self.prepared = None;
-        self.playback.clear();
         Ok(response(
             "projectOpened",
             request_id,
@@ -221,11 +223,10 @@ impl StudioAdapter {
 
     fn read_project(&mut self, request_id: &str) -> Result<Value, AdapterError> {
         let current = self.require_open()?;
-        let loaded =
-            load_project(&current.root, &current.relative_path).map_err(AdapterError::project)?;
-        let readout = project_readout(&loaded).map_err(AdapterError::project)?;
-        self.open = Some(loaded);
-        self.playback.clear();
+        let root = current.root.clone();
+        let relative_path = current.relative_path.clone();
+        let runtime = load_runtime_project(&root, &relative_path).map_err(AdapterError::project)?;
+        let readout = self.accept_runtime_project(runtime)?;
         Ok(response(
             "projectRead",
             request_id,
@@ -446,15 +447,11 @@ impl StudioAdapter {
             elapsed_milliseconds: 0,
         })
         .map_err(AdapterError::project)?;
-        let loaded = load_project(
-            &self.require_open()?.root,
-            &self.require_open()?.relative_path,
-        )
-        .map_err(AdapterError::project)?;
-        let readout = project_readout(&loaded).map_err(AdapterError::project)?;
-        self.open = Some(loaded);
+        let root = self.require_open()?.root.clone();
+        let relative_path = self.require_open()?.relative_path.clone();
+        let runtime = load_runtime_project(&root, &relative_path).map_err(AdapterError::project)?;
+        let readout = self.accept_runtime_project(runtime)?;
         self.prepared = None;
-        self.playback.clear();
         Ok(response(
             "projectMutationApplied",
             request_id,
@@ -573,9 +570,9 @@ impl StudioAdapter {
             .sort_by(|left, right| left.instance_id.cmp(&right.instance_id));
         project.revision = project.revision.saturating_add(1);
         let saved = save_project(&loaded, &project).map_err(AdapterError::project)?;
-        let readout = project_readout(&saved).map_err(AdapterError::project)?;
-        self.open = Some(saved);
-        self.playback.clear();
+        let runtime = load_runtime_project(&saved.root, &saved.relative_path)
+            .map_err(AdapterError::project)?;
+        let readout = self.accept_runtime_project(runtime)?;
         Ok(response(
             "projectMutationApplied",
             request_id,
@@ -603,8 +600,12 @@ impl StudioAdapter {
         let input: PreviewInstanceRequest = decode_request(request)?;
         self.ensure_project_hash(&input.expected_project_hash)?;
         let loaded = self.require_open()?.clone();
-        let runtime = load_runtime_project(&loaded.root, &loaded.relative_path)
-            .map_err(AdapterError::project)?;
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            AdapterError::new(
+                "project.runtimeUnavailable",
+                "open project has no admitted voxel runtime",
+            )
+        })?;
         if runtime.loaded.project_hash != input.expected_project_hash {
             return Err(AdapterError::at(
                 "project.staleHash",
@@ -618,7 +619,8 @@ impl StudioAdapter {
         let presentation = self
             .playback
             .present(
-                &runtime,
+                runtime,
+                &mut self.projector,
                 &input.scene_id,
                 &input.instance_id,
                 input.now_microseconds,
@@ -659,6 +661,17 @@ impl StudioAdapter {
         self.open
             .as_ref()
             .ok_or_else(|| AdapterError::new("project.notOpen", "open a voxel lab project first"))
+    }
+
+    fn accept_runtime_project(&mut self, runtime: RuntimeProject) -> Result<Value, AdapterError> {
+        let mut projector = VoxelObjectRenderProjector::new();
+        let readout = project_readout_from_runtime(&runtime, &mut projector)
+            .map_err(AdapterError::project)?;
+        self.open = Some(runtime.loaded.clone());
+        self.runtime = Some(runtime);
+        self.projector = projector;
+        self.playback.clear();
+        Ok(readout)
     }
 
     fn read_selection(&self, selection: &FileSelection) -> Result<(String, Vec<u8>), AdapterError> {
@@ -1048,7 +1061,16 @@ fn runtime_frame(
 
 pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
     let runtime = load_runtime_project(&loaded.root, &loaded.relative_path)?;
-    let projection = complete_projection(&runtime)?;
+    let mut projector = VoxelObjectRenderProjector::new();
+    project_readout_from_runtime(&runtime, &mut projector)
+}
+
+fn project_readout_from_runtime(
+    runtime: &RuntimeProject,
+    projector: &mut VoxelObjectRenderProjector,
+) -> Result<Value, String> {
+    let loaded = &runtime.loaded;
+    let projection = project_runtime_with_instance_frame(runtime, projector, None)?;
     let object_assets = runtime
         .objects
         .values()

@@ -120,14 +120,19 @@ const playbackResponses = played.stdout.trim().split('\n').map((line) =>
   decodeStudioAdapterResponse(JSON.parse(line))
 );
 const scrubbed = playbackResponses[1];
+const resumed = playbackResponses[2];
 const sampled = playbackResponses[3];
 if (scrubbed?.type !== 'voxelObjectInstancePreviewed'
+  || resumed?.type !== 'voxelObjectInstancePreviewed'
   || sampled?.type !== 'voxelObjectInstancePreviewed'
   || scrubbed.playback.status !== 'paused'
   || sampled.playback.status !== 'playing'
   || scrubbed.playback.runtimeFrame === sampled.playback.runtimeFrame
   || scrubbed.playback.durableFrame.kind !== 'clip'
-  || scrubbed.playback.durableFrame.frameIndex !== 0) {
+  || scrubbed.playback.durableFrame.frameIndex !== 0
+  || scrubbed.projection.ops[0]?.op !== 'setVoxelObjectFrame'
+  || resumed.projection.ops.length !== 0
+  || sampled.projection.ops[0]?.op !== 'setVoxelObjectFrame') {
   throw new Error('Studio adapter did not preserve the saved pose beside two Rust-timed poses');
 }
 
@@ -140,4 +145,6 @@ console.log(JSON.stringify({
   ownerEntityId: opened.project.voxelObjectAuthoring.instances[0]?.ownerEntityId,
   sourceClips: inspection.inspection.clips.map((clip) => clip.name),
   playbackFrames: [scrubbed.playback.runtimeFrame, sampled.playback.runtimeFrame],
+  steadyStateProjectionOperations: sampled.projection.ops.length,
+  steadyStateResponseBytes: Buffer.byteLength(JSON.stringify(playbackResponses[3])),
 }));

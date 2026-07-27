@@ -19,8 +19,10 @@ mechanisms remain owned by Rusty Engine.
 6. Each applied instance is owned by one explicit project entity repeated in Studio hierarchy,
    entity inspection, object readout, and renderer metadata.
 7. Studio may retain one disposable applied-instance player in this adapter. Closed commands carry
-   explicit time; Rust selects the visible frame and returns a complete neutral projection while the
-   project's saved initial pose and both project/object bytes remain unchanged.
+   explicit time; Rust selects the visible frame while the project's saved initial pose and both
+   project/object bytes remain unchanged. The admitted runtime and retained projector are reused for
+   the open project, so steady-state samples return only `setVoxelObjectFrame` rather than reloading
+   the object and retransmitting every mesh.
 
 The checked object is deliberately separate from both the project document and a transient Studio
 conversion candidate. A failed or discarded candidate cannot mutate project authority. A newly
@@ -42,6 +44,9 @@ cadence, and visual presentation. The project adapter implements Studio protocol
 explicit host boundary; protocol 9 is not the voxel project schema and is not an industry voxel
 standard. The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/
 mutation/close, and never serializes its posture into this project's durable instance frame.
+Studio advances that player one virtual frame only after the shared renderer accepts the previous
+pose and its authored duration elapses. `once` settles paused on the terminal pose and Play restarts
+from frame zero; repeat and ping-pong continue through the same acknowledgement-paced path.
 
 Project schema 2 assigns every voxel-object instance a stable entity ID. The selected entity owns
 the typed Voxel Object capability and its durable initial pose; Studio's entity-inspector controls

@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-07-27T03:01:22-07:00",
-  "engineRevision": "48d14507cc22c5e97c633ec599945c788d2406c0",
+  "capturedAt": "2026-07-27T03:59:18-07:00",
+  "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
   "studioProtocolVersion": 9,
   "browser": "headless Chromium",
   "project": {
@@ -28,15 +28,30 @@
     "instanceId": "retro-character",
     "savedInitialPose": "clip/run frame 0",
     "firstTransientPose": "clip/run frame 1",
-    "pausedPose": "clip/run frame 3",
+    "repeatFramesObserved": [0, 1, 2, 3, 0, 1, 2, 3],
+    "repeatFrameGapsMilliseconds": [550, 561, 551, 570, 563, 572, 562],
+    "onceFramesObserved": [0, 1, 2, 3],
+    "onceFrameGapsMilliseconds": [589, 592, 589],
+    "onceTerminalPose": "clip/run frame 3",
+    "onceTerminalStatus": "paused",
+    "onceEnded": true,
+    "playAfterOnceRestartedAtFrame": 0,
     "pausedAfterPlayback": true,
     "pauseEnabledDuringInFlightSample": true,
+    "rendererAcknowledgedScheduling": true,
     "rendererAvailable": true
+  },
+  "steadyStateProjection": {
+    "operation": "setVoxelObjectFrame",
+    "operationCount": 1,
+    "responseBytes": 907,
+    "retainedOperationRangeDuringRepeat": [5, 13]
   },
   "renderedCanvas": {
     "firstPngSha256": "b5eea3c3e419f5d7d695845cfe81ce70cddbcac514fa15c50abc59fbe2edfaca",
     "secondPngSha256": "b342881754aadb01c60e1de1fbce8761110cd86dcfe7e4c1db6e079a14629345",
     "distinct": true
   },
-  "pageErrors": []
+  "pageErrors": [],
+  "consoleErrors": []
 }

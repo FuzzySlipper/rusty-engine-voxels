@@ -67,6 +67,12 @@ attaching transformed voxel-object instances, and transiently playing reopened a
 Other protocol-9 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
+Applied playback retains the admitted object and renderer projector for the open project. After the
+initial complete frame, ordinary animation samples carry one `setVoxelObjectFrame` operation; Studio
+waits for that pose to reach the shared renderer and then displays it for its authored duration before
+requesting the next virtual-time sample. Slow authoring hosts therefore reduce playback speed without
+skipping stored poses, and `once` visibly settles on its final frame.
+
 Conversion publication is content-addressed and idempotent. Rebuilding identical source and
 settings reuses the same canonical object and does not increment the project revision. A changed
 result is written immutably first; the project document then atomically moves its reference.

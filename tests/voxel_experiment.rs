@@ -159,7 +159,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let project_hash = loaded.project_hash.clone();
 
     let mut adapter = StudioAdapter::default();
-    adapter
+    let reopened = adapter
         .dispatch(json!({
             "type": "openProject",
             "protocolVersion": 9,
@@ -184,6 +184,9 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
             "projectFile": DEFAULT_PROJECT_FILE,
         }))
         .expect("reopen should rebuild canonical state");
+    let reopened_response_bytes = serde_json::to_vec(&reopened)
+        .expect("reopened response should serialize")
+        .len();
 
     let unselected = adapter.dispatch(json!({
         "type": "previewVoxelObjectInstance",
@@ -242,6 +245,10 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
         json!({ "kind": "clip", "clipId": "clip/run", "frameIndex": 0 })
     );
     assert_eq!(scrubbed["playback"]["projectHash"], project_hash);
+    assert_eq!(
+        scrubbed["projection"]["ops"][0]["op"],
+        "setVoxelObjectFrame"
+    );
     let scrubbed_runtime_frame = scrubbed["playback"]["runtimeFrame"]
         .as_u64()
         .expect("runtime frame should be an integer");
@@ -282,6 +289,14 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
         .expect("runtime frame should be an integer");
     assert_ne!(sampled_runtime_frame, scrubbed_runtime_frame);
     assert_eq!(projected_instance_frame(&sampled), sampled_runtime_frame);
+    assert_eq!(sampled["projection"]["ops"][0]["op"], "setVoxelObjectFrame");
+    let sampled_response_bytes = serde_json::to_vec(&sampled)
+        .expect("sampled response should serialize")
+        .len();
+    assert!(
+        sampled_response_bytes * 100 < reopened_response_bytes,
+        "steady-state playback should be at least 100x smaller than the complete project response"
+    );
 
     let stopped = adapter
         .dispatch(json!({
@@ -297,6 +312,67 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
         .expect("stop should restore the saved pose");
     assert_eq!(stopped["playback"]["status"], "stopped");
     assert_eq!(stopped["playback"]["clipId"], serde_json::Value::Null);
+
+    let once_scrubbed = adapter
+        .dispatch(json!({
+            "type": "previewVoxelObjectInstance",
+            "protocolVersion": 9,
+            "requestId": "playback-once-scrub",
+            "expectedProjectHash": project_hash,
+            "sceneId": "scene/voxel-lab",
+            "instanceId": "retro-character",
+            "nowMicroseconds": 2_000_000,
+            "command": {
+                "kind": "scrub",
+                "clipId": "clip/run",
+                "clipFrame": 0,
+                "loopMode": "once"
+            }
+        }))
+        .expect("once playback should scrub to its first pose");
+    assert_eq!(once_scrubbed["playback"]["clipFrame"], 0);
+    adapter
+        .dispatch(json!({
+            "type": "previewVoxelObjectInstance",
+            "protocolVersion": 9,
+            "requestId": "playback-once-play",
+            "expectedProjectHash": project_hash,
+            "sceneId": "scene/voxel-lab",
+            "instanceId": "retro-character",
+            "nowMicroseconds": 2_000_000,
+            "command": { "kind": "play" }
+        }))
+        .expect("once playback should start");
+    let once_ended = adapter
+        .dispatch(json!({
+            "type": "previewVoxelObjectInstance",
+            "protocolVersion": 9,
+            "requestId": "playback-once-ended",
+            "expectedProjectHash": project_hash,
+            "sceneId": "scene/voxel-lab",
+            "instanceId": "retro-character",
+            "nowMicroseconds": 2_666_667,
+            "command": { "kind": "sample" }
+        }))
+        .expect("once playback should settle its terminal pose");
+    assert_eq!(once_ended["playback"]["status"], "paused");
+    assert_eq!(once_ended["playback"]["clipFrame"], 3);
+    assert_eq!(once_ended["playback"]["ended"], true);
+    let once_replayed = adapter
+        .dispatch(json!({
+            "type": "previewVoxelObjectInstance",
+            "protocolVersion": 9,
+            "requestId": "playback-once-replay",
+            "expectedProjectHash": project_hash,
+            "sceneId": "scene/voxel-lab",
+            "instanceId": "retro-character",
+            "nowMicroseconds": 3_000_000,
+            "command": { "kind": "play" }
+        }))
+        .expect("playing an ended once clip should restart it");
+    assert_eq!(once_replayed["playback"]["status"], "playing");
+    assert_eq!(once_replayed["playback"]["clipFrame"], 0);
+    assert_eq!(once_replayed["playback"]["ended"], false);
 
     assert_eq!(fs::read(&loaded.path).unwrap(), project_before);
     assert_eq!(fs::read(&object_path).unwrap(), object_before);
@@ -314,7 +390,10 @@ fn projected_instance_frame(response: &serde_json::Value) -> u64 {
         .as_array()
         .expect("projection operations should be an array")
         .iter()
-        .find(|operation| operation["op"] == "createVoxelObjectInstance")
-        .and_then(|operation| operation["instance"]["frame"].as_u64())
-        .expect("projection should create the canonical voxel-object instance")
+        .find_map(|operation| match operation["op"].as_str() {
+            Some("createVoxelObjectInstance") => operation["instance"]["frame"].as_u64(),
+            Some("setVoxelObjectFrame") => operation["frame"].as_u64(),
+            _ => None,
+        })
+        .expect("projection should create or advance the canonical voxel-object instance")
 }
