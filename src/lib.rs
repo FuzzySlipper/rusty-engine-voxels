@@ -1,5 +1,6 @@
 pub mod adapter;
 mod base64;
+pub mod churn;
 pub mod conversion;
 pub mod format_study;
 pub mod model;

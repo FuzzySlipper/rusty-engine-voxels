@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusty_engine_voxels::adapter::StudioAdapter;
+use rusty_engine_voxels::churn::run_churn_study;
 use rusty_engine_voxels::conversion::prepare_project_conversion;
 use rusty_engine_voxels::format_study::run_format_study;
 use rusty_engine_voxels::project::load_project;
@@ -552,5 +553,41 @@ fn format_study_prices_candidate_encodings_against_real_corpus() {
     // Timing passes are recorded, not thresholded (machine-specific).
     assert!(study.timing.expanded_json_parse_microseconds > 0);
     assert!(study.timing.packed_base64_bytes_decoded > 0);
+    assert!(!study.interpretation_limits.is_empty());
+}
+
+#[test]
+fn churn_study_localizes_flipbook_aliasing_to_limb_regions() {
+    let study = run_churn_study(&root(), HIGH_FIDELITY_PROJECT_FILE)
+        .expect("churn study should admit the checked high-fidelity object");
+
+    assert_eq!(study.region_count, 4);
+    assert!(!study.clips.is_empty());
+    let run = study
+        .clips
+        .iter()
+        .find(|clip| clip.clip_id == "clip/run")
+        .expect("run clip should be present");
+    assert!(!run.transitions.is_empty());
+
+    // The straight flipbook resamples every pose independently, so a large
+    // share of cells flips between adjacent run poses.
+    assert!(
+        run.average_churn_fraction > 0.3,
+        "expected substantial frame-to-frame churn, got {}",
+        run.average_churn_fraction
+    );
+    // Churn is dominated by a non-head region (limbs), not the top (head) band.
+    assert!(
+        run.dominant_region < study.region_count - 1,
+        "expected churn dominant in limb bands, got region {}",
+        run.dominant_region
+    );
+    // Every transition's regional fractions sum to ~1.
+    for transition in &run.transitions {
+        let total: f64 = transition.churn_fraction_by_region.iter().sum();
+        assert!((total - 1.0).abs() < 1e-6);
+        assert_eq!(transition.churn_by_region.len(), study.region_count);
+    }
     assert!(!study.interpretation_limits.is_empty());
 }

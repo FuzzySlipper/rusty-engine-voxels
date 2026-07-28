@@ -1,0 +1,282 @@
+{
+  "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+  "assetId": "voxel-object/retro-character-high-fidelity",
+  "contentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64",
+  "regionCount": 4,
+  "gridYMin": 22,
+  "gridYMax": 121,
+  "clips": [
+    {
+      "clipId": "clip/idle",
+      "transitions": [
+        {
+          "fromFrame": 0,
+          "toFrame": 1,
+          "fromVoxels": 10508,
+          "toVoxels": 10507,
+          "sharedVoxels": 9697,
+          "addedVoxels": 810,
+          "removedVoxels": 811,
+          "churnFraction": 0.1432,
+          "churnByRegion": [
+            167,
+            447,
+            531,
+            476
+          ],
+          "churnFractionByRegion": [
+            0.103,
+            0.2758,
+            0.3276,
+            0.2936
+          ]
+        },
+        {
+          "fromFrame": 1,
+          "toFrame": 2,
+          "fromVoxels": 10507,
+          "toVoxels": 10486,
+          "sharedVoxels": 8814,
+          "addedVoxels": 1672,
+          "removedVoxels": 1693,
+          "churnFraction": 0.2763,
+          "churnByRegion": [
+            388,
+            917,
+            1227,
+            833
+          ],
+          "churnFractionByRegion": [
+            0.1153,
+            0.2725,
+            0.3646,
+            0.2475
+          ]
+        },
+        {
+          "fromFrame": 2,
+          "toFrame": 3,
+          "fromVoxels": 10486,
+          "toVoxels": 10517,
+          "sharedVoxels": 9477,
+          "addedVoxels": 1040,
+          "removedVoxels": 1009,
+          "churnFraction": 0.1778,
+          "churnByRegion": [
+            221,
+            549,
+            747,
+            532
+          ],
+          "churnFractionByRegion": [
+            0.1079,
+            0.2679,
+            0.3646,
+            0.2596
+          ]
+        },
+        {
+          "fromFrame": 3,
+          "toFrame": 4,
+          "fromVoxels": 10517,
+          "toVoxels": 10484,
+          "sharedVoxels": 10034,
+          "addedVoxels": 450,
+          "removedVoxels": 483,
+          "churnFraction": 0.0851,
+          "churnByRegion": [
+            95,
+            245,
+            340,
+            253
+          ],
+          "churnFractionByRegion": [
+            0.1018,
+            0.2626,
+            0.3644,
+            0.2712
+          ]
+        },
+        {
+          "fromFrame": 4,
+          "toFrame": 5,
+          "fromVoxels": 10484,
+          "toVoxels": 10486,
+          "sharedVoxels": 8883,
+          "addedVoxels": 1603,
+          "removedVoxels": 1601,
+          "churnFraction": 0.2651,
+          "churnByRegion": [
+            369,
+            875,
+            1165,
+            795
+          ],
+          "churnFractionByRegion": [
+            0.1152,
+            0.2731,
+            0.3636,
+            0.2481
+          ]
+        },
+        {
+          "fromFrame": 5,
+          "toFrame": 6,
+          "fromVoxels": 10486,
+          "toVoxels": 10520,
+          "sharedVoxels": 9186,
+          "addedVoxels": 1334,
+          "removedVoxels": 1300,
+          "churnFraction": 0.2228,
+          "churnByRegion": [
+            277,
+            722,
+            928,
+            707
+          ],
+          "churnFractionByRegion": [
+            0.1052,
+            0.2741,
+            0.3523,
+            0.2684
+          ]
+        }
+      ],
+      "averageChurnFraction": 0.195,
+      "dominantRegion": 2,
+      "dominantRegionFraction": 0.3577
+    },
+    {
+      "clipId": "clip/jump",
+      "transitions": [
+        {
+          "fromFrame": 0,
+          "toFrame": 1,
+          "fromVoxels": 10700,
+          "toVoxels": 10729,
+          "sharedVoxels": 10317,
+          "addedVoxels": 412,
+          "removedVoxels": 383,
+          "churnFraction": 0.0715,
+          "churnByRegion": [
+            79,
+            244,
+            178,
+            294
+          ],
+          "churnFractionByRegion": [
+            0.0994,
+            0.3069,
+            0.2239,
+            0.3698
+          ]
+        },
+        {
+          "fromFrame": 1,
+          "toFrame": 2,
+          "fromVoxels": 10729,
+          "toVoxels": 10700,
+          "sharedVoxels": 10317,
+          "addedVoxels": 383,
+          "removedVoxels": 412,
+          "churnFraction": 0.0715,
+          "churnByRegion": [
+            79,
+            244,
+            178,
+            294
+          ],
+          "churnFractionByRegion": [
+            0.0994,
+            0.3069,
+            0.2239,
+            0.3698
+          ]
+        }
+      ],
+      "averageChurnFraction": 0.0715,
+      "dominantRegion": 3,
+      "dominantRegionFraction": 0.3698
+    },
+    {
+      "clipId": "clip/run",
+      "transitions": [
+        {
+          "fromFrame": 0,
+          "toFrame": 1,
+          "fromVoxels": 10520,
+          "toVoxels": 10525,
+          "sharedVoxels": 4858,
+          "addedVoxels": 5667,
+          "removedVoxels": 5662,
+          "churnFraction": 0.6999,
+          "churnByRegion": [
+            3745,
+            3715,
+            2183,
+            1686
+          ],
+          "churnFractionByRegion": [
+            0.3306,
+            0.3279,
+            0.1927,
+            0.1488
+          ]
+        },
+        {
+          "fromFrame": 1,
+          "toFrame": 2,
+          "fromVoxels": 10525,
+          "toVoxels": 10539,
+          "sharedVoxels": 5186,
+          "addedVoxels": 5353,
+          "removedVoxels": 5339,
+          "churnFraction": 0.6734,
+          "churnByRegion": [
+            3357,
+            3342,
+            2300,
+            1693
+          ],
+          "churnFractionByRegion": [
+            0.314,
+            0.3126,
+            0.2151,
+            0.1583
+          ]
+        },
+        {
+          "fromFrame": 2,
+          "toFrame": 3,
+          "fromVoxels": 10539,
+          "toVoxels": 10518,
+          "sharedVoxels": 4911,
+          "addedVoxels": 5607,
+          "removedVoxels": 5628,
+          "churnFraction": 0.6958,
+          "churnByRegion": [
+            3692,
+            3549,
+            2301,
+            1693
+          ],
+          "churnFractionByRegion": [
+            0.3286,
+            0.3159,
+            0.2048,
+            0.1507
+          ]
+        }
+      ],
+      "averageChurnFraction": 0.6897,
+      "dominantRegion": 0,
+      "dominantRegionFraction": 0.3246
+    }
+  ],
+  "interpretationLimits": [
+    "regions are equal-height bands over occupied Y; region 0 is lowest (feet), highest is head.",
+    "churn is symmetric difference of occupied coordinates between consecutive stored frames.",
+    "material slots ignored; coordinate occupancy only.",
+    "straight mesh->flipbook baseline; a canonical-parts pipeline should confine churn to joint seams and drive core/head churn toward zero."
+  ]
+}
