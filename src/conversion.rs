@@ -19,8 +19,9 @@ use crate::project::{
     atomic_write, load_project, read_bounded, safe_join, save_project, sha256, LoadedProject,
     MAX_SOURCE_BYTES,
 };
+use crate::quality::{analyze_prepared_quality, VoxelQualityEvidence};
 
-pub const ENGINE_REVISION: &str = "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8";
+pub const ENGINE_REVISION: &str = "ef9af77932a83dc3c441ef5f1eef9b752e16de6e";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +51,9 @@ pub struct ConversionEvidence {
     pub artifact_bytes: usize,
     pub output_path: String,
     pub project_hash: String,
-    pub elapsed_milliseconds: u128,
+    pub source_import_microseconds: u128,
+    pub conversion_microseconds: u128,
+    pub amortized_conversion_microseconds_per_sampled_frame: u128,
     pub clips: Vec<ClipConversionEvidence>,
 }
 
@@ -58,7 +61,9 @@ pub struct PreparedProjectConversion {
     pub loaded: LoadedProject,
     pub prepared: PreparedVoxelObjectConversion,
     pub materials: Vec<ProjectMaterial>,
-    pub elapsed_milliseconds: u128,
+    pub source_import_microseconds: u128,
+    pub conversion_microseconds: u128,
+    pub quality: Option<VoxelQualityEvidence>,
 }
 
 struct ConversionMaterials {
@@ -81,6 +86,7 @@ pub fn prepare_project_conversion(
             loaded.project.conversion.expected_source_sha256
         ));
     }
+    let import_started = Instant::now();
     let imported = import_animated_mesh_source(&MeshSourceImportRequest {
         source_asset_id: loaded.project.conversion.source_asset_id.clone(),
         asset_version: 1,
@@ -91,6 +97,7 @@ pub fn prepare_project_conversion(
         mesh_primitive: None,
     })
     .map_err(|error| error.to_string())?;
+    let source_import_microseconds = import_started.elapsed().as_micros();
     let materials = conversion_materials(&imported.source.mesh.materials)?;
     let conversion = &loaded.project.conversion;
     // The grid product is the natural per-pose output bound, but the engine also
@@ -144,11 +151,19 @@ pub fn prepare_project_conversion(
     let started = Instant::now();
     let prepared = plan_animated_voxel_object_conversion(&request, &imported)
         .map_err(|error| error.to_string())?;
+    let conversion_microseconds = started.elapsed().as_micros();
+    let quality = analyze_prepared_quality(
+        &imported,
+        prepared.candidate(),
+        &loaded.project.conversion.anchor_policy,
+    )?;
     Ok(PreparedProjectConversion {
         loaded,
         prepared,
         materials: materials.project,
-        elapsed_milliseconds: started.elapsed().as_millis(),
+        source_import_microseconds,
+        conversion_microseconds,
+        quality: Some(quality),
     })
 }
 
@@ -208,7 +223,10 @@ pub fn publish_project_conversion(
         artifact_bytes: candidate.artifact_bytes,
         output_path: output_relative,
         project_hash: saved.project_hash,
-        elapsed_milliseconds: prepared.elapsed_milliseconds,
+        source_import_microseconds: prepared.source_import_microseconds,
+        conversion_microseconds: prepared.conversion_microseconds,
+        amortized_conversion_microseconds_per_sampled_frame: prepared.conversion_microseconds
+            / candidate.sampled_frames.max(1) as u128,
         clips: candidate
             .clips
             .iter()

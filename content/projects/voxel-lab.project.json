@@ -3,7 +3,7 @@
   "projectId": "rusty-engine-voxels",
   "name": "Rusty Engine Voxel Lab",
   "entryScene": "scene/voxel-lab",
-  "revision": 3,
+  "revision": 4,
   "conversion": {
     "sourceAssetId": "mesh-animation/retro-character",
     "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
@@ -79,11 +79,9 @@
       "entityId": 1,
       "instanceId": "retro-character",
       "voxelObjectAssetId": "voxel-object/retro-character",
-      "frame": {
-        "kind": "clip",
-        "clipId": "clip/run",
-        "frameIndex": 0
-      },
+    "frame": {
+      "kind": "default"
+    },
       "translation": [
         0.0,
         0.0,
@@ -100,9 +98,12 @@
         1.0,
         1.0
       ],
-      "collisionPolicy": {
-        "kind": "none"
+    "collisionPolicy": {
+      "kind": "stableFrame",
+      "frame": {
+        "kind": "default"
       }
+    }
     }
   ]
 }

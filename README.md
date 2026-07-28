@@ -59,6 +59,14 @@ cargo run --locked --bin voxel-lab -- verify \
   --report evidence/high-fidelity-animated-voxel-report.json
 ```
 
+The two reports now also contain named source/voxel pose comparisons, loop-seam and foot-anchor
+readouts, palette stability, phase timings, retained CPU payload estimates, and a 512-swap Rust
+projection measurement. At this checked revision the high-fidelity front-silhouette scores exceed
+0.90 for all three clips, compared with 0.19–0.45 for the baseline, but its 12.8 MB canonical object
+and 34.5 MB unique mesh payload take about 2.6 seconds to admit and mesh in this unoptimized local
+run. See [`docs/quality-report.md`](docs/quality-report.md) for the measured tradeoff and explicit
+limits.
+
 ## Commands
 
 ```bash
@@ -101,6 +109,10 @@ initial complete frame, ordinary animation samples carry one `setVoxelObjectFram
 waits for that pose to reach the shared renderer and then displays it for its authored duration before
 requesting the next virtual-time sample. Slow authoring hosts therefore reduce playback speed without
 skipping stored poses, and `once` visibly settles on its final frame.
+
+The baseline project's saved pose is the object's static default frame. Clip selection is transient,
+and its downstream collision choice stays pinned to that default frame while visible poses change.
+Missing or corrupt object files fail project open rather than producing an empty renderer resource.
 
 Conversion publication is content-addressed and idempotent. Rebuilding identical source and
 settings reuses the same canonical object and does not increment the project revision. A changed

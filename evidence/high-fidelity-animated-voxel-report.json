@@ -1,6 +1,6 @@
 {
   "conversion": {
-    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
+    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
     "sourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
     "planHash": "sha256:958a432d6cd36cd1d4e6ab62a2f4632aad8da4c34c5e40a5c653de8e6bdef472",
     "settingsSha256": "sha256:b06e7af133baf59ffb1b73d657cf38d4da4831e9d4bbc87f6b6c0bae01e295e9",
@@ -15,7 +15,9 @@
     "artifactBytes": 12758243,
     "outputPath": "content/voxel-objects/retro-character-high-fidelity-65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64.voxel-object.json",
     "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
-    "elapsedMilliseconds": 8488,
+    "sourceImportMicroseconds": 20676,
+    "conversionMicroseconds": 8813492,
+    "amortizedConversionMicrosecondsPerSampledFrame": 550843,
     "clips": [
       {
         "clipId": "clip/idle",
@@ -41,7 +43,7 @@
     ]
   },
   "runtime": {
-    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
+    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
     "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
     "assetId": "voxel-object/retro-character-high-fidelity",
     "contentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64",
@@ -53,7 +55,43 @@
     "definedVoxelObjects": 1,
     "createdVoxelInstances": 1,
     "projectionJsonBytes": 54564714,
-    "loadMilliseconds": 4874,
+    "loadMilliseconds": 2605,
+    "resources": {
+      "canonicalObjectBytes": 12758243,
+      "resolvedCellBytes": 5061696,
+      "uniqueMeshPayloadBytes": 34541208,
+      "meshVertices": 1151368,
+      "meshIndices": 1727052,
+      "meshFaces": 287842,
+      "admissionAndMeshingMicroseconds": 2602465
+    },
+    "frameSwitch": {
+      "requestedSwitches": 512,
+      "emittedFrameSwaps": 512,
+      "projectionCpuNanoseconds": 3229041,
+      "averageProjectionCpuNanosecondsPerSwap": 6306,
+      "incrementalProjectionBytes": 45568,
+      "uniqueMeshesReused": 14
+    },
+    "behavior": {
+      "savedFrame": "clip/run[0]",
+      "defaultRuntimeFrame": 0,
+      "selectedClip": "clip/idle",
+      "onceTerminalFrame": 7,
+      "onceEnded": true,
+      "repeatWrappedToFirstFrame": true,
+      "pausedFrameStayedStable": true,
+      "resumedToLaterFrame": true,
+      "postureRoundTripMatched": true,
+      "projectReopenMatched": true,
+      "missingAssetRejected": true,
+      "corruptAssetRejected": true,
+      "collisionKind": "visualOnly",
+      "collisionVoxelDataHash": null,
+      "collisionStayedStableDuringPlayback": true,
+      "durableProjectBytesUnchanged": true,
+      "durableObjectBytesUnchanged": true
+    },
     "playbackClip": "clip/idle",
     "playbackSamples": [
       {
@@ -91,6 +129,1007 @@
         "meshIndex": 5,
         "voxelCount": 10484
       }
+    ]
+  },
+  "quality": {
+    "silhouetteResolution": 32,
+    "cellSize": 0.03125,
+    "pivot": [
+      47.5,
+      0.0,
+      47.5
+    ],
+    "paletteSlots": [
+      1
+    ],
+    "paletteStable": true,
+    "clips": [
+      {
+        "clipId": "clip/idle",
+        "sourceClip": "idle",
+        "endpointPolicy": "excludeLoopSeam",
+        "durationMicroseconds": 1041667,
+        "sampledFrames": 7,
+        "storedFrames": 7,
+        "sourceFootYRange": [
+          -0.017576,
+          -0.017494
+        ],
+        "voxelFootYRange": [
+          0.703125,
+          0.703125
+        ],
+        "minimumSourcePoseContinuity": 0.993761,
+        "minimumVoxelSilhouetteContinuity": 0.973926,
+        "loopSeamSourceContinuity": 0.99955,
+        "loopSeamVoxelContinuity": 0.99844,
+        "paletteStable": true,
+        "frames": [
+          {
+            "storedFrameIndex": 0,
+            "sourceTimestampsMicroseconds": [
+              0
+            ],
+            "representativeSourceTimestampMicroseconds": 0,
+            "voxelDataHash": "sha256:de80029b4c7386895fa22b8a1d5d7797e816975945fb8b17161911d902cfa8bc",
+            "voxelCount": 10508,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.745754,
+                -0.017498,
+                -0.32313
+              ],
+              "boundsMax": [
+                0.753303,
+                3.679181,
+                0.736102
+              ],
+              "centroid": [
+                0.005729,
+                1.313229,
+                0.152557
+              ],
+              "footCenterXz": [
+                0.008575,
+                0.012338
+              ],
+              "footY": -0.017498,
+              "sampleCount": 1029,
+              "silhouetteCells": 603
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.734375,
+                0.46875
+              ],
+              "centroid": [
+                0.018281,
+                2.28097,
+                -0.002668
+              ],
+              "footCenterXz": [
+                -0.02173,
+                -0.037666
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10508,
+              "silhouetteCells": 640
+            },
+            "normalizedExtentError": 0.003763,
+            "normalizedFootAnchorError": 0.104497,
+            "sourceVoxelSilhouetteJaccard": 0.927132,
+            "sourcePoseContinuityFromPrevious": null,
+            "voxelSilhouetteContinuityFromPrevious": null
+          },
+          {
+            "storedFrameIndex": 1,
+            "sourceTimestampsMicroseconds": [
+              166667
+            ],
+            "representativeSourceTimestampMicroseconds": 166667,
+            "voxelDataHash": "sha256:0c3c71f7d92e02cc5d7f67ca0cc3de6f1ce7b440474a924dfcd34e2b6cbc502d",
+            "voxelCount": 10507,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.742557,
+                -0.017494,
+                -0.322705
+              ],
+              "boundsMax": [
+                0.750109,
+                3.668441,
+                0.741032
+              ],
+              "centroid": [
+                0.005964,
+                1.308036,
+                0.158846
+              ],
+              "footCenterXz": [
+                0.008626,
+                0.012764
+              ],
+              "footY": -0.017494,
+              "sampleCount": 1029,
+              "silhouetteCells": 600
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.734375,
+                0.46875
+              ],
+              "centroid": [
+                0.018098,
+                2.273313,
+                0.002552
+              ],
+              "footCenterXz": [
+                -0.02173,
+                -0.037666
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10507,
+              "silhouetteCells": 643
+            },
+            "normalizedExtentError": 0.006836,
+            "normalizedFootAnchorError": 0.104139,
+            "sourceVoxelSilhouetteJaccard": 0.921175,
+            "sourcePoseContinuityFromPrevious": 0.9972369404513542,
+            "voxelSilhouetteContinuityFromPrevious": 0.989147
+          },
+          {
+            "storedFrameIndex": 2,
+            "sourceTimestampsMicroseconds": [
+              333333
+            ],
+            "representativeSourceTimestampMicroseconds": 333333,
+            "voxelDataHash": "sha256:abca5b9d44a2ceb531e5882d2b5ec6ff81ce44c6dacd9f317161cceddb606889",
+            "voxelCount": 10486,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.735024,
+                -0.017539,
+                -0.321739
+              ],
+              "boundsMax": [
+                0.745469,
+                3.647816,
+                0.755227
+              ],
+              "centroid": [
+                0.006466,
+                1.296148,
+                0.172894
+              ],
+              "footCenterXz": [
+                0.008696,
+                0.013727
+              ],
+              "footY": -0.017539,
+              "sampleCount": 1029,
+              "silhouetteCells": 600
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.703125,
+                0.46875
+              ],
+              "centroid": [
+                0.01997,
+                2.260729,
+                0.012201
+              ],
+              "footCenterXz": [
+                -0.024583,
+                -0.036875
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10486,
+              "silhouetteCells": 643
+            },
+            "normalizedExtentError": 0.015012,
+            "normalizedFootAnchorError": 0.10493,
+            "sourceVoxelSilhouetteJaccard": 0.930124,
+            "sourcePoseContinuityFromPrevious": 0.9937611705352403,
+            "voxelSilhouetteContinuityFromPrevious": 0.975422
+          },
+          {
+            "storedFrameIndex": 3,
+            "sourceTimestampsMicroseconds": [
+              500000
+            ],
+            "representativeSourceTimestampMicroseconds": 500000,
+            "voxelDataHash": "sha256:6b9ac8cff93ad4d6c579ba6367ff23ff2e90d8e9cf2e8c5f737f47d5c5323321",
+            "voxelCount": 10517,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.730309,
+                -0.01754,
+                -0.321167
+              ],
+              "boundsMax": [
+                0.746076,
+                3.634502,
+                0.766577
+              ],
+              "centroid": [
+                0.006753,
+                1.288915,
+                0.181214
+              ],
+              "footCenterXz": [
+                0.008721,
+                0.014305
+              ],
+              "footY": -0.01754,
+              "sampleCount": 1029,
+              "silhouetteCells": 599
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.703125,
+                0.5
+              ],
+              "centroid": [
+                0.01905,
+                2.250721,
+                0.017796
+              ],
+              "footCenterXz": [
+                -0.024583,
+                -0.036875
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10517,
+              "silhouetteCells": 646
+            },
+            "normalizedExtentError": 0.008853,
+            "normalizedFootAnchorError": 0.104438,
+            "sourceVoxelSilhouetteJaccard": 0.924266,
+            "sourcePoseContinuityFromPrevious": 0.9962595621119947,
+            "voxelSilhouetteContinuityFromPrevious": 0.986133
+          },
+          {
+            "storedFrameIndex": 4,
+            "sourceTimestampsMicroseconds": [
+              666667
+            ],
+            "representativeSourceTimestampMicroseconds": 666667,
+            "voxelDataHash": "sha256:32e9dfaedea40e6b53200f0d0305a20cfcfeea9a485a9097f303bf376a07f563",
+            "voxelCount": 10484,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.732413,
+                -0.017576,
+                -0.321417
+              ],
+              "boundsMax": [
+                0.745094,
+                3.64048,
+                0.761579
+              ],
+              "centroid": [
+                0.006628,
+                1.29212,
+                0.177541
+              ],
+              "footCenterXz": [
+                0.008711,
+                0.014045
+              ],
+              "footY": -0.017576,
+              "sampleCount": 1029,
+              "silhouetteCells": 598
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.703125,
+                0.46875
+              ],
+              "centroid": [
+                0.019625,
+                2.254888,
+                0.015118
+              ],
+              "footCenterXz": [
+                -0.024583,
+                -0.036875
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10484,
+              "silhouetteCells": 644
+            },
+            "normalizedExtentError": 0.018339,
+            "normalizedFootAnchorError": 0.104659,
+            "sourceVoxelSilhouetteJaccard": 0.925581,
+            "sourcePoseContinuityFromPrevious": 0.9983452654859838,
+            "voxelSilhouetteContinuityFromPrevious": 0.990741
+          },
+          {
+            "storedFrameIndex": 5,
+            "sourceTimestampsMicroseconds": [
+              833333
+            ],
+            "representativeSourceTimestampMicroseconds": 833333,
+            "voxelDataHash": "sha256:d07fd751b4642e25e91705bcdb542a2747fcf137f23686ec70d9b21b6c5afdd6",
+            "voxelCount": 10486,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.739732,
+                -0.017512,
+                -0.322333
+              ],
+              "boundsMax": [
+                0.748371,
+                3.660798,
+                0.745197
+              ],
+              "centroid": [
+                0.00616,
+                1.303524,
+                0.164236
+              ],
+              "footCenterXz": [
+                0.008658,
+                0.013133
+              ],
+              "footY": -0.017512,
+              "sampleCount": 1029,
+              "silhouetteCells": 598
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.703125,
+                0.46875
+              ],
+              "centroid": [
+                0.018677,
+                2.266546,
+                0.006354
+              ],
+              "footCenterXz": [
+                -0.02173,
+                -0.037666
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10486,
+              "silhouetteCells": 643
+            },
+            "normalizedExtentError": 0.009685,
+            "normalizedFootAnchorError": 0.103825,
+            "sourceVoxelSilhouetteJaccard": 0.921053,
+            "sourcePoseContinuityFromPrevious": 0.9940578077271113,
+            "voxelSilhouetteContinuityFromPrevious": 0.973926
+          },
+          {
+            "storedFrameIndex": 6,
+            "sourceTimestampsMicroseconds": [
+              1000000
+            ],
+            "representativeSourceTimestampMicroseconds": 1000000,
+            "voxelDataHash": "sha256:ac3f14088f3892671b2660e942f28fd26e8356cbca3696f6bafabb2d0ac3bb9c",
+            "voxelCount": 10520,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.745239,
+                -0.017509,
+                -0.32306
+              ],
+              "boundsMax": [
+                0.752673,
+                3.677233,
+                0.736912
+              ],
+              "centroid": [
+                0.005768,
+                1.312385,
+                0.153583
+              ],
+              "footCenterXz": [
+                0.008585,
+                0.012406
+              ],
+              "footY": -0.017509,
+              "sampleCount": 1029,
+              "silhouetteCells": 602
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.40625
+              ],
+              "boundsMax": [
+                0.625,
+                3.734375,
+                0.46875
+              ],
+              "centroid": [
+                0.018524,
+                2.279976,
+                -0.001812
+              ],
+              "footCenterXz": [
+                -0.02173,
+                -0.037666
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10520,
+              "silhouetteCells": 641
+            },
+            "normalizedExtentError": 0.00419,
+            "normalizedFootAnchorError": 0.10444,
+            "sourceVoxelSilhouetteJaccard": 0.924149,
+            "sourcePoseContinuityFromPrevious": 0.9953043378387356,
+            "voxelSilhouetteContinuityFromPrevious": 0.987616
+          }
+        ]
+      },
+      {
+        "clipId": "clip/jump",
+        "sourceClip": "jump",
+        "endpointPolicy": "includeClipEnd",
+        "durationMicroseconds": 666667,
+        "sampledFrames": 4,
+        "storedFrames": 3,
+        "sourceFootYRange": [
+          0.150703,
+          0.152753
+        ],
+        "voxelFootYRange": [
+          0.828125,
+          0.828125
+        ],
+        "minimumSourcePoseContinuity": 0.998746,
+        "minimumVoxelSilhouetteContinuity": 0.982906,
+        "loopSeamSourceContinuity": 1.0,
+        "loopSeamVoxelContinuity": 1.0,
+        "paletteStable": true,
+        "frames": [
+          {
+            "storedFrameIndex": 0,
+            "sourceTimestampsMicroseconds": [
+              0
+            ],
+            "representativeSourceTimestampMicroseconds": 0,
+            "voxelDataHash": "sha256:68d0b3b5c8df1322d9b6ef175282f59ad52d77a5f14d96e46d62a00ee09eb342",
+            "voxelCount": 10700,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -1.638758,
+                0.152753,
+                -0.467023
+              ],
+              "boundsMax": [
+                1.619085,
+                3.758087,
+                0.629319
+              ],
+              "centroid": [
+                -0.004251,
+                1.608365,
+                0.010912
+              ],
+              "footCenterXz": [
+                0.079398,
+                -0.250019
+              ],
+              "footY": 0.152753,
+              "sampleCount": 1029,
+              "silhouetteCells": 318
+            },
+            "voxel": {
+              "boundsMin": [
+                -1.34375,
+                0.828125,
+                -0.53125
+              ],
+              "boundsMax": [
+                1.34375,
+                3.796875,
+                0.375
+              ],
+              "centroid": [
+                0.006694,
+                2.423954,
+                -0.082091
+              ],
+              "footCenterXz": [
+                0.31875,
+                -0.425
+              ],
+              "footY": 0.828125,
+              "sampleCount": 10700,
+              "silhouetteCells": 347
+            },
+            "normalizedExtentError": 0.000678,
+            "normalizedFootAnchorError": 0.121616,
+            "sourceVoxelSilhouetteJaccard": 0.905444,
+            "sourcePoseContinuityFromPrevious": null,
+            "voxelSilhouetteContinuityFromPrevious": null
+          },
+          {
+            "storedFrameIndex": 1,
+            "sourceTimestampsMicroseconds": [
+              166667,
+              333333
+            ],
+            "representativeSourceTimestampMicroseconds": 166667,
+            "voxelDataHash": "sha256:f375c14a7dab517a087ee63e33602de20304296227d0c0c141677e4c7cfda321",
+            "voxelCount": 10729,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -1.640318,
+                0.150703,
+                -0.464539
+              ],
+              "boundsMax": [
+                1.608927,
+                3.75991,
+                0.623647
+              ],
+              "centroid": [
+                -0.005356,
+                1.606948,
+                0.010962
+              ],
+              "footCenterXz": [
+                0.0794,
+                -0.247535
+              ],
+              "footY": 0.150703,
+              "sampleCount": 1029,
+              "silhouetteCells": 321
+            },
+            "voxel": {
+              "boundsMin": [
+                -1.34375,
+                0.828125,
+                -0.53125
+              ],
+              "boundsMax": [
+                1.34375,
+                3.796875,
+                0.375
+              ],
+              "centroid": [
+                0.005837,
+                2.423573,
+                -0.083072
+              ],
+              "footCenterXz": [
+                0.3125,
+                -0.421875
+              ],
+              "footY": 0.828125,
+              "sampleCount": 10729,
+              "silhouetteCells": 349
+            },
+            "normalizedExtentError": 0.004657,
+            "normalizedFootAnchorError": 0.119092,
+            "sourceVoxelSilhouetteJaccard": 0.908832,
+            "sourcePoseContinuityFromPrevious": 0.9987459676849509,
+            "voxelSilhouetteContinuityFromPrevious": 0.982906
+          },
+          {
+            "storedFrameIndex": 2,
+            "sourceTimestampsMicroseconds": [
+              500000
+            ],
+            "representativeSourceTimestampMicroseconds": 500000,
+            "voxelDataHash": "sha256:68d0b3b5c8df1322d9b6ef175282f59ad52d77a5f14d96e46d62a00ee09eb342",
+            "voxelCount": 10700,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -1.638758,
+                0.152753,
+                -0.467023
+              ],
+              "boundsMax": [
+                1.619085,
+                3.758087,
+                0.629319
+              ],
+              "centroid": [
+                -0.004251,
+                1.608365,
+                0.010912
+              ],
+              "footCenterXz": [
+                0.079398,
+                -0.250019
+              ],
+              "footY": 0.152753,
+              "sampleCount": 1029,
+              "silhouetteCells": 318
+            },
+            "voxel": {
+              "boundsMin": [
+                -1.34375,
+                0.828125,
+                -0.53125
+              ],
+              "boundsMax": [
+                1.34375,
+                3.796875,
+                0.375
+              ],
+              "centroid": [
+                0.006694,
+                2.423954,
+                -0.082091
+              ],
+              "footCenterXz": [
+                0.31875,
+                -0.425
+              ],
+              "footY": 0.828125,
+              "sampleCount": 10700,
+              "silhouetteCells": 347
+            },
+            "normalizedExtentError": 0.000678,
+            "normalizedFootAnchorError": 0.121616,
+            "sourceVoxelSilhouetteJaccard": 0.905444,
+            "sourcePoseContinuityFromPrevious": 0.9987459676849509,
+            "voxelSilhouetteContinuityFromPrevious": 0.982906
+          }
+        ]
+      },
+      {
+        "clipId": "clip/run",
+        "sourceClip": "run",
+        "endpointPolicy": "excludeLoopSeam",
+        "durationMicroseconds": 666667,
+        "sampledFrames": 4,
+        "storedFrames": 4,
+        "sourceFootYRange": [
+          -0.003232,
+          0.003148
+        ],
+        "voxelFootYRange": [
+          0.703125,
+          0.703125
+        ],
+        "minimumSourcePoseContinuity": 0.863552,
+        "minimumVoxelSilhouetteContinuity": 0.832326,
+        "loopSeamSourceContinuity": 0.876873,
+        "loopSeamVoxelContinuity": 0.838565,
+        "paletteStable": true,
+        "frames": [
+          {
+            "storedFrameIndex": 0,
+            "sourceTimestampsMicroseconds": [
+              0
+            ],
+            "representativeSourceTimestampMicroseconds": 0,
+            "voxelDataHash": "sha256:970471c892b1faf6bc122e3b01bfbebf281ab4f60cea47f8d2114cd3bd357190",
+            "voxelCount": 10520,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.761559,
+                0.000753,
+                -1.028356
+              ],
+              "boundsMax": [
+                0.615194,
+                3.627366,
+                1.252492
+              ],
+              "centroid": [
+                -0.030477,
+                1.460822,
+                0.131196
+              ],
+              "footCenterXz": [
+                -0.214608,
+                0.410133
+              ],
+              "footY": 0.000753,
+              "sampleCount": 1029,
+              "silhouetteCells": 572
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -1.0
+              ],
+              "boundsMax": [
+                0.53125,
+                3.703125,
+                0.875
+              ],
+              "centroid": [
+                -0.008433,
+                2.31408,
+                0.017669
+              ],
+              "footCenterXz": [
+                -0.15625,
+                0.148438
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10520,
+              "silhouetteCells": 604
+            },
+            "normalizedExtentError": 0.006964,
+            "normalizedFootAnchorError": 0.023954,
+            "sourceVoxelSilhouetteJaccard": 0.934211,
+            "sourcePoseContinuityFromPrevious": null,
+            "voxelSilhouetteContinuityFromPrevious": null
+          },
+          {
+            "storedFrameIndex": 1,
+            "sourceTimestampsMicroseconds": [
+              166667
+            ],
+            "representativeSourceTimestampMicroseconds": 166667,
+            "voxelDataHash": "sha256:403534d6936d7e5a8d3df480b46ec22a7cd67639a186518052031fff3e8982a4",
+            "voxelCount": 10525,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.737561,
+                0.003148,
+                -0.480044
+              ],
+              "boundsMax": [
+                0.680264,
+                3.606663,
+                0.887732
+              ],
+              "centroid": [
+                -0.00936,
+                1.361428,
+                0.216791
+              ],
+              "footCenterXz": [
+                -0.23987,
+                -0.119821
+              ],
+              "footY": 0.003148,
+              "sampleCount": 1029,
+              "silhouetteCells": 584
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.59375,
+                0.703125,
+                -0.53125
+              ],
+              "boundsMax": [
+                0.5625,
+                3.671875,
+                0.59375
+              ],
+              "centroid": [
+                0.007242,
+                2.276637,
+                0.056113
+              ],
+              "footCenterXz": [
+                -0.236413,
+                -0.228261
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10525,
+              "silhouetteCells": 627
+            },
+            "normalizedExtentError": 0.00546,
+            "normalizedFootAnchorError": 0.047697,
+            "sourceVoxelSilhouetteJaccard": 0.910095,
+            "sourcePoseContinuityFromPrevious": 0.8635517759709752,
+            "voxelSilhouetteContinuityFromPrevious": 0.867982
+          },
+          {
+            "storedFrameIndex": 2,
+            "sourceTimestampsMicroseconds": [
+              333333
+            ],
+            "representativeSourceTimestampMicroseconds": 333333,
+            "voxelDataHash": "sha256:1e5dcb7d20ca8c3df51c9b93509798c1c12e565606248116b02dc092ba2b3a0e",
+            "voxelCount": 10539,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.649217,
+                -0.001157,
+                -0.893517
+              ],
+              "boundsMax": [
+                0.653371,
+                3.627464,
+                1.412859
+              ],
+              "centroid": [
+                0.012106,
+                1.472832,
+                0.138491
+              ],
+              "footCenterXz": [
+                0.204206,
+                0.393228
+              ],
+              "footY": -0.001157,
+              "sampleCount": 1029,
+              "silhouetteCells": 554
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.53125,
+                0.703125,
+                -0.875
+              ],
+              "boundsMax": [
+                0.5625,
+                3.703125,
+                1.03125
+              ],
+              "centroid": [
+                0.028065,
+                2.319484,
+                0.02105
+              ],
+              "footCenterXz": [
+                0.178571,
+                0.142857
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10539,
+              "silhouetteCells": 586
+            },
+            "normalizedExtentError": 0.012146,
+            "normalizedFootAnchorError": 0.020489,
+            "sourceVoxelSilhouetteJaccard": 0.928934,
+            "sourcePoseContinuityFromPrevious": 0.8828202302163212,
+            "voxelSilhouetteContinuityFromPrevious": 0.832326
+          },
+          {
+            "storedFrameIndex": 3,
+            "sourceTimestampsMicroseconds": [
+              500000
+            ],
+            "representativeSourceTimestampMicroseconds": 500000,
+            "voxelDataHash": "sha256:920fcd25adee519c6a980e65b872c9394fa88bad0e9518a33baabf087e6b765a",
+            "voxelCount": 10518,
+            "materialSlots": [
+              1
+            ],
+            "source": {
+              "boundsMin": [
+                -0.783054,
+                -0.003232,
+                -0.455877
+              ],
+              "boundsMax": [
+                0.701591,
+                3.606663,
+                0.921261
+              ],
+              "centroid": [
+                -0.000722,
+                1.359597,
+                0.202925
+              ],
+              "footCenterXz": [
+                0.243236,
+                -0.095985
+              ],
+              "footY": -0.003232,
+              "sampleCount": 1029,
+              "silhouetteCells": 586
+            },
+            "voxel": {
+              "boundsMin": [
+                -0.625,
+                0.703125,
+                -0.53125
+              ],
+              "boundsMax": [
+                0.59375,
+                3.671875,
+                0.625
+              ],
+              "centroid": [
+                0.009148,
+                2.27603,
+                0.051219
+              ],
+              "footCenterXz": [
+                0.21301,
+                -0.199617
+              ],
+              "footY": 0.703125,
+              "sampleCount": 10518,
+              "silhouetteCells": 626
+            },
+            "normalizedExtentError": 0.004004,
+            "normalizedFootAnchorError": 0.01265,
+            "sourceVoxelSilhouetteJaccard": 0.914692,
+            "sourcePoseContinuityFromPrevious": 0.8730941935519403,
+            "voxelSilhouetteContinuityFromPrevious": 0.847561
+          }
+        ]
+      }
+    ],
+    "interpretationLimits": [
+      "Silhouette scores use a deterministic 32x32 front projection; they are structural evidence, not an art-quality score.",
+      "Surface voxelization intentionally thickens sub-cell features to conservative occupied cells.",
+      "Schema 1 stores complete poses and performs frame swaps; it does not interpolate voxel positions between poses.",
+      "Material evidence measures stable palette-slot identity, not texture or color perceptual fidelity."
     ]
   }
 }

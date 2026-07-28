@@ -444,7 +444,9 @@ impl StudioAdapter {
             loaded: self.require_open()?.clone(),
             prepared: candidate.prepared.clone(),
             materials: candidate.materials.clone(),
-            elapsed_milliseconds: 0,
+            source_import_microseconds: 0,
+            conversion_microseconds: 0,
+            quality: None,
         })
         .map_err(AdapterError::project)?;
         let root = self.require_open()?.root.clone();

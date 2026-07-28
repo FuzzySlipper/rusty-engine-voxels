@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const [decoderPath, adapter, root] = process.argv.slice(2);
@@ -40,6 +43,29 @@ if (opened.project.projection.ops.length !== 3
   || opened.project.sceneHierarchy.nodes[0]?.entityId !== 1
   || opened.project.animatedMeshResources[0]?.clipIds.join(',') !== 'idle,run,jump') {
   throw new Error('Studio open response omitted the checked voxel object projection');
+}
+
+const failureRoot = mkdtempSync(join(tmpdir(), 'rusty-engine-voxels-protocol-'));
+try {
+  cpSync(join(root, 'content'), join(failureRoot, 'content'), { recursive: true });
+  const projectPath = join(failureRoot, 'content/projects/voxel-lab.project.json');
+  const project = JSON.parse(readFileSync(projectPath, 'utf8'));
+  project.voxelObjects[0].path = 'content/voxel-objects/missing.voxel-object.json';
+  writeFileSync(projectPath, `${JSON.stringify(project, null, 2)}\n`);
+  const missing = openFailureProject(adapter, failureRoot, 'missing-object');
+  if (missing?.type !== 'rejected' || missing.error.code !== 'project.rejected') {
+    throw new Error('Studio adapter did not reject a missing canonical voxel object');
+  }
+
+  project.voxelObjects[0].path = 'content/voxel-objects/corrupt.voxel-object.json';
+  writeFileSync(projectPath, `${JSON.stringify(project, null, 2)}\n`);
+  writeFileSync(join(failureRoot, project.voxelObjects[0].path), '{"schemaVersion":');
+  const corrupt = openFailureProject(adapter, failureRoot, 'corrupt-object');
+  if (corrupt?.type !== 'rejected' || corrupt.error.code !== 'project.rejected') {
+    throw new Error('Studio adapter did not reject a corrupt canonical voxel object');
+  }
+} finally {
+  rmSync(failureRoot, { force: true, recursive: true });
 }
 
 const inspectRequests = [
@@ -128,8 +154,7 @@ if (scrubbed?.type !== 'voxelObjectInstancePreviewed'
   || scrubbed.playback.status !== 'paused'
   || sampled.playback.status !== 'playing'
   || scrubbed.playback.runtimeFrame === sampled.playback.runtimeFrame
-  || scrubbed.playback.durableFrame.kind !== 'clip'
-  || scrubbed.playback.durableFrame.frameIndex !== 0
+  || scrubbed.playback.durableFrame.kind !== 'default'
   || scrubbed.projection.ops[0]?.op !== 'setVoxelObjectFrame'
   || resumed.projection.ops.length !== 0
   || sampled.projection.ops[0]?.op !== 'setVoxelObjectFrame') {
@@ -147,4 +172,24 @@ console.log(JSON.stringify({
   playbackFrames: [scrubbed.playback.runtimeFrame, sampled.playback.runtimeFrame],
   steadyStateProjectionOperations: sampled.projection.ops.length,
   steadyStateResponseBytes: Buffer.byteLength(JSON.stringify(playbackResponses[3])),
+  missingAssetRejected: true,
+  corruptAssetRejected: true,
 }));
+
+function openFailureProject(adapterPath, projectRoot, suffix) {
+  const result = spawnSync(adapterPath, [], {
+    encoding: 'utf8',
+    input: `${JSON.stringify({
+      type: 'openProject',
+      protocolVersion: 9,
+      requestId: `open-${suffix}`,
+      root: projectRoot,
+      projectFile: 'content/projects/voxel-lab.project.json',
+    })}\n`,
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Studio adapter failure probe exited ${String(result.status)}: ${result.stderr}`);
+  }
+  return decodeStudioAdapterResponse(JSON.parse(result.stdout.trim()));
+}

@@ -51,6 +51,25 @@ fn checked_object_loads_plays_and_projects() {
     assert_eq!(evidence.defined_voxel_objects, 1);
     assert_eq!(evidence.created_voxel_instances, 1);
     assert_eq!(evidence.playback_samples.len(), 5);
+    assert_eq!(evidence.behavior.saved_frame, "default");
+    assert_eq!(evidence.behavior.default_runtime_frame, 0);
+    assert!(evidence.behavior.once_ended);
+    assert!(evidence.behavior.repeat_wrapped_to_first_frame);
+    assert!(evidence.behavior.paused_frame_stayed_stable);
+    assert!(evidence.behavior.resumed_to_later_frame);
+    assert!(evidence.behavior.posture_round_trip_matched);
+    assert!(evidence.behavior.project_reopen_matched);
+    assert!(evidence.behavior.missing_asset_rejected);
+    assert!(evidence.behavior.corrupt_asset_rejected);
+    assert_eq!(evidence.behavior.collision_kind, "stableFrame");
+    assert!(evidence.behavior.collision_voxel_data_hash.is_some());
+    assert!(evidence.behavior.collision_stayed_stable_during_playback);
+    assert!(evidence.behavior.durable_project_bytes_unchanged);
+    assert!(evidence.behavior.durable_object_bytes_unchanged);
+    assert_eq!(evidence.frame_switch.requested_switches, 512);
+    assert!(evidence.frame_switch.emitted_frame_swaps >= 500);
+    assert_eq!(evidence.frame_switch.unique_meshes_reused, 14);
+    assert!(evidence.resources.unique_mesh_payload_bytes > 0);
     assert!(
         evidence
             .playback_samples
@@ -245,7 +264,7 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     assert_eq!(scrubbed["playback"]["clipFrame"], 1);
     assert_eq!(
         scrubbed["playback"]["durableFrame"],
-        json!({ "kind": "clip", "clipId": "clip/run", "frameIndex": 0 })
+        json!({ "kind": "default" })
     );
     assert_eq!(scrubbed["playback"]["projectHash"], project_hash);
     assert_eq!(
@@ -386,6 +405,32 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
         after.project.instances[0].frame,
         loaded.project.instances[0].frame
     );
+}
+
+#[test]
+fn checked_quality_report_compares_named_source_and_voxel_poses() {
+    let prepared = prepare_project_conversion(&root(), DEFAULT_PROJECT_FILE)
+        .expect("checked animated source should produce quality evidence");
+    let quality = prepared
+        .quality
+        .as_ref()
+        .expect("ordinary conversion preparation should retain its quality readout");
+    assert_eq!(quality.clips.len(), 3);
+    assert!(quality.palette_stable);
+    assert_eq!(quality.silhouette_resolution, 32);
+    for clip in &quality.clips {
+        assert!(!clip.frames.is_empty());
+        assert!(clip.palette_stable);
+        assert!(clip.loop_seam_source_continuity > 0.0);
+        assert!(clip.loop_seam_voxel_continuity > 0.0);
+        for frame in &clip.frames {
+            assert!(!frame.source_timestamps_microseconds.is_empty());
+            assert!(frame.source_voxel_silhouette_jaccard > 0.0);
+            assert!(frame.normalized_extent_error.is_finite());
+            assert!(frame.normalized_foot_anchor_error.is_finite());
+            assert!(!frame.material_slots.is_empty());
+        }
+    }
 }
 
 fn projected_instance_frame(response: &serde_json::Value) -> u64 {
