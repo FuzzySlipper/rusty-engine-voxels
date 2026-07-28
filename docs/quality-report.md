@@ -1,7 +1,7 @@
 # Animated voxel quality and runtime report
 
 Status: checked M12H corpus evidence at Rusty Engine
-`ef9af77932a83dc3c441ef5f1eef9b752e16de6e`
+`1703f46f1624d32b8324f831107a068d5f66ab30`
 
 This report compares two conversions of the same CC0 Kenney retro character. Both select the
 `idle`, `run`, and `jump` clips at 6 Hz, preserve source-space motion, store 15 runtime frames from
@@ -14,24 +14,33 @@ not pass/fail thresholds.
 | Measure | 24 × 36 × 24 baseline | 96 × 144 × 96 high fidelity |
 |---|---:|---:|
 | Cell size | 0.125 | 0.03125 |
-| Source import | 18.1 ms | 20.7 ms |
-| Conversion | 785 ms | 8.81 s |
-| Amortized conversion per sampled pose | 49.1 ms | 551 ms |
+| Source import | 18.1 ms | 18.8 ms |
+| Conversion | 824 ms | 8.95 s |
+| Amortized conversion per sampled pose | 51.5 ms | 559 ms |
 | Aggregate conversion voxels | 9,650 | 168,907 |
 | Canonical object | 656,537 bytes | 12,758,243 bytes |
-| Runtime admission and meshing | 128 ms | 2.60 s |
+| Runtime admission and meshing | 122 ms | 2.57 s |
 | Resolved cell storage | 289,888 bytes | 5,061,696 bytes |
 | Unique mesh payload storage | 1,805,208 bytes | 34,541,208 bytes |
 | Unique mesh faces | 15,042 | 287,842 |
 | Complete retained projection JSON | 2,397,927 bytes | 54,564,714 bytes |
-| Rust projection CPU per frame swap | 6.05 µs | 6.31 µs |
+| Studio open control response | 23,922 bytes | 24,805 bytes |
+| Packed Studio mesh resource | 1,805,056 bytes | 34,541,056 bytes |
+| Rust projection CPU per frame swap | 6.71 µs | 6.33 µs |
 | Incremental frame-swap JSON | 89 bytes | 89 bytes |
 
 The 4× linear grid improves the useful visual signal substantially, but it is not an interactive
-conversion default: this observation made conversion about 11.2× slower, admission/meshing about
-20.3× slower, and the unique CPU mesh payload about 19.1× larger. Frame switching stays effectively
+conversion default: this observation made conversion about 10.9× slower, admission/meshing about
+21.1× slower, and the unique CPU mesh payload about 19.1× larger. Frame switching stays effectively
 constant because the admitted object and its 14 geometries are retained; each ordinary update is a
 small `setVoxelObjectFrame` selection instead of a remesh or reupload.
+
+The complete retained-projection JSON row remains a diagnostic measurement of the compatibility
+shape. Studio no longer sends it: the control response references the packed resource row. On the
+high-fidelity project, the earlier expanded-stream parse proxy averaged 2,028 ms per pass; one
+current observation measured the compact response at 0.207 ms in Node and 0.4 ms in Chromium. The
+same Chromium run fetched the 34,541,056-byte resource in 58.9 ms and visibly opened it through the
+shared renderer. See `evidence/mesh-data-plane.json` for interpretation limits.
 
 ## Pose and silhouette comparison
 

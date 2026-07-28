@@ -1,6 +1,6 @@
 {
   "conversion": {
-    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+    "engineRevision": "1703f46f1624d32b8324f831107a068d5f66ab30",
     "sourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
     "planHash": "sha256:f5f0ffdc7cb5e1a6f1f2a2dbdde95fb2a9ca3af5970cc5924f86137968d09408",
     "settingsSha256": "sha256:be4b5287d989a5b24d05a4061011d514525938dd9ed17497d487f3080ef48aae",
@@ -15,9 +15,9 @@
     "artifactBytes": 656537,
     "outputPath": "content/voxel-objects/retro-character-900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c.voxel-object.json",
     "projectHash": "sha256:398443febf02f5f2a660fac09bacc172392bf1aa9fd1d87f6b7ccc3b757b3b6c",
-    "sourceImportMicroseconds": 18061,
-    "conversionMicroseconds": 785359,
-    "amortizedConversionMicrosecondsPerSampledFrame": 49084,
+    "sourceImportMicroseconds": 18106,
+    "conversionMicroseconds": 823510,
+    "amortizedConversionMicrosecondsPerSampledFrame": 51469,
     "clips": [
       {
         "clipId": "clip/idle",
@@ -43,7 +43,7 @@
     ]
   },
   "runtime": {
-    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+    "engineRevision": "1703f46f1624d32b8324f831107a068d5f66ab30",
     "projectHash": "sha256:398443febf02f5f2a660fac09bacc172392bf1aa9fd1d87f6b7ccc3b757b3b6c",
     "assetId": "voxel-object/retro-character",
     "contentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c",
@@ -55,7 +55,7 @@
     "definedVoxelObjects": 1,
     "createdVoxelInstances": 1,
     "projectionJsonBytes": 2397927,
-    "loadMilliseconds": 128,
+    "loadMilliseconds": 122,
     "resources": {
       "canonicalObjectBytes": 656537,
       "resolvedCellBytes": 289888,
@@ -63,13 +63,13 @@
       "meshVertices": 60168,
       "meshIndices": 90252,
       "meshFaces": 15042,
-      "admissionAndMeshingMicroseconds": 127877
+      "admissionAndMeshingMicroseconds": 121722
     },
     "frameSwitch": {
       "requestedSwitches": 512,
       "emittedFrameSwaps": 512,
-      "projectionCpuNanoseconds": 3098738,
-      "averageProjectionCpuNanosecondsPerSwap": 6052,
+      "projectionCpuNanoseconds": 3436179,
+      "averageProjectionCpuNanosecondsPerSwap": 6711,
       "incrementalProjectionBytes": 45568,
       "uniqueMeshesReused": 14
     },

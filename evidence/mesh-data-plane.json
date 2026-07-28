@@ -1,0 +1,31 @@
+{
+  "engineRevision": "1703f46f1624d32b8324f831107a068d5f66ab30",
+  "projectFile": "content/projects/retro-character-high-fidelity.project.json",
+  "corpus": {
+    "canonicalObjectBytes": 12758243,
+    "uniqueMeshes": 14
+  },
+  "before": {
+    "completeProjectionJsonBytes": 54564714,
+    "expandedMeshStreamJsonBytes": 54558012,
+    "expandedJsonParseRepetitions": 3,
+    "expandedJsonParseMicroseconds": 6084230,
+    "averageExpandedJsonParseMilliseconds": 2028.077,
+    "parseRuntime": "serde_json host-neutral proxy from the checked format study"
+  },
+  "after": {
+    "studioControlResponseBytes": 24805,
+    "packedResourceBytes": 34541056,
+    "nodeJsonParseMilliseconds": 0.207,
+    "chromiumJsonParseMilliseconds": 0.4,
+    "adapterRoundTripMilliseconds": 5188.9,
+    "chromiumResourceTransferMilliseconds": 58.9,
+    "steadyStatePlaybackResponseBytes": 1213
+  },
+  "interpretationLimits": [
+    "timings are one unoptimized local observation, not CI thresholds",
+    "the before parse timing is the existing host-neutral serde_json proxy; after timings use the real Studio Node and Chromium JavaScript parsers",
+    "adapter round-trip includes canonical object admission, meshing, packing, atomic cache publication, and control serialization",
+    "resource transfer timing is same-host trusted-LAN Studio evidence and does not isolate GPU upload time"
+  ]
+}

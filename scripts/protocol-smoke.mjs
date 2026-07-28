@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 
 const [decoderPath, adapter, root] = process.argv.slice(2);
@@ -29,7 +31,8 @@ const initial = spawnSync(adapter, [], {
 if (initial.status !== 0) {
   throw new Error(`Studio adapter exited ${String(initial.status)}: ${initial.stderr}`);
 }
-const initialResponses = initial.stdout.trim().split('\n').map((line) =>
+const initialLines = initial.stdout.trim().split('\n');
+const initialResponses = initialLines.map((line) =>
   decodeStudioAdapterResponse(JSON.parse(line))
 );
 const [described, opened] = initialResponses;
@@ -41,9 +44,26 @@ if (opened.project.projection.ops.length !== 3
   || opened.project.voxelObjectAuthoring.instances.length !== 1
   || opened.project.voxelObjectAuthoring.instances[0]?.ownerEntityId !== 1
   || opened.project.sceneHierarchy.nodes[0]?.entityId !== 1
-  || opened.project.animatedMeshResources[0]?.clipIds.join(',') !== 'idle,run,jump') {
+  || opened.project.animatedMeshResources[0]?.clipIds.join(',') !== 'idle,run,jump'
+  || opened.project.meshResources?.length !== 1) {
   throw new Error('Studio open response omitted the checked voxel object projection');
 }
+const baselineResources = validateMeshResources(root, opened.project.meshResources);
+
+const highFidelity = openProject(adapter, root, 'content/projects/retro-character-high-fidelity.project.json', 'high-fidelity');
+const parseStarted = performance.now();
+const highFidelityRaw = JSON.parse(highFidelity.line);
+const nodeJsonParseMilliseconds = performance.now() - parseStarted;
+const highFidelityOpened = decodeStudioAdapterResponse(highFidelityRaw);
+if (highFidelityOpened.type !== 'projectOpened'
+  || highFidelityOpened.project.meshResources?.length !== 1
+  || JSON.stringify(highFidelityOpened.project.projection).includes('"positions":[')) {
+  throw new Error('high-fidelity project did not use the packed mesh data plane');
+}
+const highFidelityResources = validateMeshResources(
+  root,
+  highFidelityOpened.project.meshResources,
+);
 
 const failureRoot = mkdtempSync(join(tmpdir(), 'rusty-engine-voxels-protocol-'));
 try {
@@ -172,9 +192,47 @@ console.log(JSON.stringify({
   playbackFrames: [scrubbed.playback.runtimeFrame, sampled.playback.runtimeFrame],
   steadyStateProjectionOperations: sampled.projection.ops.length,
   steadyStateResponseBytes: Buffer.byteLength(JSON.stringify(playbackResponses[3])),
+  baselineControlResponseBytes: Buffer.byteLength(initialLines[1]),
+  baselinePackedResourceBytes: baselineResources.byteLength,
+  highFidelityControlResponseBytes: Buffer.byteLength(highFidelity.line),
+  highFidelityPackedResourceBytes: highFidelityResources.byteLength,
+  highFidelityNodeJsonParseMilliseconds: Number(nodeJsonParseMilliseconds.toFixed(3)),
   missingAssetRejected: true,
   corruptAssetRejected: true,
 }));
+
+function openProject(adapterPath, projectRoot, projectFile, suffix) {
+  const result = spawnSync(adapterPath, [], {
+    encoding: 'utf8',
+    input: `${JSON.stringify({
+      type: 'openProject',
+      protocolVersion: 9,
+      requestId: `open-${suffix}`,
+      root: projectRoot,
+      projectFile,
+    })}\n`,
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Studio adapter ${suffix} open exited ${String(result.status)}: ${result.stderr}`);
+  }
+  return { line: result.stdout.trim() };
+}
+
+function validateMeshResources(projectRoot, resources) {
+  let byteLength = 0;
+  for (const resource of resources ?? []) {
+    const bytes = readFileSync(join(projectRoot, resource.sourcePath));
+    const hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+    if (bytes.byteLength !== resource.byteLength
+      || hash !== resource.contentHash
+      || bytes.subarray(0, 8).toString('ascii') !== 'RMSHLE01') {
+      throw new Error(`packed mesh resource ${resource.resource} does not match its manifest`);
+    }
+    byteLength += bytes.byteLength;
+  }
+  return { byteLength };
+}
 
 function openFailureProject(adapterPath, projectRoot, suffix) {
   const result = spawnSync(adapterPath, [], {

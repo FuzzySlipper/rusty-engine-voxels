@@ -1,6 +1,6 @@
 {
   "conversion": {
-    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+    "engineRevision": "1703f46f1624d32b8324f831107a068d5f66ab30",
     "sourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
     "planHash": "sha256:958a432d6cd36cd1d4e6ab62a2f4632aad8da4c34c5e40a5c653de8e6bdef472",
     "settingsSha256": "sha256:b06e7af133baf59ffb1b73d657cf38d4da4831e9d4bbc87f6b6c0bae01e295e9",
@@ -15,9 +15,9 @@
     "artifactBytes": 12758243,
     "outputPath": "content/voxel-objects/retro-character-high-fidelity-65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64.voxel-object.json",
     "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
-    "sourceImportMicroseconds": 20676,
-    "conversionMicroseconds": 8813492,
-    "amortizedConversionMicrosecondsPerSampledFrame": 550843,
+    "sourceImportMicroseconds": 18785,
+    "conversionMicroseconds": 8947986,
+    "amortizedConversionMicrosecondsPerSampledFrame": 559249,
     "clips": [
       {
         "clipId": "clip/idle",
@@ -43,7 +43,7 @@
     ]
   },
   "runtime": {
-    "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+    "engineRevision": "1703f46f1624d32b8324f831107a068d5f66ab30",
     "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
     "assetId": "voxel-object/retro-character-high-fidelity",
     "contentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64",
@@ -55,7 +55,7 @@
     "definedVoxelObjects": 1,
     "createdVoxelInstances": 1,
     "projectionJsonBytes": 54564714,
-    "loadMilliseconds": 2605,
+    "loadMilliseconds": 2570,
     "resources": {
       "canonicalObjectBytes": 12758243,
       "resolvedCellBytes": 5061696,
@@ -63,13 +63,13 @@
       "meshVertices": 1151368,
       "meshIndices": 1727052,
       "meshFaces": 287842,
-      "admissionAndMeshingMicroseconds": 2602465
+      "admissionAndMeshingMicroseconds": 2566699
     },
     "frameSwitch": {
       "requestedSwitches": 512,
       "emittedFrameSwaps": 512,
-      "projectionCpuNanoseconds": 3229041,
-      "averageProjectionCpuNanosecondsPerSwap": 6306,
+      "projectionCpuNanoseconds": 3239895,
+      "averageProjectionCpuNanosecondsPerSwap": 6327,
       "incrementalProjectionBytes": 45568,
       "uniqueMeshesReused": 14
     },

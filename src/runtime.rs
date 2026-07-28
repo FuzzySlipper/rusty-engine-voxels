@@ -7,7 +7,9 @@ use std::time::Instant;
 use render_model::{
     MaterialUvStrategy, RenderDiff, RenderMaterialDescriptor, RenderMetadata, Transform,
 };
-use render_projection::{VoxelObjectProjectionInstance, VoxelObjectRenderProjector};
+use render_projection::{
+    VoxelObjectProjectionInstance, VoxelObjectProjectionResult, VoxelObjectRenderProjector,
+};
 use serde::Serialize;
 use voxel_object_runtime::{
     admit_voxel_object_json, AdmittedVoxelObject, VoxelObjectCollisionPolicy,
@@ -301,11 +303,14 @@ fn benchmark_frame_switches(
     let mut diffs = Vec::with_capacity(SWITCHES);
     for index in 0..SWITCHES {
         let frame = clip.frame_indices[index % clip.frame_indices.len()];
-        diffs.push(project_runtime_with_instance_frame(
-            runtime,
-            &mut projector,
-            Some((&instance.instance_id, frame)),
-        )?);
+        diffs.push(
+            project_runtime_with_instance_frame(
+                runtime,
+                &mut projector,
+                Some((&instance.instance_id, frame)),
+            )?
+            .frame,
+        );
     }
     let projection_cpu_nanoseconds = started.elapsed().as_nanos();
     let emitted_frame_swaps = diffs
@@ -534,13 +539,21 @@ pub(crate) fn complete_projection_with_instance_frame(
 ) -> Result<render_model::RenderFrameDiff, String> {
     let mut projector = VoxelObjectRenderProjector::new();
     project_runtime_with_instance_frame(runtime, &mut projector, frame_override)
+        .map(|result| result.frame)
+}
+
+pub(crate) fn complete_packed_projection(
+    runtime: &RuntimeProject,
+) -> Result<VoxelObjectProjectionResult, String> {
+    let mut projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+    project_runtime_with_instance_frame(runtime, &mut projector, None)
 }
 
 pub(crate) fn project_runtime_with_instance_frame(
     runtime: &RuntimeProject,
     projector: &mut VoxelObjectRenderProjector,
     frame_override: Option<(&str, u32)>,
-) -> Result<render_model::RenderFrameDiff, String> {
+) -> Result<VoxelObjectProjectionResult, String> {
     let instances = runtime
         .loaded
         .project
@@ -558,7 +571,6 @@ pub(crate) fn project_runtime_with_instance_frame(
             &instances,
             &render_materials(&runtime.loaded.project.materials),
         )
-        .map(|result| result.frame)
         .map_err(|error| format!("voxel-object projection rejected: {error:?}"))
 }
 
@@ -567,8 +579,8 @@ pub fn projection_for_object(
     frame: u32,
     materials: &[ProjectMaterial],
     label: &str,
-) -> Result<render_model::RenderFrameDiff, String> {
-    let mut projector = VoxelObjectRenderProjector::new();
+) -> Result<VoxelObjectProjectionResult, String> {
+    let mut projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
     let instance = VoxelObjectProjectionInstance {
         instance_id: "studio-candidate".to_owned(),
         object,
@@ -585,7 +597,6 @@ pub fn projection_for_object(
     };
     projector
         .project(&[instance], &render_materials(materials))
-        .map(|result| result.frame)
         .map_err(|error| format!("candidate projection rejected: {error:?}"))
 }
 

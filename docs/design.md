@@ -15,7 +15,10 @@ mechanisms remain owned by Rusty Engine.
 4. Rusty Engine's voxel-object runtime independently admits the serialized object and resolves a
    selected default or clip frame.
 5. Rusty Engine's renderer-neutral projection defines the material and voxel object and creates the
-   selected instance. Studio supplies the Three renderer and authoring UI.
+   selected instance. Large mesh streams are packed into deterministic content-addressed resources;
+   this adapter publishes them atomically under the ignored `.studio-cache/render-resources`
+   directory and returns only their bounded manifest beside the control frame. Studio supplies the
+   Three renderer and authoring UI.
 6. Each applied instance is owned by one explicit project entity repeated in Studio hierarchy,
    entity inspection, object readout, and renderer metadata.
 7. Studio may retain one disposable applied-instance player in this adapter. Closed commands carry
@@ -75,12 +78,18 @@ Promote a mechanism upstream only when the experiment demonstrates that it is re
 behavior. Keep subjective art-direction defaults and corpus-specific fixes here unless several
 concrete consumers prove otherwise.
 
-## Voxel data-plane format study
+## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked
 corpus against candidate mesh-payload encodings so the upstream voxel data-plane decision (rusty-engine
-#6331) starts from corpus evidence rather than preference. It is deliberately downstream: it changes
-no wire or durable format, only prices them against real admitted meshes.
+#6331) starts from corpus evidence rather than preference. Those measurements selected Engine's
+`packedStreamsLeV1` presentation resources. Canonical schema-1 voxel-object JSON remains unchanged;
+the resource cache is disposable and regenerates from the admitted object.
+
+Open/read, conversion candidate, discard, and applied-instance playback responses carry the
+manifest for the exact projection they return. The adapter retains the canonical manifest across
+ordinary `setVoxelObjectFrame` patches. It never places paths in the renderer-neutral frame, and it
+does not base64-encode bulk bytes into Studio's JSON control channel.
 
 For each project's unique flipbook meshes it reports four shapes — the current expanded JSON number
 arrays, a packed base64 typed-array envelope, a binary lower-bound reference, and a mesh-delta
@@ -105,5 +114,9 @@ Findings on the checked corpus, with the harness's stated interpretation limits:
   packed encoding. The durable fix is architectural (resource-referenced or chunked mesh payloads), with
   encoding as a secondary multiplier.
 
-These measurements constrain, but do not by themselves decide, the upstream format; the harness exists so
-that decision and its successor measurements share one corpus.
+On the high-fidelity corpus, the former complete projection was 54,564,714 JSON bytes. The checked
+resource implementation returns a 24,805-byte complete Studio response plus 34,541,056 packed
+bytes, and a steady-state playback response remains 1,213 bytes. One local observation measured
+the compact response at 0.207 ms in Node `JSON.parse` and 0.4 ms in Chromium, versus the earlier
+2,028 ms-per-pass host-neutral expanded-JSON proxy. See
+`evidence/mesh-data-plane.json`; timings are observations rather than thresholds.

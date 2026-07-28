@@ -22,6 +22,7 @@ struct PlaybackSession {
 pub(crate) struct PlaybackPresentation {
     pub readout: Value,
     pub projection: render_model::RenderFrameDiff,
+    pub mesh_resources: Vec<render_model::PackedMeshResource>,
 }
 
 #[derive(Debug)]
@@ -209,7 +210,8 @@ impl StudioVoxelObjectPlayback {
         .map_err(StudioPlaybackError::Runtime)?;
         Ok(PlaybackPresentation {
             readout,
-            projection,
+            projection: projection.frame,
+            mesh_resources: projection.mesh_resources,
         })
     }
 

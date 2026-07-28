@@ -17,13 +17,16 @@ use voxel_convert::{
 use voxel_object_runtime::{admit_voxel_object, AdmittedVoxelObject, VoxelObjectRuntimeLimits};
 
 use crate::conversion::{publish_project_conversion, PreparedProjectConversion};
+use crate::mesh_resource_cache::{
+    merge_mesh_resource_readouts, publish_mesh_resources, MeshResourceReadout,
+};
 use crate::model::{
     experiment_color, ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial,
     ProjectVoxelObjectInstance,
 };
 use crate::project::{read_bounded, safe_join, save_project, LoadedProject, MAX_SOURCE_BYTES};
 use crate::runtime::{
-    complete_projection, load_runtime_project, project_runtime_with_instance_frame,
+    complete_packed_projection, load_runtime_project, project_runtime_with_instance_frame,
     projection_for_object, resolve_frame, RuntimeProject,
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
@@ -130,6 +133,7 @@ pub struct StudioAdapter {
     open: Option<LoadedProject>,
     runtime: Option<RuntimeProject>,
     projector: VoxelObjectRenderProjector,
+    mesh_resources: Vec<MeshResourceReadout>,
     prepared: Option<PreparedCandidate>,
     playback: StudioVoxelObjectPlayback,
     last_request_id: Option<String>,
@@ -177,7 +181,8 @@ impl StudioAdapter {
             "closeProject" => {
                 self.open = None;
                 self.runtime = None;
-                self.projector = VoxelObjectRenderProjector::new();
+                self.projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+                self.mesh_resources.clear();
                 self.prepared = None;
                 self.playback.clear();
                 Ok(response("projectClosed", &request_id, json!({})))
@@ -354,16 +359,21 @@ impl StudioAdapter {
             prepared.candidate().asset.material_palette.as_slice(),
             self.require_open()?,
         );
-        let projection =
-            candidate_projection(&prepared, &preview.selected_frame.selection, &materials)?;
+        let projection = candidate_projection(
+            &self.require_open()?.root,
+            &prepared,
+            &preview.selected_frame.selection,
+            &materials,
+        )?;
         let response_value = response(
             "voxelObjectConversionPrepared",
             request_id,
             json!({
                 "plan": prepared.plan(),
                 "preview": preview,
-                "projection": projection,
+                "projection": projection.frame,
                 "projectionReadout": projection_readout(self.require_open()?.project.revision + 1, 1),
+                "meshResources": projection.mesh_resources,
             }),
         );
         self.prepared = Some(PreparedCandidate {
@@ -397,6 +407,7 @@ impl StudioAdapter {
         )
         .map_err(AdapterError::conversion)?;
         let projection = candidate_projection(
+            &self.require_open()?.root,
             &candidate.prepared,
             &preview.selected_frame.selection,
             &candidate.materials,
@@ -406,8 +417,9 @@ impl StudioAdapter {
             request_id,
             json!({
                 "preview": preview,
-                "projection": projection,
+                "projection": projection.frame,
                 "projectionReadout": projection_readout(self.require_open()?.project.revision + 1, 1),
+                "meshResources": projection.mesh_resources,
             }),
         ))
     }
@@ -491,17 +503,23 @@ impl StudioAdapter {
             ));
         }
         self.prepared = None;
-        let loaded = self.require_open()?;
+        let loaded = self.require_open()?.clone();
         let runtime = load_runtime_project(&loaded.root, &loaded.relative_path)
             .map_err(AdapterError::project)?;
-        let projection = complete_projection(&runtime).map_err(AdapterError::project)?;
+        let projection = publish_projection(
+            &loaded.root,
+            complete_packed_projection(&runtime).map_err(AdapterError::project)?,
+        )
+        .map_err(AdapterError::project)?;
+        self.mesh_resources = projection.mesh_resources.clone();
         Ok(response(
             "voxelObjectConversionDiscarded",
             request_id,
             json!({
                 "planId": input.plan_id,
-                "projection": projection,
+                "projection": projection.frame,
                 "projectionReadout": projection_readout(loaded.project.revision, loaded.project.instances.len()),
+                "meshResources": projection.mesh_resources,
             }),
         ))
     }
@@ -629,12 +647,17 @@ impl StudioAdapter {
                 &input.command,
             )
             .map_err(AdapterError::studio_playback)?;
+        let additions = publish_mesh_resources(&loaded.root, presentation.mesh_resources)
+            .map_err(AdapterError::project)?;
+        merge_mesh_resource_readouts(&mut self.mesh_resources, additions)
+            .map_err(AdapterError::project)?;
         Ok(response(
             "voxelObjectInstancePreviewed",
             request_id,
             json!({
                 "playback": presentation.readout,
                 "projection": presentation.projection,
+                "meshResources": &self.mesh_resources,
                 "projectionReadout": projection_readout(
                     loaded.project.revision,
                     loaded.project.instances.len(),
@@ -666,12 +689,13 @@ impl StudioAdapter {
     }
 
     fn accept_runtime_project(&mut self, runtime: RuntimeProject) -> Result<Value, AdapterError> {
-        let mut projector = VoxelObjectRenderProjector::new();
-        let readout = project_readout_from_runtime(&runtime, &mut projector)
+        let mut projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, mesh_resources) = project_readout_from_runtime(&runtime, &mut projector)
             .map_err(AdapterError::project)?;
         self.open = Some(runtime.loaded.clone());
         self.runtime = Some(runtime);
         self.projector = projector;
+        self.mesh_resources = mesh_resources;
         self.playback.clear();
         Ok(readout)
     }
@@ -1024,19 +1048,37 @@ fn candidate_materials(
         .collect()
 }
 
+struct PublishedProjection {
+    frame: render_model::RenderFrameDiff,
+    mesh_resources: Vec<MeshResourceReadout>,
+}
+
+fn publish_projection(
+    project_root: &Path,
+    projection: render_projection::VoxelObjectProjectionResult,
+) -> Result<PublishedProjection, String> {
+    let mesh_resources = publish_mesh_resources(project_root, projection.mesh_resources)?;
+    Ok(PublishedProjection {
+        frame: projection.frame,
+        mesh_resources,
+    })
+}
+
 fn candidate_projection(
+    project_root: &Path,
     candidate: &PreparedVoxelObjectConversion,
     selection: &VoxelObjectFrameSelection,
     materials: &[ProjectMaterial],
-) -> Result<render_model::RenderFrameDiff, AdapterError> {
+) -> Result<PublishedProjection, AdapterError> {
     let object = admit_voxel_object(
         &candidate.candidate().asset,
         VoxelObjectRuntimeLimits::default(),
     )
     .map_err(|error| AdapterError::new("voxelObject.runtimeAdmission", error.to_string()))?;
     let frame = runtime_frame(&object, selection)?;
-    projection_for_object(&object, frame, materials, "Voxel object candidate")
-        .map_err(AdapterError::project)
+    let projection = projection_for_object(&object, frame, materials, "Voxel object candidate")
+        .map_err(AdapterError::project)?;
+    publish_projection(project_root, projection).map_err(AdapterError::project)
 }
 
 fn runtime_frame(
@@ -1063,16 +1105,19 @@ fn runtime_frame(
 
 pub fn project_readout(loaded: &LoadedProject) -> Result<Value, String> {
     let runtime = load_runtime_project(&loaded.root, &loaded.relative_path)?;
-    let mut projector = VoxelObjectRenderProjector::new();
-    project_readout_from_runtime(&runtime, &mut projector)
+    let mut projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+    project_readout_from_runtime(&runtime, &mut projector).map(|(readout, _)| readout)
 }
 
 fn project_readout_from_runtime(
     runtime: &RuntimeProject,
     projector: &mut VoxelObjectRenderProjector,
-) -> Result<Value, String> {
+) -> Result<(Value, Vec<MeshResourceReadout>), String> {
     let loaded = &runtime.loaded;
-    let projection = project_runtime_with_instance_frame(runtime, projector, None)?;
+    let projection = publish_projection(
+        &loaded.root,
+        project_runtime_with_instance_frame(runtime, projector, None)?,
+    )?;
     let object_assets = runtime
         .objects
         .values()
@@ -1157,7 +1202,7 @@ fn project_readout_from_runtime(
         .filter_map(|path| std::fs::metadata(path).ok())
         .map(|metadata| metadata.len())
         .sum::<u64>();
-    Ok(json!({
+    let readout = json!({
         "identity": {
             "projectId": loaded.project.project_id,
             "name": loaded.project.name,
@@ -1229,6 +1274,7 @@ fn project_readout_from_runtime(
             "clipIds": loaded.project.conversion.clips.iter().map(|clip| clip.source_clip_name.clone()).collect::<Vec<_>>(),
             "sourcePath": loaded.project.conversion.source_path,
         }],
+        "meshResources": &projection.mesh_resources,
         "loadingBay": {
             "sceneName": "Voxel Lab",
             "entityCount": loaded.project.instances.len(),
@@ -1242,9 +1288,10 @@ fn project_readout_from_runtime(
             "weaponCount": 0,
             "voxelEnvironment": "voxelObjectExperiment",
         },
-        "projection": projection,
+        "projection": projection.frame,
         "projectionReadout": projection_readout(loaded.project.revision, loaded.project.instances.len()),
-    }))
+    });
+    Ok((readout, projection.mesh_resources))
 }
 
 fn projection_readout(source_revision: u64, instances: usize) -> Value {

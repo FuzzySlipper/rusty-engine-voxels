@@ -3,6 +3,7 @@ mod base64;
 pub mod churn;
 pub mod conversion;
 pub mod format_study;
+mod mesh_resource_cache;
 pub mod model;
 pub mod project;
 pub mod provider_pin;

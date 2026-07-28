@@ -160,6 +160,13 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
         opened["project"]["animatedMeshResources"][0]["clipIds"],
         json!(["idle", "run", "jump"])
     );
+    assert_eq!(
+        opened["project"]["meshResources"].as_array().map(Vec::len),
+        Some(1)
+    );
+    let opened_json = serde_json::to_string(&opened).expect("open response should serialize");
+    assert!(opened_json.contains("\"kind\":\"resource\""));
+    assert!(!opened_json.contains("\"positions\":["));
 
     let unsupported = adapter.dispatch(json!({
         "type": "createSceneObject",
@@ -317,10 +324,15 @@ fn reopened_applied_instance_playback_is_transient_and_rust_timed() {
     let sampled_response_bytes = serde_json::to_vec(&sampled)
         .expect("sampled response should serialize")
         .len();
-    assert!(
-        sampled_response_bytes * 100 < reopened_response_bytes,
-        "steady-state playback should be at least 100x smaller than the complete project response"
+    assert!(sampled_response_bytes < 4 * 1024);
+    assert!(sampled_response_bytes < reopened_response_bytes);
+    assert_eq!(
+        sampled["meshResources"], reopened["project"]["meshResources"],
+        "steady-state playback should retain only the compact canonical manifest"
     );
+    assert!(!serde_json::to_string(&sampled)
+        .expect("sample response should serialize")
+        .contains("\"positions\":["));
 
     let stopped = adapter
         .dispatch(json!({
