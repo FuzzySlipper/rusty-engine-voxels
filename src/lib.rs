@@ -6,6 +6,7 @@ pub mod format_study;
 pub mod kit;
 mod mesh_resource_cache;
 pub mod model;
+pub mod pose;
 pub mod project;
 pub mod provider_pin;
 pub mod quality;

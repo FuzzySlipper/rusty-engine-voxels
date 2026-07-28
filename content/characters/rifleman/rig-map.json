@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "bindings": [
+    { "partId": "head", "boneNodeIndex": 26 },
+    { "partId": "torso", "boneNodeIndex": 23 },
+    { "partId": "pelvis", "boneNodeIndex": 21 },
+    { "partId": "left_upper_arm", "boneNodeIndex": 29 },
+    { "partId": "left_lower_arm", "boneNodeIndex": 30 },
+    { "partId": "right_upper_arm", "boneNodeIndex": 40 },
+    { "partId": "right_lower_arm", "boneNodeIndex": 41 },
+    { "partId": "left_upper_leg", "boneNodeIndex": 50 },
+    { "partId": "left_lower_leg", "boneNodeIndex": 51 },
+    { "partId": "right_upper_leg", "boneNodeIndex": 55 },
+    { "partId": "right_lower_leg", "boneNodeIndex": 56 },
+    { "partId": "rifle", "boneNodeIndex": 42 },
+    { "partId": "backpack", "boneNodeIndex": 23 }
+  ]
+}
