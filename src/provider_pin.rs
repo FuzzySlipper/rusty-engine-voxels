@@ -109,8 +109,8 @@ mod tests {
     fn checked_pin_is_closed_and_exact() {
         let readout = checked_provider_pin().expect("checked provider pin should be coherent");
         assert_eq!(readout.commit, ENGINE_REVISION);
-        assert_eq!(readout.manifest_dependency_count, 5);
-        assert!(readout.locked_provider_package_count >= 5);
+        assert_eq!(readout.manifest_dependency_count, 6);
+        assert!(readout.locked_provider_package_count >= 6);
     }
 
     #[test]

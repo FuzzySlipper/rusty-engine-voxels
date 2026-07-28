@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rusty_engine_voxels::adapter::StudioAdapter;
 use rusty_engine_voxels::conversion::prepare_project_conversion;
+use rusty_engine_voxels::format_study::run_format_study;
 use rusty_engine_voxels::project::load_project;
 use rusty_engine_voxels::runtime::verify_runtime_project;
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
@@ -508,4 +509,48 @@ fn high_fidelity_object_loads_plays_and_projects() {
             > 1,
         "explicit-time playback should traverse more than one voxel mesh"
     );
+}
+
+#[test]
+fn format_study_prices_candidate_encodings_against_real_corpus() {
+    let study = run_format_study(&root(), HIGH_FIDELITY_PROJECT_FILE)
+        .expect("format study should admit the checked high-fidelity object");
+
+    assert_eq!(study.unique_mesh_count, 14);
+    assert_eq!(study.meshes.len(), 14);
+    assert!(study.canonical_object_bytes > 12_000_000);
+
+    // The packed stream envelope is exact: 4/3 of raw LE bytes plus envelope.
+    let raw: usize = study
+        .meshes
+        .iter()
+        .map(|mesh| {
+            (usize::try_from(mesh.vertices).unwrap() * 6 + usize::try_from(mesh.indices).unwrap())
+                * 4
+        })
+        .sum();
+    let expected_packed: usize = study
+        .meshes
+        .iter()
+        .map(|mesh| {
+            (usize::try_from(mesh.vertices).unwrap() * 6 + usize::try_from(mesh.indices).unwrap())
+                * 4
+        })
+        .map(|bytes| bytes.div_ceil(3) * 4 + 96)
+        .sum();
+    assert_eq!(study.streams.packed_base64_bytes, expected_packed);
+    assert!(raw > 0);
+    assert!(study.streams.binary_reference_bytes < study.streams.packed_base64_bytes);
+    assert!(study.streams.binary_reference_bytes < study.streams.expanded_json_bytes);
+
+    // Flipbook frames genuinely deform: most vertex data changes pose-to-pose,
+    // index topology barely does. The harness must report that honestly.
+    let delta = study.delta.expect("flipbook should produce delta evidence");
+    assert!(delta.average_changed_vertex_fraction > 0.5);
+    assert!(delta.average_changed_index_fraction < 0.05);
+    assert!(delta.binary_savings_fraction > 0.25);
+    // Timing passes are recorded, not thresholded (machine-specific).
+    assert!(study.timing.expanded_json_parse_microseconds > 0);
+    assert!(study.timing.packed_base64_bytes_decoded > 0);
+    assert!(!study.interpretation_limits.is_empty());
 }

@@ -67,6 +67,20 @@ and 34.5 MB unique mesh payload take about 2.6 seconds to admit and mesh in this
 run. See [`docs/quality-report.md`](docs/quality-report.md) for the measured tradeoff and explicit
 limits.
 
+## Voxel data-plane format study
+
+`voxel-lab format-study` prices the checked corpus's unique flipbook meshes against candidate
+payload encodings (expanded JSON, packed base64, binary reference, mesh-delta) plus parse/decode
+timings, producing checked evidence for the upstream voxel data-plane decision (rusty-engine #6331).
+See `docs/design.md` for findings and `evidence/format-study-{baseline,high-fidelity}.json` for the
+numbers.
+
+```bash
+cargo run --locked --bin voxel-lab -- format-study \
+  --project content/projects/retro-character-high-fidelity.project.json \
+  --report evidence/format-study-high-fidelity.json
+```
+
 ## Commands
 
 ```bash

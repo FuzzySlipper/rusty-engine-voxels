@@ -25,6 +25,7 @@ render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
+svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "ef9af77932a83dc3c441ef5f1eef9b752e16de6e" }
 voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "ef9af77932a83dc3c441ef5f1eef9b752e16de6e" }
 voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "ef9af77932a83dc3c441ef5f1eef9b752e16de6e" }
 voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "ef9af77932a83dc3c441ef5f1eef9b752e16de6e" }

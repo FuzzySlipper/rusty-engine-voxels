@@ -471,6 +471,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "svc-mesh",
  "voxel-asset",
  "voxel-convert",
  "voxel-object-runtime",

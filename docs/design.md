@@ -74,3 +74,36 @@ animation ergonomics.
 Promote a mechanism upstream only when the experiment demonstrates that it is reusable Engine
 behavior. Keep subjective art-direction defaults and corpus-specific fixes here unless several
 concrete consumers prove otherwise.
+
+## Voxel data-plane format study
+
+The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked
+corpus against candidate mesh-payload encodings so the upstream voxel data-plane decision (rusty-engine
+#6331) starts from corpus evidence rather than preference. It is deliberately downstream: it changes
+no wire or durable format, only prices them against real admitted meshes.
+
+For each project's unique flipbook meshes it reports four shapes — the current expanded JSON number
+arrays, a packed base64 typed-array envelope, a binary lower-bound reference, and a mesh-delta
+(base-plus-difference) accounting — plus browser-relevant parse/decode timings. Evidence is checked
+in `evidence/format-study-{baseline,high-fidelity}.json`.
+
+Findings on the checked corpus, with the harness's stated interpretation limits:
+
+- **Packed typed-array payloads are not a blanket byte win.** Positions/normals here are cell-quantized,
+  so many coordinates are small integers that serialize to 1–3 JSON bytes — cheaper than 4 packed bytes
+  plus base64's 4/3 overhead. At the baseline grid packed base64 is a wash (1.01× expanded JSON); at the
+  high-fidelity grid it is only ~0.84×. Full binary is a consistent ~0.63–0.76× lower bound. The leverage
+  of packing is primarily parse cost and payload structure, not raw bytes.
+- **Frame-to-frame vertex data barely overlaps.** Across the 14 unique meshes, ~64–67% of vertex
+  attribute values change between poses and no mesh is fully shared with the base. Whole-mesh delta
+  encoding does not pay for itself under text accounting (net-negative) and saves only ~43–45% under
+  binary accounting. Vertex deduplication across frames is a dead end for this corpus.
+- **Index topology is nearly static** (~0.7–3.6% changed). If a delta scheme is pursued, it should key on
+  shared index streams, not shared vertex data.
+- **The real cliff is total transferred volume per define/open,** not per-value cost — the 54.5 MB
+  `openProject` response that trips Studio's 32 MiB cap (#6329) is the same data regardless of text vs.
+  packed encoding. The durable fix is architectural (resource-referenced or chunked mesh payloads), with
+  encoding as a secondary multiplier.
+
+These measurements constrain, but do not by themselves decide, the upstream format; the harness exists so
+that decision and its successor measurements share one corpus.

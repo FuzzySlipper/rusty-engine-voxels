@@ -6,6 +6,7 @@ use rusty_engine_voxels::conversion::{
     convert_project, prepare_project_conversion, publish_project_conversion, report_path,
     ConversionEvidence,
 };
+use rusty_engine_voxels::format_study::run_format_study;
 use rusty_engine_voxels::project::atomic_write;
 use rusty_engine_voxels::quality::VoxelQualityEvidence;
 use rusty_engine_voxels::runtime::{verify_runtime_project, RuntimeEvidence};
@@ -76,8 +77,15 @@ fn run() -> Result<(), String> {
             write_json(&path, &evidence)?;
             print_json(&evidence)?;
         }
+        "format-study" => {
+            let study = run_format_study(&root, &project)?;
+            if let Some(path) = report {
+                write_json(&path, &study)?;
+            }
+            print_json(&study)?;
+        }
         _ => return Err(
-            "usage: voxel-lab [convert|load|verify] [--root PATH] [--project PATH] [--report PATH]"
+            "usage: voxel-lab [convert|load|verify|format-study] [--root PATH] [--project PATH] [--report PATH]"
                 .to_owned(),
         ),
     }

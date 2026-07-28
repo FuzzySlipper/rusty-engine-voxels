@@ -1,0 +1,179 @@
+{
+  "engineRevision": "ef9af77932a83dc3c441ef5f1eef9b752e16de6e",
+  "projectFile": "content/projects/voxel-lab.project.json",
+  "projectHash": "sha256:398443febf02f5f2a660fac09bacc172392bf1aa9fd1d87f6b7ccc3b757b3b6c",
+  "assetId": "voxel-object/retro-character",
+  "contentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c",
+  "uniqueMeshCount": 14,
+  "canonicalObjectBytes": 656537,
+  "streams": {
+    "expandedJsonBytes": 2391496,
+    "packedBase64Bytes": 2408064,
+    "binaryReferenceBytes": 1806048
+  },
+  "delta": {
+    "baseMeshIndex": 0,
+    "fullySharedMeshes": 0,
+    "averageChangedVertexFraction": 0.6356142871605784,
+    "averageChangedIndexFraction": 0.035948669365406985,
+    "expandedJsonBytes": 2767394,
+    "binaryReferenceBytes": 992748,
+    "jsonSavingsFraction": -0.15718111173926275,
+    "binarySavingsFraction": 0.4503202572689098
+  },
+  "timing": {
+    "repetitions": 3,
+    "expandedJsonParseMicroseconds": 305145,
+    "packedBase64DecodeMicroseconds": 283408,
+    "packedBase64BytesDecoded": 2406720
+  },
+  "meshes": [
+    {
+      "meshIndex": 0,
+      "vertices": 4152,
+      "indices": 6228,
+      "streams": {
+        "expandedJsonBytes": 165542,
+        "packedBase64Bytes": 166176,
+        "binaryReferenceBytes": 124632
+      }
+    },
+    {
+      "meshIndex": 1,
+      "vertices": 4256,
+      "indices": 6384,
+      "streams": {
+        "expandedJsonBytes": 169010,
+        "packedBase64Bytes": 170336,
+        "binaryReferenceBytes": 127752
+      }
+    },
+    {
+      "meshIndex": 2,
+      "vertices": 4256,
+      "indices": 6384,
+      "streams": {
+        "expandedJsonBytes": 168974,
+        "packedBase64Bytes": 170336,
+        "binaryReferenceBytes": 127752
+      }
+    },
+    {
+      "meshIndex": 3,
+      "vertices": 4240,
+      "indices": 6360,
+      "streams": {
+        "expandedJsonBytes": 168334,
+        "packedBase64Bytes": 169696,
+        "binaryReferenceBytes": 127272
+      }
+    },
+    {
+      "meshIndex": 4,
+      "vertices": 4208,
+      "indices": 6312,
+      "streams": {
+        "expandedJsonBytes": 167138,
+        "packedBase64Bytes": 168416,
+        "binaryReferenceBytes": 126312
+      }
+    },
+    {
+      "meshIndex": 5,
+      "vertices": 4256,
+      "indices": 6384,
+      "streams": {
+        "expandedJsonBytes": 169042,
+        "packedBase64Bytes": 170336,
+        "binaryReferenceBytes": 127752
+      }
+    },
+    {
+      "meshIndex": 6,
+      "vertices": 4272,
+      "indices": 6408,
+      "streams": {
+        "expandedJsonBytes": 169598,
+        "packedBase64Bytes": 170976,
+        "binaryReferenceBytes": 128232
+      }
+    },
+    {
+      "meshIndex": 7,
+      "vertices": 4256,
+      "indices": 6384,
+      "streams": {
+        "expandedJsonBytes": 169006,
+        "packedBase64Bytes": 170336,
+        "binaryReferenceBytes": 127752
+      }
+    },
+    {
+      "meshIndex": 8,
+      "vertices": 4480,
+      "indices": 6720,
+      "streams": {
+        "expandedJsonBytes": 178758,
+        "packedBase64Bytes": 179296,
+        "binaryReferenceBytes": 134472
+      }
+    },
+    {
+      "meshIndex": 9,
+      "vertices": 4504,
+      "indices": 6756,
+      "streams": {
+        "expandedJsonBytes": 179718,
+        "packedBase64Bytes": 180256,
+        "binaryReferenceBytes": 135192
+      }
+    },
+    {
+      "meshIndex": 10,
+      "vertices": 4368,
+      "indices": 6552,
+      "streams": {
+        "expandedJsonBytes": 173534,
+        "packedBase64Bytes": 174816,
+        "binaryReferenceBytes": 131112
+      }
+    },
+    {
+      "meshIndex": 11,
+      "vertices": 4272,
+      "indices": 6408,
+      "streams": {
+        "expandedJsonBytes": 169478,
+        "packedBase64Bytes": 170976,
+        "binaryReferenceBytes": 128232
+      }
+    },
+    {
+      "meshIndex": 12,
+      "vertices": 4424,
+      "indices": 6636,
+      "streams": {
+        "expandedJsonBytes": 175818,
+        "packedBase64Bytes": 177056,
+        "binaryReferenceBytes": 132792
+      }
+    },
+    {
+      "meshIndex": 13,
+      "vertices": 4224,
+      "indices": 6336,
+      "streams": {
+        "expandedJsonBytes": 167546,
+        "packedBase64Bytes": 169056,
+        "binaryReferenceBytes": 126792
+      }
+    }
+  ],
+  "interpretationLimits": [
+    "byte counts cover mesh attribute streams (positions, normals, indices) plus a minimal per-mesh header; full response/document framing is excluded and adds a small constant overhead per shape",
+    "binary-reference is a lower-bound estimate (raw little-endian streams + 64-byte header), not a proposed schema",
+    "packed-base64 keeps JSON transport (control channel) with typed-array-friendly payloads; decode timing uses this repository's safe base64 as a proxy — a native browser atob path would be faster",
+    "mesh-delta uses the first mesh as base; real encodings would choose the base per object and may differ modestly",
+    "browser JSON.parse cost is approximated by a serde_json parse of the same shape; relative, not absolute, comparison is the intent"
+  ]
+}
