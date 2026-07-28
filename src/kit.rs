@@ -146,9 +146,67 @@ pub struct KitPart {
     pub sockets: Vec<Socket>,
     /// Palette group names this part draws from (must exist in the kit).
     pub palette_groups: Vec<String>,
+    /// How much this part may deform during posing (see M2/M3).
+    pub deformation_budget: DeformationBudget,
+    /// Regions of this part that may not be removed or carved by fusion/cleanup.
+    #[serde(default)]
+    pub protected_regions: Vec<ProtectedRegion>,
     /// Optional mirror part for symmetry tooling (e.g. right_lower_arm).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symmetry_partner: Option<String>,
+}
+
+/// How much a part may deform near joints during posing. All fractions are
+/// relative to the part's own measure (length along its primary axis, or
+/// total volume) and must be within [0, 1].
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeformationBudget {
+    /// Maximum allowed change in the part's length along its primary axis.
+    pub max_length_change: f64,
+    /// Maximum allowed change in the part's total volume.
+    pub max_volume_change: f64,
+    /// Whether joint sockets may compress (shorten) under posing.
+    pub allow_joint_compression: bool,
+}
+
+impl DeformationBudget {
+    fn validate(&self, part_id: &str) -> Result<(), KitError> {
+        for (name, value) in [
+            ("maxLengthChange", self.max_length_change),
+            ("maxVolumeChange", self.max_volume_change),
+        ] {
+            if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                return Err(KitError::validation(format!(
+                    "part {part_id}: deformationBudget.{name} must be within [0, 1], got {value}"
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// An axis-aligned region of a part (in part-local cells, inclusive) that may
+/// not be removed or carved by joint fusion or cleanup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProtectedRegion {
+    pub min: [i64; 3],
+    pub max: [i64; 3],
+}
+
+impl ProtectedRegion {
+    fn validate(&self, part_id: &str) -> Result<(), KitError> {
+        for axis in 0..3 {
+            if self.min[axis] > self.max[axis] {
+                return Err(KitError::validation(format!(
+                    "part {part_id}: protectedRegion min must be <= max on every axis, got {:?}..{:?}",
+                    self.min, self.max
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// One occupied cell in a part, with its material slot.
@@ -212,9 +270,15 @@ impl KitPart {
         if let Some(partner) = &self.symmetry_partner {
             require_identity(partner, "part.symmetryPartner").map_err(KitError::validation)?;
         }
+        self.deformation_budget.validate(&self.id)?;
+        for region in &self.protected_regions {
+            region.validate(&self.id)?;
+        }
         Ok(())
     }
 
+    /// The set of palette-group names this part declares. Used by the kit to
+    /// check that a part's cells only use slots from its declared groups.
     pub fn socket(&self, id: &str) -> Option<&Socket> {
         self.sockets.iter().find(|socket| socket.id == id)
     }
@@ -240,6 +304,23 @@ pub struct IdentityInvariants {
     /// Sockets that must remain present and usable across all frames.
     #[serde(default)]
     pub required_sockets: Vec<String>,
+    /// Dimensions (in cells) that must hold for the whole character or a named
+    /// part: `<partId-or-"character">.<axis>` -> `[min, max]`. An axis is one of
+    /// `width` (X), `height` (Y), or `depth` (Z).
+    #[serde(default)]
+    pub fixed_dimensions: Vec<FixedDimension>,
+}
+
+/// A required dimension for the whole character or one part, on one axis.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FixedDimension {
+    /// The part id, or the reserved value `character` for the whole assembly.
+    pub subject: String,
+    /// One of `width` (X), `height` (Y), `depth` (Z).
+    pub axis: String,
+    /// Inclusive `[min, max]` extent in cells along that axis.
+    pub range: [i64; 2],
 }
 
 impl IdentityInvariants {
@@ -258,6 +339,22 @@ impl IdentityInvariants {
         }
         for socket in &self.required_sockets {
             parse_mate(socket).map_err(KitError::validation)?;
+        }
+        for dimension in &self.fixed_dimensions {
+            require_identity(&dimension.subject, "fixedDimension.subject")
+                .map_err(KitError::validation)?;
+            if !matches!(dimension.axis.as_str(), "width" | "height" | "depth") {
+                return Err(KitError::validation(format!(
+                    "fixedDimension.axis must be width|height|depth, got {}",
+                    dimension.axis
+                )));
+            }
+            if dimension.range[0] > dimension.range[1] {
+                return Err(KitError::validation(format!(
+                    "fixedDimension.range must be [min, max], got {:?}",
+                    dimension.range
+                )));
+            }
         }
         Ok(())
     }
@@ -460,6 +557,10 @@ impl VoxelKit {
                 )));
             }
         }
+
+        // Identity-intent value checks (R6335-1): every declared invariant must
+        // hold against the canonical kit, not merely parse.
+        self.validate_identity_values(&part_ids)?;
         Ok(())
     }
 
@@ -470,6 +571,95 @@ impl VoxelKit {
     /// Total occupied canonical cells across all parts.
     pub fn total_cells(&self) -> usize {
         self.parts.iter().map(|part| part.cells.len()).sum()
+    }
+
+    /// Validate that declared identity intent actually holds against the
+    /// canonical kit (R6335-1): protected parts resolve, palette-group slot
+    /// usage matches declarations, neutral facing matches the convention, the
+    /// volume range admits the assembled volume, and fixed-dimension subjects
+    /// resolve. Each failure names the offending declaration.
+    fn validate_identity_values(&self, part_ids: &BTreeSet<&str>) -> Result<(), KitError> {
+        // protected_parts must name real parts.
+        for protected in &self.invariants.protected_parts {
+            if !part_ids.contains(protected.as_str()) {
+                return Err(KitError::validation(format!(
+                    "invariants.protectedParts names unknown part {protected}"
+                )));
+            }
+        }
+
+        // A part's cells may only use slots from its declared palette groups.
+        let group_slots: BTreeMap<&str, BTreeSet<u16>> = self
+            .palette
+            .iter()
+            .map(|group| {
+                (
+                    group.name.as_str(),
+                    group.slots.iter().map(|slot| slot.slot).collect(),
+                )
+            })
+            .collect();
+        for part in &self.parts {
+            let allowed: BTreeSet<u16> = part
+                .palette_groups
+                .iter()
+                .flat_map(|group| group_slots.get(group.as_str()).cloned().unwrap_or_default())
+                .collect();
+            for cell in &part.cells {
+                if !allowed.contains(&cell.material_slot) {
+                    return Err(KitError::validation(format!(
+                        "part {}: cell {:?} uses slot {} not in its declared palette groups {:?}",
+                        part.id, cell.coordinate, cell.material_slot, part.palette_groups
+                    )));
+                }
+            }
+        }
+
+        // neutralFacing must be a unit axis consistent with the declared
+        // forward axis.
+        let facing = self.convention.neutral_facing;
+        let magnitude = facing[0].abs() + facing[1].abs() + facing[2].abs();
+        if magnitude != 1 {
+            return Err(KitError::validation(format!(
+                "convention.neutralFacing must be a single unit axis, got {facing:?}"
+            )));
+        }
+        let forward_matches = (self.convention.forward_axis == "-Z" && facing == [0, 0, -1])
+            || (self.convention.forward_axis == "+Z" && facing == [0, 0, 1])
+            || (self.convention.forward_axis == "-X" && facing == [-1, 0, 0])
+            || (self.convention.forward_axis == "+X" && facing == [1, 0, 0])
+            || (self.convention.forward_axis == "-Y" && facing == [0, -1, 0])
+            || (self.convention.forward_axis == "+Y" && facing == [0, 1, 0]);
+        if !forward_matches {
+            return Err(KitError::validation(format!(
+                "convention.neutralFacing {facing:?} does not match forwardAxis {}",
+                self.convention.forward_axis
+            )));
+        }
+
+        // volumeRange must admit the assembled character volume.
+        if let Some([lo, hi]) = self.invariants.volume_range {
+            let assembled = assemble_neutral_unchecked(self).map_err(|e| {
+                KitError::validation(format!("cannot assemble to check volume: {e}"))
+            })?;
+            let volume = assembled.len() as u64;
+            if volume < lo || volume > hi {
+                return Err(KitError::validation(format!(
+                    "assembled volume {volume} is outside invariants.volumeRange [{lo}, {hi}]"
+                )));
+            }
+        }
+
+        // fixed_dimensions subjects must resolve (a part id or `character`).
+        for dimension in &self.invariants.fixed_dimensions {
+            if dimension.subject != "character" && !part_ids.contains(dimension.subject.as_str()) {
+                return Err(KitError::validation(format!(
+                    "fixedDimension.subject {} is not a part id or 'character'",
+                    dimension.subject
+                )));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -512,6 +702,11 @@ impl AssembledFrame {
         Some((lo, hi))
     }
     /// Deterministic content fingerprint for regeneration-stability tests.
+    ///
+    /// Covers geometry, material, *and* provenance (R6335-3): two frames with
+    /// identical occupied cells and materials but different `VoxelOrigin`
+    /// ownership (e.g. a different overlap winner) must not share a pin, since
+    /// provenance is the stated basis for later drift gates.
     pub fn fingerprint(&self) -> u64 {
         let mut hash = 0xcbf2_9ce4_8422_2325u64;
         for (coord, voxel) in &self.voxels {
@@ -521,6 +716,12 @@ impl AssembledFrame {
             }
             hash ^= u64::from(voxel.material_slot);
             hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+            // Fold in the closed origin identity.
+            let VoxelOrigin::Canonical(origin) = voxel.origin;
+            for identity in [origin.part_index, origin.voxel_index] {
+                hash ^= u64::from(identity);
+                hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+            }
         }
         hash
     }
@@ -538,33 +739,23 @@ impl AssembledFrame {
 /// aligning their positions, with orientation handled by later milestones.
 pub fn assemble_neutral(kit: &VoxelKit) -> Result<AssembledFrame, KitError> {
     kit.validate()?;
+    assemble_neutral_unchecked(kit)
+}
 
+/// The assembly core, without re-running validation. Used internally where the
+/// kit is already known-valid (e.g. the volume-range check inside validation,
+/// which would otherwise recurse).
+fn assemble_neutral_unchecked(kit: &VoxelKit) -> Result<AssembledFrame, KitError> {
     // Resolve placement order via mate dependencies (parts referenced by a
     // mate must be placed before the part that mates to them).
     let order = placement_order(kit)?;
 
-    // placed_part -> map of socketId -> world position of that socket.
-    let mut placed_sockets: BTreeMap<usize, BTreeMap<String, [f64; 3]>> = BTreeMap::new();
     // part_index -> world translation applied to its local coordinates.
     let mut translations: BTreeMap<usize, [i64; 3]> = BTreeMap::new();
 
     for &part_index in &order {
-        let part = &kit.parts[part_index];
-        let translation = resolve_translation(kit, part_index, &placed_sockets, &translations)?;
+        let translation = resolve_translation(kit, part_index, &translations)?;
         translations.insert(part_index, translation);
-        // Record this part's socket world positions for dependents.
-        let mut world = BTreeMap::new();
-        for socket in &part.sockets {
-            world.insert(
-                socket.id.clone(),
-                [
-                    socket.position[0] + translation[0] as f64,
-                    socket.position[1] + translation[1] as f64,
-                    socket.position[2] + translation[2] as f64,
-                ],
-            );
-        }
-        placed_sockets.insert(part_index, world);
     }
 
     // Emit cells with overlap resolution (earlier part wins) and provenance.
@@ -674,12 +865,17 @@ fn placement_order(kit: &VoxelKit) -> Result<Vec<usize>, KitError> {
 }
 
 /// Determine the world translation for one part. Root parts translate so their
-/// pivot sits at the ground plane at the kit origin; mated parts translate so
-/// their mating socket coincides with the mate's world socket position.
+/// pivot sits at the ground plane at the kit origin. A mated part must satisfy
+/// *every* declared mate: each mate yields a candidate translation, and the
+/// part is placed only if all candidates agree on a single integer-cell
+/// translation. A mate whose socket positions are not representable on the
+/// integer lattice (a fractional delta) or two mates that disagree are
+/// assembly errors naming the offending part and sockets — sockets/pivots are
+/// load-bearing for M2/M3, so a mate that does not actually coincide is never
+/// silently rounded.
 fn resolve_translation(
     kit: &VoxelKit,
     part_index: usize,
-    placed_sockets: &BTreeMap<usize, BTreeMap<String, [f64; 3]>>,
     translations: &BTreeMap<usize, [i64; 3]>,
 ) -> Result<[i64; 3], KitError> {
     let part = &kit.parts[part_index];
@@ -690,43 +886,70 @@ fn resolve_translation(
         .map(|(i, p)| (p.id.as_str(), i))
         .collect();
 
-    // Find the first mated socket to anchor this part.
+    let mut candidate: Option<[i64; 3]> = None;
     for socket in &part.sockets {
-        if let Some(mate) = &socket.mate {
-            let (mate_part_id, mate_socket_id) = parse_mate(mate).map_err(KitError::validation)?;
-            let &mate_index = index_of.get(mate_part_id).ok_or_else(|| {
-                KitError::Assembly(format!(
-                    "part {}: mate part {mate_part_id} not placed",
-                    part.id
-                ))
-            })?;
-            let mate_translation = translations.get(&mate_index).ok_or_else(|| {
-                KitError::Assembly(format!(
-                    "part {}: mate part {mate_part_id} has no translation",
-                    part.id
-                ))
-            })?;
-            let mate_part = &kit.parts[mate_index];
-            let mate_socket = mate_part.socket(mate_socket_id).ok_or_else(|| {
-                KitError::Assembly(format!(
-                    "part {}: mate socket {mate_socket_id} missing on {mate_part_id}",
-                    part.id
-                ))
-            })?;
-            let _ = placed_sockets; // socket world positions are derived from translations.
-                                    // World position of mate socket:
-            let mate_world = [
-                mate_socket.position[0] + mate_translation[0] as f64,
-                mate_socket.position[1] + mate_translation[1] as f64,
-                mate_socket.position[2] + mate_translation[2] as f64,
-            ];
-            // Translate this part so its socket lands on the mate socket.
-            return Ok([
-                (mate_world[0] - socket.position[0]).round() as i64,
-                (mate_world[1] - socket.position[1]).round() as i64,
-                (mate_world[2] - socket.position[2]).round() as i64,
-            ]);
+        let Some(mate) = &socket.mate else {
+            continue;
+        };
+        let (mate_part_id, mate_socket_id) = parse_mate(mate).map_err(KitError::validation)?;
+        let &mate_index = index_of.get(mate_part_id).ok_or_else(|| {
+            KitError::Assembly(format!(
+                "part {} socket {}: mate part {mate_part_id} not placed",
+                part.id, socket.id
+            ))
+        })?;
+        let mate_translation = translations.get(&mate_index).ok_or_else(|| {
+            KitError::Assembly(format!(
+                "part {} socket {}: mate part {mate_part_id} has no translation",
+                part.id, socket.id
+            ))
+        })?;
+        let mate_part = &kit.parts[mate_index];
+        let mate_socket = mate_part.socket(mate_socket_id).ok_or_else(|| {
+            KitError::Assembly(format!(
+                "part {} socket {}: mate socket {mate_socket_id} missing on {mate_part_id}",
+                part.id, socket.id
+            ))
+        })?;
+        // World position of the mate socket:
+        let mate_world = [
+            mate_socket.position[0] + mate_translation[0] as f64,
+            mate_socket.position[1] + mate_translation[1] as f64,
+            mate_socket.position[2] + mate_translation[2] as f64,
+        ];
+        let delta = [
+            mate_world[0] - socket.position[0],
+            mate_world[1] - socket.position[1],
+            mate_world[2] - socket.position[2],
+        ];
+        // The translation must land exactly on the integer lattice; a
+        // fractional delta means the declared sockets cannot coincide.
+        let mut mate_candidate = [0i64; 3];
+        for axis in 0..3 {
+            let rounded = delta[axis].round();
+            if (delta[axis] - rounded).abs() > 1e-9 {
+                return Err(KitError::Assembly(format!(
+                    "part {} socket {}: mate {} requires a non-integral translation ({delta:?}); \
+                     sockets are not lattice-representable",
+                    part.id, socket.id, mate
+                )));
+            }
+            mate_candidate[axis] = rounded as i64;
         }
+        match candidate {
+            None => candidate = Some(mate_candidate),
+            Some(existing) if existing == mate_candidate => {}
+            Some(existing) => {
+                return Err(KitError::Assembly(format!(
+                    "part {}: contradictory mates — first mate yields translation {:?} but socket {} yields {:?}",
+                    part.id, existing, socket.id, mate_candidate
+                )));
+            }
+        }
+    }
+
+    if let Some(translation) = candidate {
+        return Ok(translation);
     }
     // Root: place pivot at ground plane, centered on origin in X/Z.
     Ok([
@@ -814,6 +1037,14 @@ mod tests {
         }
     }
 
+    fn budget() -> DeformationBudget {
+        DeformationBudget {
+            max_length_change: 0.05,
+            max_volume_change: 0.1,
+            allow_joint_compression: true,
+        }
+    }
+
     fn two_part_kit() -> VoxelKit {
         VoxelKit {
             schema_version: KIT_SCHEMA_VERSION,
@@ -844,6 +1075,8 @@ mod tests {
                         mate: None,
                     }],
                     palette_groups: vec!["body".to_owned()],
+                    deformation_budget: budget(),
+                    protected_regions: vec![],
                     symmetry_partner: None,
                 },
                 KitPart {
@@ -859,6 +1092,8 @@ mod tests {
                         mate: Some("torso.neck".to_owned()),
                     }],
                     palette_groups: vec!["body".to_owned()],
+                    deformation_budget: budget(),
+                    protected_regions: vec![],
                     symmetry_partner: None,
                 },
             ],
@@ -867,6 +1102,7 @@ mod tests {
                 protected_parts: vec![],
                 volume_range: None,
                 required_sockets: vec![],
+                fixed_dimensions: vec![],
             },
         }
     }
@@ -890,6 +1126,33 @@ mod tests {
         match head_voxel.origin {
             VoxelOrigin::Canonical(id) => assert_eq!(id.part_index, 1),
         }
+    }
+
+    #[test]
+    fn fingerprint_distinguishes_provenance_drift() {
+        // Two frames with identical geometry and materials but different
+        // VoxelOrigin ownership must not share a fingerprint (R6335-3).
+        let origin_a = VoxelOrigin::Canonical(CanonicalVoxelId {
+            part_index: 0,
+            voxel_index: 0,
+        });
+        let origin_b = VoxelOrigin::Canonical(CanonicalVoxelId {
+            part_index: 1,
+            voxel_index: 0,
+        });
+        let make = |origin: VoxelOrigin| AssembledFrame {
+            voxels: [(
+                [0, 0, 0],
+                AssembledVoxel {
+                    coordinate: [0, 0, 0],
+                    material_slot: 1,
+                    origin,
+                },
+            )]
+            .into_iter()
+            .collect(),
+        };
+        assert_ne!(make(origin_a).fingerprint(), make(origin_b).fingerprint());
     }
 
     #[test]
@@ -926,6 +1189,168 @@ mod tests {
     fn rejects_unknown_palette_group() {
         let mut kit = two_part_kit();
         kit.parts[0].palette_groups = vec!["nope".to_owned()];
+        assert!(kit.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_fractional_mate_translation() {
+        // Head's neck socket at a fractional position that cannot land on the
+        // integer lattice when mated to torso.neck.
+        let mut kit = two_part_kit();
+        kit.parts[1].sockets[0].position = [0.5, 0.0, 0.0];
+        let result = assemble_neutral(&kit);
+        match result {
+            Err(KitError::Assembly(message)) => {
+                assert!(
+                    message.contains("non-integral") || message.contains("lattice"),
+                    "expected lattice error, got: {message}"
+                );
+            }
+            other => panic!("expected assembly error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn two_consistent_mates_assemble() {
+        // Give the head a second mate that agrees with the first (same target
+        // socket), which should assemble fine.
+        let mut kit = two_part_kit();
+        kit.parts[1].sockets.push(Socket {
+            id: "neck_alt".to_owned(),
+            position: [0.0, 0.0, 0.0],
+            forward: [0.0, -1.0, 0.0],
+            radius: 2.0,
+            mate: Some("torso.neck".to_owned()),
+        });
+        assert!(assemble_neutral(&kit).is_ok());
+    }
+
+    #[test]
+    fn two_contradictory_mates_are_rejected() {
+        // The head mates its neck to torso.neck AND to a torso socket at a
+        // different location; the two candidate translations disagree.
+        let mut kit = two_part_kit();
+        kit.parts[0].sockets.push(Socket {
+            id: "crown".to_owned(),
+            position: [0.0, 4.0, 0.0],
+            forward: [0.0, 1.0, 0.0],
+            radius: 2.0,
+            mate: None,
+        });
+        kit.parts[1].sockets.push(Socket {
+            id: "neck_alt".to_owned(),
+            position: [0.0, 0.0, 0.0],
+            forward: [0.0, -1.0, 0.0],
+            radius: 2.0,
+            mate: Some("torso.crown".to_owned()),
+        });
+        let result = assemble_neutral(&kit);
+        match result {
+            Err(KitError::Assembly(message)) => {
+                assert!(
+                    message.contains("contradictory"),
+                    "expected contradictory-mates error, got: {message}"
+                );
+            }
+            other => panic!("expected assembly error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rejects_out_of_range_deformation_budget() {
+        let mut kit = two_part_kit();
+        kit.parts[0].deformation_budget.max_volume_change = 1.5;
+        assert!(kit.validate().is_err());
+        kit.parts[0].deformation_budget.max_volume_change = 1.0; // exact limit ok
+        assert!(kit.validate().is_ok());
+        kit.parts[0].deformation_budget.max_length_change = -0.1;
+        assert!(kit.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_inverted_protected_region() {
+        let mut kit = two_part_kit();
+        kit.parts[0].protected_regions = vec![ProtectedRegion {
+            min: [0, 2, 0],
+            max: [0, 1, 0],
+        }];
+        assert!(kit.validate().is_err());
+        kit.parts[0].protected_regions = vec![ProtectedRegion {
+            min: [0, 1, 0],
+            max: [0, 2, 0],
+        }];
+        assert!(kit.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_cell_slot_outside_declared_palette_groups() {
+        let mut kit = two_part_kit();
+        // body group has slots {1,2}; give the torso a cell on slot 3 (unknown group).
+        kit.palette.push(PaletteGroup {
+            name: "accent".to_owned(),
+            slots: vec![slot(3)],
+        });
+        kit.parts[0].cells.push(cell(0, 2, 0, 3));
+        // torso declares only "body", so slot 3 must be rejected.
+        assert!(kit.validate().is_err());
+        // Declaring the group fixes it.
+        kit.parts[0].palette_groups.push("accent".to_owned());
+        assert!(kit.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_protected_part_that_is_not_a_part() {
+        let mut kit = two_part_kit();
+        kit.invariants.protected_parts = vec!["ghost".to_owned()];
+        assert!(kit.validate().is_err());
+        kit.invariants.protected_parts = vec!["torso".to_owned()];
+        assert!(kit.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_neutral_facing_mismatch() {
+        let mut kit = two_part_kit();
+        kit.convention.neutral_facing = [0, 0, 1]; // convention is -Z
+        assert!(kit.validate().is_err());
+        kit.convention.neutral_facing = [0, 0, -1];
+        assert!(kit.validate().is_ok());
+        kit.convention.neutral_facing = [1, 1, 0]; // not a unit axis
+        assert!(kit.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_volume_range_that_excludes_assembled_volume() {
+        let mut kit = two_part_kit();
+        // Assembled volume for two_part_kit is 3 cells; require at least 10.
+        kit.invariants.volume_range = Some([10, 100]);
+        assert!(kit.validate().is_err());
+        kit.invariants.volume_range = Some([3, 100]); // exact limit ok
+        assert!(kit.validate().is_ok());
+        kit.invariants.volume_range = Some([1, 2]); // one over max
+        assert!(kit.validate().is_err());
+    }
+
+    #[test]
+    fn rejects_fixed_dimension_with_unknown_subject() {
+        let mut kit = two_part_kit();
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "ghost".to_owned(),
+            axis: "height".to_owned(),
+            range: [1, 10],
+        }];
+        assert!(kit.validate().is_err());
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "character".to_owned(),
+            axis: "height".to_owned(),
+            range: [1, 10],
+        }];
+        assert!(kit.validate().is_ok());
+        // Bad axis is rejected.
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "torso".to_owned(),
+            axis: "tall".to_owned(),
+            range: [1, 10],
+        }];
         assert!(kit.validate().is_err());
     }
 

@@ -89,4 +89,4 @@ fn regenerated_neutral_matches_checked_fingerprint() {
 /// `AssembledFrame::fingerprint`). Derived from the checked corpus; an
 /// intentional character revision must update this value and bump the affected
 /// part versions.
-const RIFLEMAN_NEUTRAL_FINGERPRINT: u64 = 0x2ced_8030_1cc5_6d5e;
+const RIFLEMAN_NEUTRAL_FINGERPRINT: u64 = 0x4882_9188_4a78_fb21;

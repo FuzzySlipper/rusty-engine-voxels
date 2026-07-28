@@ -2711,7 +2711,13 @@
       ],
       "paletteGroups": [
         "coat"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "head",
@@ -4143,6 +4149,25 @@
       "paletteGroups": [
         "skin",
         "helmet"
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": [
+        {
+          "min": [
+            -2,
+            -3,
+            -2
+          ],
+          "max": [
+            2,
+            2,
+            2
+          ]
+        }
       ]
     },
     {
@@ -5602,7 +5627,13 @@
       ],
       "paletteGroups": [
         "trouser"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "left_upper_arm",
@@ -6007,7 +6038,13 @@
       ],
       "paletteGroups": [
         "coat"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "left_lower_arm",
@@ -6412,7 +6449,13 @@
       ],
       "paletteGroups": [
         "skin"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "right_upper_arm",
@@ -6817,7 +6860,13 @@
       ],
       "paletteGroups": [
         "coat"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "right_lower_arm",
@@ -7222,7 +7271,13 @@
       ],
       "paletteGroups": [
         "skin"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "left_upper_leg",
@@ -7771,7 +7826,13 @@
       ],
       "paletteGroups": [
         "trouser"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "left_lower_leg",
@@ -8499,7 +8560,13 @@
       "paletteGroups": [
         "trouser",
         "boot"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "right_upper_leg",
@@ -9048,7 +9115,13 @@
       ],
       "paletteGroups": [
         "trouser"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "right_lower_leg",
@@ -9776,7 +9849,13 @@
       "paletteGroups": [
         "trouser",
         "boot"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     },
     {
       "id": "rifle",
@@ -9895,6 +9974,25 @@
       ],
       "paletteGroups": [
         "metal"
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": [
+        {
+          "min": [
+            0,
+            0,
+            -4
+          ],
+          "max": [
+            0,
+            0,
+            4
+          ]
+        }
       ]
     },
     {
@@ -10766,7 +10864,13 @@
       ],
       "paletteGroups": [
         "pack"
-      ]
+      ],
+      "deformationBudget": {
+        "maxLengthChange": 0.06,
+        "maxVolumeChange": 0.1,
+        "allowJointCompression": true
+      },
+      "protectedRegions": []
     }
   ],
   "invariants": {
@@ -10783,6 +10887,24 @@
     "requiredSockets": [
       "torso.neck",
       "head.neck"
+    ],
+    "fixedDimensions": [
+      {
+        "subject": "character",
+        "axis": "height",
+        "range": [
+          30,
+          40
+        ]
+      },
+      {
+        "subject": "rifle",
+        "axis": "depth",
+        "range": [
+          9,
+          9
+        ]
+      }
     ]
   }
 }
