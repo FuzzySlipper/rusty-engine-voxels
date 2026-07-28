@@ -2717,7 +2717,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": false
     },
     {
       "id": "head",
@@ -4168,7 +4169,8 @@
             2
           ]
         }
-      ]
+      ],
+      "limb": false
     },
     {
       "id": "pelvis",
@@ -5633,7 +5635,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": false
     },
     {
       "id": "left_upper_arm",
@@ -6044,7 +6047,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "left_lower_arm",
@@ -6455,7 +6459,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "right_upper_arm",
@@ -6866,7 +6871,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "right_lower_arm",
@@ -7277,7 +7283,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "left_upper_leg",
@@ -7832,7 +7839,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "left_lower_leg",
@@ -8566,7 +8574,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "right_upper_leg",
@@ -9121,7 +9130,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "right_lower_leg",
@@ -9855,7 +9865,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": true
     },
     {
       "id": "rifle",
@@ -9993,7 +10004,8 @@
             4
           ]
         }
-      ]
+      ],
+      "limb": false
     },
     {
       "id": "backpack",
@@ -10870,7 +10882,8 @@
         "maxVolumeChange": 0.1,
         "allowJointCompression": true
       },
-      "protectedRegions": []
+      "protectedRegions": [],
+      "limb": false
     }
   ],
   "invariants": {

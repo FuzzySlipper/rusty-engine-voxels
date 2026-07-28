@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use rusty_engine_voxels::kit::{assemble_neutral, load_kit, KitError, VoxelOrigin};
+use rusty_engine_voxels::kit::{
+    assemble_neutral, load_kit, FixedDimension, KitError, VoxelOrigin, MAX_COORDINATE_ABS,
+};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
@@ -90,3 +92,64 @@ fn regenerated_neutral_matches_checked_fingerprint() {
 /// intentional character revision must update this value and bump the affected
 /// part versions.
 const RIFLEMAN_NEUTRAL_FINGERPRINT: u64 = 0x4882_9188_4a78_fb21;
+
+/// The reviewer's round-2 probe: a fixedDimensions declaration that does not
+/// match the canonical character geometry must now be rejected, at exact limit
+/// admitted, and one-over rejected.
+#[test]
+fn fixed_dimensions_are_enforced_against_rifleman_geometry() {
+    let mut kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit should load");
+
+    // The checked corpus declares character height [30, 40] and rifle depth
+    // [9, 9]; both hold against the assembled geometry.
+    assert!(kit.validate().is_ok());
+
+    // The exact regression from the rereview: height [1, 1] must be rejected.
+    let height = kit
+        .invariants
+        .fixed_dimensions
+        .iter_mut()
+        .find(|d| d.subject == "character" && d.axis == "height")
+        .expect("corpus declares character height");
+    height.range = [1, 1];
+    match kit.validate() {
+        Err(KitError::Validation(message)) => {
+            assert!(
+                message.contains("character"),
+                "error names subject: {message}"
+            );
+        }
+        other => panic!("expected fixedDimensions rejection, got {other:?}"),
+    }
+}
+
+/// Extreme coordinates must be rejected at load, and assembly must fail typed
+/// rather than panic on them.
+#[test]
+fn extreme_coordinates_fail_without_panicking() {
+    let mut kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit should load");
+    // Out-of-domain pivot: validation rejects up front.
+    kit.parts[0].pivot = [MAX_COORDINATE_ABS + 1, 0, 0];
+    assert!(kit.validate().is_err());
+
+    // i64::MIN pivot: validation rejects without panicking in abs() (which
+    // overflows on i64::MIN).
+    let mut kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit should load");
+    kit.parts[0].pivot = [i64::MIN, 0, 0];
+    assert!(kit.validate().is_err());
+}
+
+/// The reviewer's exact-probe shape: a kit edited to an invalid fixedDimension
+/// then restored validates again (validation is total, not sticky).
+#[test]
+fn validation_recovers_after_bad_dimension_is_repaired() {
+    let mut kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit should load");
+    kit.invariants.fixed_dimensions.push(FixedDimension {
+        subject: "character".to_owned(),
+        axis: "width".to_owned(),
+        range: [1000, 2000],
+    });
+    assert!(kit.validate().is_err());
+    kit.invariants.fixed_dimensions.pop();
+    assert!(kit.validate().is_ok());
+}

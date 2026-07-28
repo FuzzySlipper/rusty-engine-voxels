@@ -31,6 +31,8 @@ A kit is a single canonical JSON document (schema version 1):
   - `sockets[]` — named attachment points (`position`, `forward`, `radius`, optional `mate` as
     `<partId>.<socketId>`),
   - `paletteGroups`, optional `symmetryPartner`,
+  - `limb` — whether the kit's `minLimbThickness` invariant applies to this part (limbs true;
+    torso/head/equipment false),
   - `deformationBudget` — how much the part may deform during posing (`maxLengthChange`,
     `maxVolumeChange` in [0, 1], `allowJointCompression`),
   - `protectedRegions[]` — inclusive part-local boxes that fusion/cleanup may not remove or carve.
@@ -47,7 +49,18 @@ It also validates that declared identity intent actually **holds** against the c
 merely parses: protected parts resolve to real parts, a part's cells only use slots from its
 declared palette groups, `neutralFacing` is a unit axis matching `forwardAxis`, the declared
 `volumeRange` admits the assembled volume, and every `fixedDimensions` subject resolves to a part
-id or `character`. Exact-limit values are admitted; one-over is rejected (covered by tests).
+id or `character` *and the declared range holds against the canonical geometry* — the inclusive
+width/height/depth extent of the named part's cells or of the whole assembled character. Likewise
+`minLimbThickness` is enforced against every `limb` part's thinnest bounding-box dimension (a
+coarse canonical gate; true cross-sectional thickness is a fusion-time check in M3). Exact-limit
+values are admitted; one-over is rejected (covered by tests).
+
+**Coordinate domain.** All lattice coordinates in the format — part pivots, cell coordinates,
+socket positions, protected regions, and `groundY` — are bounded to ±1,000,000 cells (aligned
+with the engine voxel-frame coordinate bound). Out-of-domain values fail validation. Assembly
+additionally uses checked arithmetic throughout (root placement, emission, grounding), so even an
+unvalidated kit returns a typed `KitError` rather than panicking on extreme values — including
+`i64::MIN`, which is covered by regression tests.
 
 ## Provenance
 

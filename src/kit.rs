@@ -25,6 +25,15 @@ use serde::{Deserialize, Serialize};
 /// Current canonical kit schema version. Bump on any breaking format change.
 pub const KIT_SCHEMA_VERSION: u32 = 1;
 
+/// Maximum absolute value admitted for any lattice coordinate in the format:
+/// part pivots, cell coordinates, socket positions, protected regions, and the
+/// declared ground plane. Bounding the domain at validation means assembly
+/// arithmetic over a validated kit cannot overflow; assembly additionally uses
+/// checked arithmetic so even an unvalidated kit fails with a typed KitError
+/// instead of panicking (R6335-4). Aligned with the engine voxel-frame
+/// coordinate bound.
+pub const MAX_COORDINATE_ABS: i64 = 1_000_000;
+
 // ---------------------------------------------------------------------------
 // Identity types
 // ---------------------------------------------------------------------------
@@ -93,6 +102,14 @@ impl Socket {
                 )));
             }
         }
+        for component in self.position {
+            if component.abs() > MAX_COORDINATE_ABS as f64 {
+                return Err(KitError::validation(format!(
+                    "part {part_id} socket {}: position {component} exceeds the ±{MAX_COORDINATE_ABS} coordinate bound",
+                    self.id
+                )));
+            }
+        }
         let len =
             (self.forward[0].powi(2) + self.forward[1].powi(2) + self.forward[2].powi(2)).sqrt();
         if len < 1e-6 {
@@ -146,6 +163,10 @@ pub struct KitPart {
     pub sockets: Vec<Socket>,
     /// Palette group names this part draws from (must exist in the kit).
     pub palette_groups: Vec<String>,
+    /// Whether this part is a limb subject to the kit's minLimbThickness rule.
+    /// Equipment, props, and the torso/head core leave this false.
+    #[serde(default)]
+    pub limb: bool,
     /// How much this part may deform during posing (see M2/M3).
     pub deformation_budget: DeformationBudget,
     /// Regions of this part that may not be removed or carved by fusion/cleanup.
@@ -204,6 +225,14 @@ impl ProtectedRegion {
                     self.min, self.max
                 )));
             }
+            if !(-MAX_COORDINATE_ABS..=MAX_COORDINATE_ABS).contains(&self.min[axis])
+                || !(-MAX_COORDINATE_ABS..=MAX_COORDINATE_ABS).contains(&self.max[axis])
+            {
+                return Err(KitError::validation(format!(
+                    "part {part_id}: protectedRegion {:?}..{:?} exceeds the ±{MAX_COORDINATE_ABS} coordinate bound",
+                    self.min, self.max
+                )));
+            }
         }
         Ok(())
     }
@@ -241,12 +270,28 @@ impl KitPart {
                 )));
             }
         }
+        for pivot_component in self.pivot {
+            if !(-MAX_COORDINATE_ABS..=MAX_COORDINATE_ABS).contains(&pivot_component) {
+                return Err(KitError::validation(format!(
+                    "part {}: pivot component {pivot_component} exceeds the ±{MAX_COORDINATE_ABS} coordinate bound",
+                    self.id
+                )));
+            }
+        }
         for cell in &self.cells {
             if cell.material_slot == 0 {
                 return Err(KitError::validation(format!(
                     "part {}: cell {:?} uses reserved material slot 0",
                     self.id, cell.coordinate
                 )));
+            }
+            for component in cell.coordinate {
+                if !(-MAX_COORDINATE_ABS..=MAX_COORDINATE_ABS).contains(&component) {
+                    return Err(KitError::validation(format!(
+                        "part {}: cell {:?} exceeds the ±{MAX_COORDINATE_ABS} coordinate bound",
+                        self.id, cell.coordinate
+                    )));
+                }
             }
         }
         let mut socket_ids = BTreeSet::new();
@@ -413,6 +458,12 @@ impl CoordinateConvention {
             return Err(KitError::validation(
                 "voxelSizeMeters must be positive".to_owned(),
             ));
+        }
+        if !(-MAX_COORDINATE_ABS..=MAX_COORDINATE_ABS).contains(&self.ground_y) {
+            return Err(KitError::validation(format!(
+                "groundY {} exceeds the ±{MAX_COORDINATE_ABS} coordinate bound",
+                self.ground_y
+            )));
         }
         Ok(())
     }
@@ -616,10 +667,13 @@ impl VoxelKit {
         }
 
         // neutralFacing must be a unit axis consistent with the declared
-        // forward axis.
+        // forward axis. Checked arithmetic: extreme values fail validation
+        // rather than panicking in abs()/add (same class as R6335-4).
         let facing = self.convention.neutral_facing;
-        let magnitude = facing[0].abs() + facing[1].abs() + facing[2].abs();
-        if magnitude != 1 {
+        let magnitude = facing.iter().try_fold(0i64, |total, component| {
+            total.checked_add(component.checked_abs()?)
+        });
+        if magnitude != Some(1) {
             return Err(KitError::validation(format!(
                 "convention.neutralFacing must be a single unit axis, got {facing:?}"
             )));
@@ -650,17 +704,88 @@ impl VoxelKit {
             }
         }
 
-        // fixed_dimensions subjects must resolve (a part id or `character`).
+        // fixed_dimensions subjects must resolve, and each declared range must
+        // hold against the canonical geometry it constrains (R6335-1 closure):
+        // the inclusive extent of the named part's cells, or of the whole
+        // assembled character, on the named axis.
+        let mut assembled_bounds = None;
         for dimension in &self.invariants.fixed_dimensions {
-            if dimension.subject != "character" && !part_ids.contains(dimension.subject.as_str()) {
+            let axis_index = match dimension.axis.as_str() {
+                "width" => 0,
+                "height" => 1,
+                "depth" => 2,
+                _ => unreachable!("axis validated above"),
+            };
+            let extent = if dimension.subject == "character" {
+                if assembled_bounds.is_none() {
+                    let assembled = assemble_neutral_unchecked(self).map_err(|e| {
+                        KitError::validation(format!(
+                            "cannot assemble to check fixedDimensions: {e}"
+                        ))
+                    })?;
+                    assembled_bounds = Some(assembled.bounds().ok_or_else(|| {
+                        KitError::validation("fixedDimensions on an empty character".to_owned())
+                    })?);
+                }
+                let (lo, hi) = assembled_bounds.expect("bounds computed");
+                hi[axis_index] - lo[axis_index] + 1
+            } else {
+                let part = self
+                    .parts
+                    .iter()
+                    .find(|p| p.id == dimension.subject)
+                    .ok_or_else(|| {
+                        KitError::validation(format!(
+                            "fixedDimension.subject {} is not a part id or 'character'",
+                            dimension.subject
+                        ))
+                    })?;
+                let (lo, hi) = part_bounds(part);
+                hi[axis_index] - lo[axis_index] + 1
+            };
+            if extent < dimension.range[0] || extent > dimension.range[1] {
                 return Err(KitError::validation(format!(
-                    "fixedDimension.subject {} is not a part id or 'character'",
-                    dimension.subject
+                    "fixedDimension {}.{}: canonical extent {extent} is outside the declared range {:?}",
+                    dimension.subject, dimension.axis, dimension.range
+                )));
+            }
+        }
+
+        // minLimbThickness must hold against every limb part's canonical
+        // geometry: a limb's thinnest bounding-box dimension may not fall below
+        // the declared thickness. (True cross-sectional thickness is enforced
+        // during fusion in M3; this is the canonical coarse gate.)
+        for part in &self.parts {
+            if !part.limb {
+                continue;
+            }
+            let (lo, hi) = part_bounds(part);
+            let thinnest = (0..3)
+                .map(|axis| hi[axis] - lo[axis] + 1)
+                .min()
+                .expect("three axes");
+            if thinnest < i64::from(self.invariants.min_limb_thickness) {
+                return Err(KitError::validation(format!(
+                    "part {}: thinnest dimension {thinnest} is below invariants.minLimbThickness {}",
+                    part.id, self.invariants.min_limb_thickness
                 )));
             }
         }
         Ok(())
     }
+}
+
+/// Inclusive bounding box of a part's cells.
+fn part_bounds(part: &KitPart) -> ([i64; 3], [i64; 3]) {
+    let mut lo = part.cells[0].coordinate;
+    let mut hi = part.cells[0].coordinate;
+    for cell in &part.cells {
+        for axis in 0..3 {
+            lo[axis] = lo[axis].min(cell.coordinate[axis]);
+            hi[axis] = hi[axis].max(cell.coordinate[axis]);
+        }
+    }
+    (lo, hi)
 }
 
 // ---------------------------------------------------------------------------
@@ -766,11 +891,12 @@ fn assemble_neutral_unchecked(kit: &VoxelKit) -> Result<AssembledFrame, KitError
         let part = &kit.parts[part_index];
         let translation = translations[&part_index];
         for (voxel_index, cell) in part.cells.iter().enumerate() {
-            let coordinate = [
-                cell.coordinate[0] + translation[0],
-                cell.coordinate[1] + translation[1],
-                cell.coordinate[2] + translation[2],
-            ];
+            let mut coordinate = [0i64; 3];
+            for axis in 0..3 {
+                coordinate[axis] = cell.coordinate[axis]
+                    .checked_add(translation[axis])
+                    .ok_or_else(|| overflow_error(&part.id, "cell", cell.coordinate))?;
+            }
             // Earlier part wins; do not overwrite.
             frame.voxels.entry(coordinate).or_insert(AssembledVoxel {
                 coordinate,
@@ -788,18 +914,20 @@ fn assemble_neutral_unchecked(kit: &VoxelKit) -> Result<AssembledFrame, KitError
     // placed by their pivot, but limbs and equipment may hang below that root,
     // so grounding is a property of the finished assembly, not any single part.
     if let Some((lo, _)) = frame.bounds() {
-        let shift = kit.convention.ground_y - lo[1];
+        let shift =
+            kit.convention.ground_y.checked_sub(lo[1]).ok_or_else(|| {
+                overflow_error("character", "ground plane", [lo[0], lo[1], lo[2]])
+            })?;
         if shift != 0 {
-            frame = AssembledFrame {
-                voxels: frame
-                    .voxels
-                    .into_values()
-                    .map(|mut voxel| {
-                        voxel.coordinate[1] += shift;
-                        (voxel.coordinate, voxel)
-                    })
-                    .collect(),
-            };
+            let mut grounded = BTreeMap::new();
+            for voxel in frame.voxels.into_values() {
+                let mut voxel = voxel;
+                voxel.coordinate[1] = voxel.coordinate[1].checked_add(shift).ok_or_else(|| {
+                    overflow_error("character", "grounded cell", voxel.coordinate)
+                })?;
+                grounded.insert(voxel.coordinate, voxel);
+            }
+            frame = AssembledFrame { voxels: grounded };
         }
     }
     Ok(frame)
@@ -951,12 +1079,27 @@ fn resolve_translation(
     if let Some(translation) = candidate {
         return Ok(translation);
     }
-    // Root: place pivot at ground plane, centered on origin in X/Z.
-    Ok([
-        -part.pivot[0],
-        kit.convention.ground_y - part.pivot[1],
-        -part.pivot[2],
-    ])
+    // Root: place pivot at ground plane, centered on origin in X/Z. Checked
+    // arithmetic: an extreme pivot or ground plane must fail with a typed
+    // error, never panic (R6335-4).
+    let x = part.pivot[0]
+        .checked_neg()
+        .ok_or_else(|| overflow_error(&part.id, "pivot", part.pivot))?;
+    let y = kit
+        .convention
+        .ground_y
+        .checked_sub(part.pivot[1])
+        .ok_or_else(|| overflow_error(&part.id, "pivot", part.pivot))?;
+    let z = part.pivot[2]
+        .checked_neg()
+        .ok_or_else(|| overflow_error(&part.id, "pivot", part.pivot))?;
+    Ok([x, y, z])
+}
+
+fn overflow_error(part_id: &str, what: &str, value: [i64; 3]) -> KitError {
+    KitError::Assembly(format!(
+        "part {part_id}: {what} {value:?} overflows assembly arithmetic; coordinates must be within the validated ±{MAX_COORDINATE_ABS} bound"
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -1075,6 +1218,7 @@ mod tests {
                         mate: None,
                     }],
                     palette_groups: vec!["body".to_owned()],
+                    limb: false,
                     deformation_budget: budget(),
                     protected_regions: vec![],
                     symmetry_partner: None,
@@ -1092,6 +1236,7 @@ mod tests {
                         mate: Some("torso.neck".to_owned()),
                     }],
                     palette_groups: vec!["body".to_owned()],
+                    limb: false,
                     deformation_budget: budget(),
                     protected_regions: vec![],
                     symmetry_partner: None,
@@ -1352,6 +1497,152 @@ mod tests {
             range: [1, 10],
         }];
         assert!(kit.validate().is_err());
+    }
+
+    // --- R6335-1 completion: fixedDimensions + minLimbThickness vs geometry ---
+
+    #[test]
+    fn fixed_dimension_enforces_character_extent() {
+        let mut kit = two_part_kit();
+        // Assembled character is y 0..2 -> height extent 3, x/z extent 1.
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "character".to_owned(),
+            axis: "height".to_owned(),
+            range: [3, 3],
+        }];
+        assert!(
+            kit.validate().is_ok(),
+            "exact-limit extent must be admitted"
+        );
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "character".to_owned(),
+            axis: "height".to_owned(),
+            range: [4, 10],
+        }];
+        assert!(
+            kit.validate().is_err(),
+            "one over the extent must be rejected"
+        );
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "character".to_owned(),
+            axis: "height".to_owned(),
+            range: [1, 2],
+        }];
+        assert!(
+            kit.validate().is_err(),
+            "one under the extent must be rejected"
+        );
+    }
+
+    #[test]
+    fn fixed_dimension_enforces_part_extent() {
+        let mut kit = two_part_kit();
+        // Torso occupies only x=0 -> width extent 1.
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "torso".to_owned(),
+            axis: "width".to_owned(),
+            range: [1, 1],
+        }];
+        assert!(kit.validate().is_ok(), "exact-limit part extent admitted");
+        kit.invariants.fixed_dimensions = vec![FixedDimension {
+            subject: "torso".to_owned(),
+            axis: "width".to_owned(),
+            range: [2, 5],
+        }];
+        assert!(
+            kit.validate().is_err(),
+            "part extent outside range rejected"
+        );
+    }
+
+    #[test]
+    fn min_limb_thickness_enforced_on_limb_parts() {
+        let mut kit = two_part_kit();
+        // Head is a single cell -> thinnest dimension 1 < minLimbThickness 2.
+        kit.parts[1].limb = true;
+        assert!(kit.validate().is_err(), "thin limb must be rejected");
+        kit.invariants.min_limb_thickness = 1;
+        assert!(
+            kit.validate().is_ok(),
+            "thickness at the exact limit admitted"
+        );
+        // Non-limb parts are exempt regardless of thickness.
+        kit.invariants.min_limb_thickness = 2;
+        kit.parts[1].limb = false;
+        assert!(kit.validate().is_ok(), "non-limb part is exempt");
+    }
+
+    // --- R6335-4: extreme coordinates fail typed, never panic ---
+
+    #[test]
+    fn extreme_root_pivot_is_rejected_without_panicking() {
+        // Validation rejects out-of-domain pivots up front.
+        let mut kit = two_part_kit();
+        kit.parts[0].pivot = [i64::MIN, 0, 0];
+        assert!(
+            kit.validate().is_err(),
+            "i64::MIN pivot must fail validation"
+        );
+
+        // And even bypassing validation, assembly returns a typed error rather
+        // than panicking (checked arithmetic).
+        let result = assemble_neutral_unchecked(&kit);
+        match result {
+            Err(KitError::Assembly(message)) => {
+                assert!(message.contains("overflow"), "got: {message}");
+            }
+            other => panic!("expected typed assembly error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn extreme_coordinates_are_rejected_at_validation() {
+        let mut kit = two_part_kit();
+        kit.parts[0].pivot = [MAX_COORDINATE_ABS + 1, 0, 0];
+        assert!(kit.validate().is_err(), "pivot one over the bound");
+
+        let mut kit = two_part_kit();
+        kit.parts[0]
+            .cells
+            .push(cell(MAX_COORDINATE_ABS + 1, 0, 0, 1));
+        assert!(kit.validate().is_err(), "cell one over the bound");
+
+        let mut kit = two_part_kit();
+        kit.parts[0].sockets[0].position = [(MAX_COORDINATE_ABS + 1) as f64, 0.0, 0.0];
+        assert!(
+            kit.validate().is_err(),
+            "socket position one over the bound"
+        );
+
+        let mut kit = two_part_kit();
+        kit.convention.ground_y = MAX_COORDINATE_ABS + 1;
+        assert!(kit.validate().is_err(), "groundY one over the bound");
+
+        let mut kit = two_part_kit();
+        kit.parts[0].protected_regions = vec![ProtectedRegion {
+            min: [0, 0, 0],
+            max: [MAX_COORDINATE_ABS + 1, 0, 0],
+        }];
+        assert!(
+            kit.validate().is_err(),
+            "protected region one over the bound"
+        );
+    }
+
+    #[test]
+    fn grounding_overflow_returns_typed_error_without_panicking() {
+        // Bypass validation and force a grounding-shift overflow: ground plane
+        // at i64::MAX with cells far below must fail typed, not panic.
+        let mut kit = two_part_kit();
+        kit.convention.ground_y = i64::MAX;
+        kit.parts[0].pivot = [0, i64::MIN + 1, 0];
+        let result = assemble_neutral_unchecked(&kit);
+        match result {
+            Err(KitError::Assembly(message)) => {
+                assert!(message.contains("overflow"), "got: {message}");
+            }
+            other => panic!("expected typed assembly error, got {other:?}"),
+        }
     }
 
     #[test]
