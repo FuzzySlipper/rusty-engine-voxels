@@ -9,6 +9,9 @@ use rusty_engine_voxels::runtime::verify_runtime_project;
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
 use serde_json::json;
 
+const HIGH_FIDELITY_PROJECT_FILE: &str =
+    "content/projects/retro-character-high-fidelity.project.json";
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
@@ -396,4 +399,68 @@ fn projected_instance_frame(response: &serde_json::Value) -> u64 {
             _ => None,
         })
         .expect("projection should create or advance the canonical voxel-object instance")
+}
+
+#[test]
+fn high_fidelity_conversion_is_deterministic_and_much_denser() {
+    let prepared = prepare_project_conversion(&root(), HIGH_FIDELITY_PROJECT_FILE)
+        .expect("high-fidelity animated source should convert");
+    let candidate = prepared.prepared.candidate();
+    let object = prepared
+        .loaded
+        .project
+        .voxel_objects
+        .iter()
+        .find(|object| object.asset_id == candidate.asset.asset_id)
+        .expect("project should point at the converted object");
+    let checked = fs::read_to_string(root().join(&object.path))
+        .expect("checked voxel object should be readable");
+
+    assert_eq!(candidate.canonical_json, checked);
+    assert_eq!(candidate.content_hash, object.expected_content_hash);
+    assert_eq!(candidate.asset.grid.cell_size, 0.03125);
+    assert_eq!(candidate.asset.grid.pivot, [47.5, 0.0, 47.5]);
+    assert_eq!(candidate.sampled_frames, 16);
+    assert_eq!(candidate.stored_frames, 15);
+    assert_eq!(candidate.clips.len(), 3);
+    assert_eq!(candidate.aggregate_voxels, 168_907);
+
+    let baseline = prepare_project_conversion(&root(), DEFAULT_PROJECT_FILE)
+        .expect("baseline animated source should convert");
+    assert!(
+        candidate.aggregate_voxels >= 10 * baseline.prepared.candidate().aggregate_voxels,
+        "4x linear grid should hold at least 10x the baseline voxels"
+    );
+}
+
+#[test]
+fn high_fidelity_object_loads_plays_and_projects() {
+    let evidence = verify_runtime_project(&root(), HIGH_FIDELITY_PROJECT_FILE)
+        .expect("high-fidelity voxel object should load through the runtime");
+
+    assert_eq!(evidence.frame_count, 15);
+    assert_eq!(evidence.clip_count, 3);
+    assert_eq!(evidence.unique_mesh_count, 14);
+    assert_eq!(evidence.resolved_voxels, 158_178);
+    assert_eq!(evidence.projection_operation_count, 3);
+    assert_eq!(evidence.defined_voxel_objects, 1);
+    assert_eq!(evidence.created_voxel_instances, 1);
+    assert_eq!(evidence.playback_samples.len(), 5);
+    assert!(
+        evidence
+            .playback_samples
+            .iter()
+            .all(|sample| sample.voxel_count > 10_000),
+        "every sampled high-fidelity pose should exceed ten thousand voxels"
+    );
+    assert!(
+        evidence
+            .playback_samples
+            .iter()
+            .map(|sample| sample.mesh_index)
+            .collect::<BTreeSet<_>>()
+            .len()
+            > 1,
+        "explicit-time playback should traverse more than one voxel mesh"
+    );
 }

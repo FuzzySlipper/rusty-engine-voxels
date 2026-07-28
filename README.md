@@ -30,6 +30,35 @@ The exact identities, per-clip counts, and explicit-time playback samples are ch
 `evidence/initial-animated-voxel-report.json`. Machine-specific timings are evidence, not pass/fail
 thresholds.
 
+## High-fidelity experiment
+
+The second experiment re-runs the same retro-character conversion on a much finer grid. The project
+`content/projects/retro-character-high-fidelity.project.json` keeps the source, pivot anchor,
+six-sample-per-second schedule, and clip set identical to the first experiment and changes only the
+spatial resolution: a 96 × 144 × 96 grid with 0.03125-unit cells (4× linear, 64× volumetric). The
+experiment:
+
+- sampled the same 16 source poses and stored 15 runtime frames (14 unique voxel meshes);
+- produced 168,907 aggregate conversion voxels in a 12,758,243-byte canonical object — about 17.5×
+  the baseline aggregate, with 10,484–10,508 voxels per sampled `idle` pose instead of ~610;
+- loaded the object through the same strict runtime admission path (158,178 resolved voxels); and
+- projected a selected `run` frame as a real shared-renderer voxel-object instance.
+
+One adapter change was required: the per-pose output bound derived from the grid product
+(96 × 144 × 96 = 1,327,104 cells) exceeded the engine's `MAX_REPRESENTED_VOXELS` cap, so the
+project now clamps its `maxOutputVoxels` request to that engine limit. Conversion work
+(1,093,918 against the 10,000,000 budget), runtime admission limits, and artifact size all remain
+comfortably inside engine bounds.
+
+Exact identities and playback samples are checked in
+`evidence/high-fidelity-animated-voxel-report.json`. Rebuild it with:
+
+```bash
+cargo run --locked --bin voxel-lab -- verify \
+  --project content/projects/retro-character-high-fidelity.project.json \
+  --report evidence/high-fidelity-animated-voxel-report.json
+```
+
 ## Commands
 
 ```bash

@@ -1,0 +1,96 @@
+{
+  "conversion": {
+    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
+    "sourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
+    "planHash": "sha256:958a432d6cd36cd1d4e6ab62a2f4632aad8da4c34c5e40a5c653de8e6bdef472",
+    "settingsSha256": "sha256:b06e7af133baf59ffb1b73d657cf38d4da4831e9d4bbc87f6b6c0bae01e295e9",
+    "contentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64",
+    "sourceVertices": 1029,
+    "sourceTriangles": 1604,
+    "deformationWork": 82320,
+    "voxelizationWork": 1093918,
+    "sampledFrames": 16,
+    "storedFrames": 15,
+    "aggregateVoxels": 168907,
+    "artifactBytes": 12758243,
+    "outputPath": "content/voxel-objects/retro-character-high-fidelity-65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64.voxel-object.json",
+    "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
+    "elapsedMilliseconds": 8488,
+    "clips": [
+      {
+        "clipId": "clip/idle",
+        "sourceClip": "idle",
+        "sampledFrames": 7,
+        "storedFrames": 7,
+        "durationMicroseconds": 1041667
+      },
+      {
+        "clipId": "clip/jump",
+        "sourceClip": "jump",
+        "sampledFrames": 4,
+        "storedFrames": 3,
+        "durationMicroseconds": 666667
+      },
+      {
+        "clipId": "clip/run",
+        "sourceClip": "run",
+        "sampledFrames": 4,
+        "storedFrames": 4,
+        "durationMicroseconds": 666667
+      }
+    ]
+  },
+  "runtime": {
+    "engineRevision": "7a2a54c00a3bbd7e34a78e14c5a8aaaa1f64f9c8",
+    "projectHash": "sha256:20aab2ed3e8721eccb98b4615e6835da11aa9dfedba4e33130a6447887832f8f",
+    "assetId": "voxel-object/retro-character-high-fidelity",
+    "contentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64",
+    "frameCount": 15,
+    "clipCount": 3,
+    "uniqueMeshCount": 14,
+    "resolvedVoxels": 158178,
+    "projectionOperationCount": 3,
+    "definedVoxelObjects": 1,
+    "createdVoxelInstances": 1,
+    "projectionJsonBytes": 54564714,
+    "loadMilliseconds": 4874,
+    "playbackClip": "clip/idle",
+    "playbackSamples": [
+      {
+        "timeMicroseconds": 0,
+        "runtimeFrame": 1,
+        "clipFrame": 0,
+        "meshIndex": 1,
+        "voxelCount": 10508
+      },
+      {
+        "timeMicroseconds": 100000,
+        "runtimeFrame": 1,
+        "clipFrame": 0,
+        "meshIndex": 1,
+        "voxelCount": 10508
+      },
+      {
+        "timeMicroseconds": 200000,
+        "runtimeFrame": 2,
+        "clipFrame": 1,
+        "meshIndex": 2,
+        "voxelCount": 10507
+      },
+      {
+        "timeMicroseconds": 400000,
+        "runtimeFrame": 3,
+        "clipFrame": 2,
+        "meshIndex": 3,
+        "voxelCount": 10486
+      },
+      {
+        "timeMicroseconds": 800000,
+        "runtimeFrame": 5,
+        "clipFrame": 4,
+        "meshIndex": 5,
+        "voxelCount": 10484
+      }
+    ]
+  }
+}

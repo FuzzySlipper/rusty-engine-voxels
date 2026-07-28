@@ -5,6 +5,7 @@ use serde::Serialize;
 use voxel_asset::{
     VoxelAssetMaterialBinding, VoxelAssetMaterialMapping, VoxelConversionFitPolicy,
     VoxelConversionMode, VoxelConversionOriginPolicy, VoxelConversionSettings,
+    MAX_REPRESENTED_VOXELS,
 };
 use voxel_convert::{
     identity_transform, import_animated_mesh_source, plan_animated_voxel_object_conversion,
@@ -92,11 +93,14 @@ pub fn prepare_project_conversion(
     .map_err(|error| error.to_string())?;
     let materials = conversion_materials(&imported.source.mesh.materials)?;
     let conversion = &loaded.project.conversion;
+    // The grid product is the natural per-pose output bound, but the engine also
+    // caps representable voxels per frame; clamp so finer grids remain admissible.
     let max_output_voxels = conversion
         .resolution
         .into_iter()
         .try_fold(1_u32, u32::checked_mul)
-        .ok_or("conversion resolution product overflows u32")?;
+        .ok_or("conversion resolution product overflows u32")?
+        .min(MAX_REPRESENTED_VOXELS as u32);
     let request = VoxelObjectConversionPlanRequest {
         source: imported.source.receipt.source.clone(),
         source_path: conversion.source_path.clone(),
