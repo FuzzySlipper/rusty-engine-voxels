@@ -933,6 +933,59 @@ fn assemble_neutral_unchecked(kit: &VoxelKit) -> Result<AssembledFrame, KitError
     Ok(frame)
 }
 
+/// The neutral assembly transform of every part, keyed by part id: identity
+/// rotation plus the part's neutral translation (including the whole-frame
+/// ground shift, so these land in the same grounded canonical frame as
+/// `assemble_neutral`). Used to derive bind transforms that reproduce the
+/// neutral assembly at bind pose (R6336-6).
+pub type NeutralTransformMap = BTreeMap<String, ([f64; 4], [i64; 3])>;
+
+pub fn neutral_part_transforms(kit: &VoxelKit) -> Result<NeutralTransformMap, KitError> {
+    kit.validate()?;
+    let order = placement_order(kit)?;
+    let mut translations: BTreeMap<usize, [i64; 3]> = BTreeMap::new();
+    for &part_index in &order {
+        let translation = resolve_translation(kit, part_index, &translations)?;
+        translations.insert(part_index, translation);
+    }
+    // Compute the whole-frame ground shift exactly as assembly does, so the
+    // returned transforms land in the grounded canonical frame.
+    let mut min_y = i64::MAX;
+    for &part_index in &order {
+        let part = &kit.parts[part_index];
+        let translation = translations[&part_index];
+        for cell in &part.cells {
+            min_y = min_y.min(
+                cell.coordinate[1]
+                    .checked_add(translation[1])
+                    .ok_or_else(|| overflow_error(&part.id, "cell", cell.coordinate))?,
+            );
+        }
+    }
+    let shift = if min_y == i64::MAX {
+        0
+    } else {
+        kit.convention
+            .ground_y
+            .checked_sub(min_y)
+            .ok_or_else(|| overflow_error("character", "ground plane", [0, min_y, 0]))?
+    };
+    let mut result = BTreeMap::new();
+    for &part_index in &order {
+        let part = &kit.parts[part_index];
+        let base = translations[&part_index];
+        let translation = [
+            base[0],
+            base[1]
+                .checked_add(shift)
+                .ok_or_else(|| overflow_error(&part.id, "grounded translation", base))?,
+            base[2],
+        ];
+        result.insert(part.id.clone(), ([0.0, 0.0, 0.0, 1.0], translation));
+    }
+    Ok(result)
+}
+
 /// Compute a placement order where every part appears after the part it mates
 /// to (when it has a mate). Deterministic: ties broken by part index.
 fn placement_order(kit: &VoxelKit) -> Result<Vec<usize>, KitError> {

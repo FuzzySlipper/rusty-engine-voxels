@@ -411,6 +411,23 @@ fn quat_from_basis(b: [[f64; 3]; 3]) -> [f64; 4] {
 // Rig mapping
 // ---------------------------------------------------------------------------
 
+/// Derive bind transforms that reproduce the M1 grounded neutral assembly at
+/// bind pose (R6336-6), per the planner-confirmed convention:
+/// `bindTransform = inverse(bone_bind_world) * neutral_part_transform`.
+///
+/// At bind pose `bone_pose == bone_bind_world`, so the placement
+/// `bone_bind_world ∘ inverse(bone_bind_world) ∘ neutral_part_transform`
+/// equals `neutral_part_transform` exactly — the part lands in the same
+/// grounded canonical frame as `assemble_neutral`. Later poses apply bone
+/// deltas from that baseline; we do NOT silently re-ground each pose (that
+/// would introduce frame-dependent global motion/churn).
+pub fn derive_bind_transform(
+    bone_bind_world: RigidTransform,
+    neutral_part_transform: RigidTransform,
+) -> RigidTransform {
+    bone_bind_world.inverse().then(neutral_part_transform)
+}
+
 /// Binds each canonical part to one proxy bone (node index) with a bind
 /// transform from the part's pivot frame to the bone frame. Rigid: one part,
 /// one bone, no skinning weights.

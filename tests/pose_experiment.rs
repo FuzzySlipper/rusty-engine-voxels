@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use rusty_engine_voxels::kit::{assemble_neutral, load_kit};
+use rusty_engine_voxels::kit::{assemble_neutral, load_kit, neutral_part_transforms};
 use rusty_engine_voxels::pose::{
-    admit_node_world_transform, evaluate_node_poses, evaluate_node_poses_with_policy,
-    rasterize_part, RasterSettings, RigMap, RigidTransform,
+    admit_node_world_transform, derive_bind_transform, evaluate_node_poses,
+    evaluate_node_poses_with_policy, rasterize_part, RasterSettings, RigMap, RigidTransform,
 };
 
 /// Face-connected component count of a cell set (6-connectivity BFS).
@@ -461,5 +461,105 @@ fn fallback_rejects_truly_non_uniform_scale() {
     assert!(
         result.is_err(),
         "a one-axis 3x stretch must be rejected as non-uniform"
+    );
+}
+
+// --- R6336-6: bind pose reproduces the M1 grounded neutral assembly ---
+
+/// Derive bind transforms from the M1 neutral part transforms + the bind-pose
+/// bone world transforms, then confirm that at bind pose every part lands in
+/// the same grounded canonical frame as `assemble_neutral` — same cells,
+/// bounds, and grounding (the planner-confirmed convention).
+#[test]
+fn derived_bind_transforms_reconstruct_neutral_frame() {
+    let kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit");
+    let imported = import_retro();
+    let rig_map = load_rig_map();
+
+    // M1 grounded neutral reference.
+    let neutral = assemble_neutral(&kit).expect("neutral assembly");
+    let neutral_transforms = neutral_part_transforms(&kit).expect("neutral transforms");
+
+    // Bind-pose bone world transforms (t=0 of the idle clip is the rig's rest pose).
+    let bind_world = evaluate_node_poses(&imported.model, 0, 0).expect("bind pose");
+
+    // For each binding, derive the bind transform and confirm the placement at
+    // bind pose equals the part's neutral transform (i.e., the part lands in
+    // the neutral frame, not a bone-centric frame).
+    for binding in &rig_map.bindings {
+        let bone_bind_world = bind_world
+            .get(&binding.bone_node_index)
+            .copied()
+            .unwrap_or(RigidTransform::IDENTITY);
+        let (neutral_rotation, neutral_translation) = neutral_transforms
+            .get(&binding.part_id)
+            .copied()
+            .unwrap_or(([0.0, 0.0, 0.0, 1.0], [0, 0, 0]));
+        let neutral_transform = RigidTransform {
+            rotation: neutral_rotation,
+            translation: [
+                neutral_translation[0] as f64,
+                neutral_translation[1] as f64,
+                neutral_translation[2] as f64,
+            ],
+        };
+        let derived = derive_bind_transform(bone_bind_world, neutral_transform);
+        let placement = bone_bind_world.then(derived);
+
+        // The placement at bind pose must equal the neutral transform (within
+        // floating tolerance), so the part lands in the grounded canonical frame.
+        for axis in 0..3 {
+            assert!(
+                (placement.translation[axis] - neutral_transform.translation[axis]).abs() < 1e-6,
+                "part {} bind placement axis {} ({}) should equal neutral translation ({})",
+                binding.part_id,
+                axis,
+                placement.translation[axis],
+                neutral_transform.translation[axis]
+            );
+        }
+    }
+
+    // Grounding: the M1 neutral frame is grounded at y=0. The bind-assembled
+    // character must share that grounding, not sit 23 cells below ground.
+    let (lo, hi) = neutral.bounds().expect("neutral bounds");
+    assert_eq!(lo[1], 0, "M1 neutral is grounded at y=0");
+    assert!(hi[1] > lo[1]);
+
+    // Same-frame overlap: rasterize every part at bind pose with the derived
+    // transforms and confirm the union of placed cells overlaps the M1 neutral
+    // assembly almost exactly (within the rasterizer's conservative dilation),
+    // rather than the reviewer's measured 677/1080 with a 23-cell drop.
+    let settings = RasterSettings::default();
+    let mut placed: std::collections::BTreeSet<[i64; 3]> = std::collections::BTreeSet::new();
+    for binding in &rig_map.bindings {
+        let part = kit.part(&binding.part_id).expect("part in kit");
+        let bone_bind_world = bind_world
+            .get(&binding.bone_node_index)
+            .copied()
+            .unwrap_or(RigidTransform::IDENTITY);
+        let placement = bone_bind_world.then(binding.bind_transform);
+        for cell in rasterize_part(part, placement, &settings).expect("rasterize") {
+            placed.insert(cell.coordinate);
+        }
+    }
+    let neutral_cells: std::collections::BTreeSet<[i64; 3]> =
+        neutral.voxels.keys().copied().collect();
+    let overlap = placed.intersection(&neutral_cells).count();
+    let union = placed.union(&neutral_cells).count();
+    let iou = overlap as f64 / union.max(1) as f64;
+    assert!(
+        iou >= 0.95,
+        "bind reconstruction should substantially overlap M1 neutral in the same frame: IoU {iou} (overlap {overlap}, union {union}, placed {}, neutral {})",
+        placed.len(),
+        neutral_cells.len()
+    );
+    // Grounding in the same frame: lowest placed cell must rest at ground (0),
+    // matching the grounded neutral, not 23 cells below it.
+    let min_y = placed.iter().map(|c| c[1]).min().expect("non-empty");
+    assert!(
+        (min_y - lo[1]).abs() <= 1,
+        "bind reconstruction should be grounded near y={} (M1 neutral), got min y={min_y}",
+        lo[1]
     );
 }
