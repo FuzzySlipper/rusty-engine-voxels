@@ -4,6 +4,7 @@ use rusty_engine_voxels::assemble::{
     assemble_rough_schedule, select_pose_schedule, PoseSelectionSettings, SelectionReason,
 };
 use rusty_engine_voxels::kit::load_kit;
+use rusty_engine_voxels::pose::evaluate_node_poses;
 use rusty_engine_voxels::pose::{RasterSettings, RigMap};
 use voxel_convert::{import_animated_mesh_source, MeshSourceFormat, MeshSourceImportRequest};
 
@@ -182,4 +183,103 @@ fn schedule_error_stays_within_budget() {
         intermediate >= 1,
         "a run cycle should surface event or error-budget frames"
     );
+}
+
+// --- R6336-7 regressions: selector cap, error invariant, mandatory timestamps ---
+
+#[test]
+fn max_frames_cap_is_never_exceeded() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    let settings = PoseSelectionSettings {
+        max_frames: 3,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
+    assert!(
+        schedule.len() <= settings.max_frames,
+        "cap {} must not be exceeded, got {}",
+        settings.max_frames,
+        schedule.len()
+    );
+    // max_frames < 2 is a typed settings error, not a silent overflow.
+    let bad = PoseSelectionSettings {
+        max_frames: 1,
+        ..PoseSelectionSettings::default()
+    };
+    assert!(select_pose_schedule(&imported.model, run_index, &bad).is_err());
+}
+
+#[test]
+fn mandatory_timestamps_are_always_retained() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    let mandatory_time = 250_000u64;
+    let settings = PoseSelectionSettings {
+        mandatory_timestamps: vec![mandatory_time],
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
+    assert!(
+        schedule.iter().any(|pose| {
+            pose.time_microseconds == mandatory_time && pose.reason == SelectionReason::Mandatory
+        }),
+        "an authored mandatory timestamp must be retained with the Mandatory reason"
+    );
+}
+
+#[test]
+fn error_budget_intervals_stay_within_budget() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // A budget below the clip's minimum inter-tick error is unsatisfiable and
+    // must be a typed impossibility error, not a silent over-budget schedule.
+    let unsatisfiable = PoseSelectionSettings {
+        error_budget: 0.05,
+        event_translation_threshold: 1.0e9,
+        event_rotation_threshold: 1.0e9,
+        ..PoseSelectionSettings::default()
+    };
+    let result = select_pose_schedule(&imported.model, run_index, &unsatisfiable);
+    assert!(
+        result.is_err(),
+        "an unsatisfiable error budget must be rejected with a typed error"
+    );
+
+    // A satisfiable budget keeps every consecutive kept interval within budget.
+    let settings = PoseSelectionSettings {
+        error_budget: 1.0,
+        event_translation_threshold: 1.0e9,
+        event_rotation_threshold: 1.0e9,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
+    let times: Vec<u64> = schedule.iter().map(|p| p.time_microseconds).collect();
+    let poses: Vec<_> = times
+        .iter()
+        .map(|&t| evaluate_node_poses(&imported.model, run_index, t).expect("pose"))
+        .collect();
+    let budget = settings.error_budget;
+    for pair in poses.windows(2) {
+        let error = rusty_engine_voxels::assemble::pose_error(&pair[0], &pair[1]);
+        assert!(
+            error <= budget,
+            "consecutive poses exceed the budget: {error} > {budget}"
+        );
+    }
 }

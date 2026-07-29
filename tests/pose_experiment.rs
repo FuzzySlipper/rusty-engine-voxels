@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 
 use rusty_engine_voxels::kit::{assemble_neutral, load_kit};
 use rusty_engine_voxels::pose::{
-    evaluate_node_poses, evaluate_node_poses_with_policy, rasterize_part, RasterSettings, RigMap,
-    RigidTransform,
+    admit_node_world_transform, evaluate_node_poses, evaluate_node_poses_with_policy,
+    rasterize_part, RasterSettings, RigMap, RigidTransform,
 };
 
 /// Face-connected component count of a cell set (6-connectivity BFS).
@@ -387,5 +387,79 @@ fn non_uniform_scale_is_rejected_uniform_jitter_is_admitted() {
         node.admit_rigid_world_transform(NodePoseRigidScalePolicy::AllowUniformScale)
             .is_err(),
         "a one-axis-stretched transform must be rejected as non-uniform"
+    );
+}
+
+// --- R6336-5 regressions: the fallback retains all rigid invariants ---
+
+fn affine_node(m: [f64; 16]) -> voxel_convert::AnimationNodePose {
+    voxel_convert::AnimationNodePose {
+        source_node_index: 0,
+        local_transform: m,
+        world_transform: m,
+    }
+}
+
+#[test]
+fn fallback_rejects_shear_reflection_and_non_finite() {
+    use voxel_convert::NodePoseRigidScalePolicy;
+
+    // Shear: equal-length but non-orthogonal axes (X and X+Y both length ~1.4).
+    let mut shear = [0.0f64; 16];
+    shear[0] = 1.0; // X column = (1,0,0)
+    shear[4] = 1.0; // Y column = (1,1,0) -> not orthogonal to X
+    shear[5] = 1.0;
+    shear[10] = 1.0;
+    shear[15] = 1.0;
+    let result = admit_node_world_transform(
+        &affine_node(shear),
+        NodePoseRigidScalePolicy::AllowUniformScale,
+    );
+    assert!(result.is_err(), "shear must be rejected by the fallback");
+
+    // Reflection: negative-determinant basis (mirror across X).
+    let mut reflect = [0.0f64; 16];
+    reflect[0] = -1.0; // flip X
+    reflect[5] = 1.0;
+    reflect[10] = 1.0;
+    reflect[15] = 1.0;
+    let result = admit_node_world_transform(
+        &affine_node(reflect),
+        NodePoseRigidScalePolicy::AllowUniformScale,
+    );
+    assert!(result.is_err(), "a reflected basis must be rejected");
+
+    // Non-finite: NaN translation component.
+    let mut nan = [0.0f64; 16];
+    nan[0] = 1.0;
+    nan[5] = 1.0;
+    nan[10] = 1.0;
+    nan[12] = f64::NAN;
+    nan[15] = 1.0;
+    let result = admit_node_world_transform(
+        &affine_node(nan),
+        NodePoseRigidScalePolicy::AllowUniformScale,
+    );
+    assert!(result.is_err(), "non-finite affine data must be rejected");
+
+    // And the real rig still passes through the same fallback path.
+    let ok = evaluate_node_poses(&import_retro().model, 1, 0);
+    assert!(ok.is_ok(), "the retro-character rig is still admitted");
+}
+
+#[test]
+fn fallback_rejects_truly_non_uniform_scale() {
+    use voxel_convert::NodePoseRigidScalePolicy;
+    // Uniform-length axes are fine; a one-axis 3x stretch must be rejected.
+    let mut m = [0.0f64; 16];
+    m[0] = 3.0; // X scaled 3x
+    m[5] = 1.0;
+    m[10] = 1.0;
+    m[15] = 1.0;
+    let result =
+        admit_node_world_transform(&affine_node(m), NodePoseRigidScalePolicy::AllowUniformScale);
+    assert!(
+        result.is_err(),
+        "a one-axis 3x stretch must be rejected as non-uniform"
     );
 }

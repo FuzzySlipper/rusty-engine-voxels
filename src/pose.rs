@@ -242,7 +242,7 @@ pub fn evaluate_node_poses_with_policy(
 /// still requiring finite values, non-singular axes, orthogonality (no shear),
 /// and a proper (non-reflecting) basis. Non-uniform scale, shear, and
 /// reflections remain hard failures regardless of tolerance.
-fn admit_node_world_transform(
+pub fn admit_node_world_transform(
     node: &voxel_convert::AnimationNodePose,
     policy: NodePoseRigidScalePolicy,
 ) -> Result<voxel_convert::AdmittedRigidNodePose, PoseError> {
@@ -262,40 +262,92 @@ fn admit_node_world_transform(
 /// truly non-uniform rig (a limb stretched on one axis) is still rejected.
 const UNIFORM_SCALE_RELATIVE_TOLERANCE: f64 = 1.0e-3;
 
+/// The absolute tolerance for the *other* rigid invariants (orthogonality,
+/// determinant, non-singularity). Matches the Engine's rigid tolerance so the
+/// fallback only ever relaxes uniform-scale uniformity, never rigidity itself.
+const RIGID_INVARIANT_TOLERANCE: f64 = 1.0e-4;
+
+/// Re-validate every Engine rigid invariant the strict check enforces, but
+/// with the *uniform-scale uniformity* measured at the relative tolerance the
+/// caller admitted. Shear, reflection, singular axes, and non-finite values
+/// are hard failures at `RIGID_INVARIANT_TOLERANCE`; only the per-axis scale
+/// *uniformity* threshold is relaxed (for the ~100x retro-character rig's fp
+/// jitter). This closes the gap where the previous fallback admitted
+/// equal-length non-orthogonal (shear) or reflected bases.
 fn admit_uniform_scale_with_relative_tolerance(
     node: &voxel_convert::AnimationNodePose,
     policy: NodePoseRigidScalePolicy,
 ) -> Result<voxel_convert::AdmittedRigidNodePose, PoseError> {
     let m = node.world_transform;
+    let reject = |reason: &str| PoseError::NonRigidPose {
+        node: node.source_node_index,
+        reason: reason.to_owned(),
+    };
+
+    // 1. Every affine component (basis + translation) must be finite.
+    if !m.iter().all(|component| component.is_finite()) {
+        return Err(reject("world transform is not finite affine data"));
+    }
+
     let columns = [[m[0], m[1], m[2]], [m[4], m[5], m[6]], [m[8], m[9], m[10]]];
     let length = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
     let scales = columns.map(length);
-    if scales.iter().any(|s| !s.is_finite() || *s <= f64::EPSILON) {
-        return Err(PoseError::NonRigidPose {
-            node: node.source_node_index,
-            reason: "world transform has a singular or non-finite scale axis".to_owned(),
-        });
-    }
-    let mean = (scales[0] + scales[1] + scales[2]) / 3.0;
-    let non_uniform = scales
+
+    // 2. Non-singular axes.
+    if scales
         .iter()
-        .any(|s| (*s - mean).abs() > UNIFORM_SCALE_RELATIVE_TOLERANCE * mean);
-    if non_uniform {
-        return Err(PoseError::NonRigidPose {
-            node: node.source_node_index,
-            reason: format!(
-                "world transform has non-uniform scale beyond {UNIFORM_SCALE_RELATIVE_TOLERANCE} relative tolerance"
-            ),
-        });
+        .any(|scale| *scale <= RIGID_INVARIANT_TOLERANCE)
+    {
+        return Err(reject("world transform has a singular scale axis"));
+    }
+
+    // 3. Orthogonality (no shear): normalized axes must be mutually orthogonal.
+    let axes: [[f64; 3]; 3] = std::array::from_fn(|i| {
+        let c = columns[i];
+        [c[0] / scales[i], c[1] / scales[i], c[2] / scales[i]]
+    });
+    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    if dot(axes[0], axes[1]).abs() > RIGID_INVARIANT_TOLERANCE
+        || dot(axes[0], axes[2]).abs() > RIGID_INVARIANT_TOLERANCE
+        || dot(axes[1], axes[2]).abs() > RIGID_INVARIANT_TOLERANCE
+    {
+        return Err(reject("world transform contains shear"));
+    }
+
+    // 4. Proper basis (no reflection): determinant of the normalized basis ~ +1.
+    let cross = |a: [f64; 3], b: [f64; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let determinant = dot(cross(axes[0], axes[1]), axes[2]);
+    if (determinant - 1.0).abs() > RIGID_INVARIANT_TOLERANCE {
+        return Err(reject(
+            "world transform contains a reflection or a non-rigid basis",
+        ));
+    }
+
+    // 5. Uniform scale at the admitted *relative* tolerance (the only relaxed
+    //    invariant): per-axis scales agree within a fraction of the mean.
+    let mean = (scales[0] + scales[1] + scales[2]) / 3.0;
+    if scales
+        .iter()
+        .any(|s| (*s - mean).abs() > UNIFORM_SCALE_RELATIVE_TOLERANCE * mean)
+    {
+        return Err(reject(
+            "world transform has non-uniform scale beyond the admitted relative tolerance",
+        ));
     }
     if policy == NodePoseRigidScalePolicy::RequireUnitScale
         && (mean - 1.0).abs() > UNIFORM_SCALE_RELATIVE_TOLERANCE
     {
-        return Err(PoseError::NonRigidPose {
-            node: node.source_node_index,
-            reason: "world transform scale is not one under RequireUnitScale".to_owned(),
-        });
+        return Err(reject(
+            "world transform scale is not one under RequireUnitScale",
+        ));
     }
+
     Ok(voxel_convert::AdmittedRigidNodePose {
         source_node_index: node.source_node_index,
         affine_world_transform: m,
@@ -456,6 +508,13 @@ fn validate_rigid_transform(transform: &RigidTransform, part_id: &str) -> Result
             )));
         }
     }
+    // Reject non-finite rotation components explicitly: a NaN norm would
+    // otherwise bypass the unit-quaternion check (NaN comparisons are false).
+    if !transform.rotation.iter().all(|c| c.is_finite()) {
+        return Err(PoseError::Validation(format!(
+            "part {part_id}: bind rotation components must be finite"
+        )));
+    }
     let norm = (transform.rotation[0].powi(2)
         + transform.rotation[1].powi(2)
         + transform.rotation[2].powi(2)
@@ -502,6 +561,12 @@ impl RasterSettings {
                 self.supersample
             )));
         }
+        // The admitted threshold range is the full (0, 1]. Volume and
+        // connectivity are not guaranteed by the threshold alone: a rigid part
+        // always keeps at least half its source volume (the volume-floor
+        // repair) and stays a single connected body (the connectivity repair),
+        // so no admitted setting can collapse a part regardless of threshold
+        // (R6336-8).
         if !(self.occupancy_threshold > 0.0 && self.occupancy_threshold <= 1.0) {
             return Err(PoseError::Validation(format!(
                 "occupancy_threshold must be within (0, 1], got {}",
@@ -656,6 +721,28 @@ pub fn rasterize_part(
     }
     cells.sort_by_key(|cell| cell.coordinate);
     sub_threshold.sort_by_key(|cell| cell.coordinate);
+
+    // Volume floor: a rigid part must not lose more than half its source
+    // volume. Add the most-covered remaining cells (deterministic by coverage
+    // then coordinate) until the floor is met, before connectivity repair.
+    let source_volume = part.cells.len();
+    let volume_floor = source_volume.div_ceil(2);
+    if cells.len() < volume_floor {
+        let mut pool: Vec<(usize, RasterCell)> = sub_threshold
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (i, *c))
+            .collect();
+        // Deterministic: preserve the sorted order; take from the front.
+        let mut take = 0usize;
+        while cells.len() < volume_floor && take < pool.len() {
+            cells.push(pool[take].1);
+            take += 1;
+        }
+        pool.clear();
+        sub_threshold.retain(|c| !cells.iter().any(|x| x.coordinate == c.coordinate));
+        cells.sort_by_key(|cell| cell.coordinate);
+    }
 
     // Add sub-threshold cells one at a time (most-covered first, deterministic
     // by coordinate) until the part is a single connected component or no
@@ -907,6 +994,38 @@ mod tests {
         let a = rasterize_part(&part, transform, &RasterSettings::default()).expect("first");
         let b = rasterize_part(&part, transform, &RasterSettings::default()).expect("second");
         assert_eq!(a, b, "same part + transform must be bit-identical");
+    }
+
+    #[test]
+    fn solid_does_not_collapse_at_max_occupancy_threshold() {
+        // R6336-8: a 3x3x3 solid rotated 30° with the valid settings
+        // {supersample:2, occupancy_threshold:1.0} previously collapsed from 27
+        // cells to 13. The volume-floor repair must keep at least half the
+        // source volume while preserving connectivity.
+        let part = solid_part(3, 1);
+        let angle = std::f64::consts::PI / 6.0;
+        let transform = RigidTransform {
+            rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
+            translation: [0.0, 0.0, 0.0],
+        };
+        let settings = RasterSettings {
+            supersample: 2,
+            occupancy_threshold: 1.0,
+        };
+        let cells = rasterize_part(&part, transform, &settings).expect("max-threshold rasterize");
+        assert!(
+            cells.len() * 2 >= part.cells.len(),
+            "volume floor must hold: {} cells kept of {}",
+            cells.len(),
+            part.cells.len()
+        );
+        let set: std::collections::BTreeSet<[i64; 3]> =
+            cells.iter().map(|c| c.coordinate).collect();
+        assert_eq!(
+            connected_components(&set),
+            1,
+            "even at max threshold the part must remain one connected body"
+        );
     }
 
     #[test]

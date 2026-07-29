@@ -32,7 +32,7 @@ use crate::pose::{
 // ---------------------------------------------------------------------------
 
 /// Settings for selecting a stepped pose schedule from a source clip.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PoseSelectionSettings {
     /// Root/limb translation (in cells) that counts as a mandatory event frame.
     pub event_translation_threshold: f64,
@@ -41,8 +41,42 @@ pub struct PoseSelectionSettings {
     /// Pose-space error budget: the maximum allowed deviation (in cells) when
     /// reducing between mandatory frames.
     pub error_budget: f64,
-    /// Hard cap on selected frames (defensive bound).
+    /// Hard cap on selected frames (defensive bound). Must be >= 2 so first and
+    /// last can both be retained; the cap is never exceeded.
     pub max_frames: usize,
+    /// Caller-authored mandatory timestamps (microseconds) that must be
+    /// retained regardless of motion delta (contacts, key poses, impacts).
+    pub mandatory_timestamps: Vec<u64>,
+}
+
+impl PoseSelectionSettings {
+    fn validate(&self) -> Result<(), PoseError> {
+        for (name, value) in [
+            (
+                "eventTranslationThreshold",
+                self.event_translation_threshold,
+            ),
+            ("eventRotationThreshold", self.event_rotation_threshold),
+            ("errorBudget", self.error_budget),
+        ] {
+            if !value.is_finite() || value < 0.0 {
+                return Err(PoseError::Validation(format!(
+                    "{name} must be finite and non-negative, got {value}"
+                )));
+            }
+        }
+        if self.max_frames < 2 {
+            return Err(PoseError::Validation(format!(
+                "max_frames must be >= 2 so first and last poses fit, got {}",
+                self.max_frames
+            )));
+        }
+        for &t in &self.mandatory_timestamps {
+            // Checked in select against the clip; only shape here.
+            let _ = t;
+        }
+        Ok(())
+    }
 }
 
 impl Default for PoseSelectionSettings {
@@ -52,6 +86,7 @@ impl Default for PoseSelectionSettings {
             event_rotation_threshold: 0.35,
             error_budget: 1.5,
             max_frames: 64,
+            mandatory_timestamps: Vec::new(),
         }
     }
 }
@@ -75,6 +110,8 @@ pub enum SelectionReason {
     First,
     Last,
     Event,
+    /// A caller-authored mandatory timestamp (contact, key pose, impact).
+    Mandatory,
     ErrorBudget,
 }
 
@@ -91,6 +128,7 @@ pub fn select_pose_schedule(
     clip_index: usize,
     settings: &PoseSelectionSettings,
 ) -> Result<Vec<SelectedPose>, PoseError> {
+    settings.validate()?;
     let clip = model
         .clips
         .get(clip_index)
@@ -112,43 +150,131 @@ pub fn select_pose_schedule(
     candidates.truncate(settings.max_frames * 4);
     debug_assert!(!candidates.is_empty());
 
+    // Caller-authored mandatory timestamps are added to the candidate set
+    // (clamped into the clip) so they are always evaluated and retained.
+    let mut mandatory_times: Vec<u64> = settings
+        .mandatory_timestamps
+        .iter()
+        .map(|&t| t.min(duration.saturating_sub(1)))
+        .collect();
+    mandatory_times.sort_unstable();
+    mandatory_times.dedup();
+    for &time in &mandatory_times {
+        if !candidates.contains(&time) {
+            candidates.push(time);
+        }
+    }
+    candidates.sort_unstable();
+
     // Evaluate poses for candidates.
     let poses: Vec<BTreeMap<u32, RigidTransform>> = candidates
         .iter()
         .map(|&time| evaluate_node_poses(model, clip_index, time))
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Error-budget feasibility: the budget can only be honored at the
+    // clip's tick resolution if it is at least the minimum adjacent-tick pose
+    // error. A budget below that floor is unsatisfiable — no subdivision can
+    // help — so reject it with a typed impossibility error naming the floor
+    // rather than silently returning an over-budget schedule (R6336-7).
+    let min_intertick = poses
+        .windows(2)
+        .map(|pair| pose_error(&pair[0], &pair[1]))
+        .fold(f64::INFINITY, f64::min);
+    if settings.error_budget < min_intertick {
+        return Err(PoseError::Validation(format!(
+            "errorBudget {} is unsatisfiable: the run clip's minimum inter-tick pose error is {min_intertick}; no tick-resolution schedule can stay within it",
+            settings.error_budget
+        )));
+    }
+
+    // Reserve one slot for the final pose, so the cap is never exceeded.
+    let budget_for_anchors = settings.max_frames - 1;
+
     let mut kept: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
-    let mut last_kept = 0usize;
-    for i in 1..candidates.len() {
-        let is_last = i == candidates.len() - 1;
-        let error = pose_error(&poses[last_kept], &poses[i]);
-        let mandatory = is_last
-            || exceeds_event(
-                &poses[last_kept],
-                &poses[i],
-                settings.event_translation_threshold,
-                settings.event_rotation_threshold,
-            );
-        if mandatory {
-            let reason = if is_last {
-                SelectionReason::Last
+    let mut anchor = 0usize;
+    let mut i = 1usize;
+    while i < candidates.len() {
+        if kept.len() >= budget_for_anchors {
+            break; // leave room for the final pose
+        }
+        // Error-budget invariant: whenever the interval from the current anchor
+        // to the *next* candidate exceeds the budget, keep the current
+        // candidate as an anchor so no kept interval ever exceeds the budget.
+        if pose_error(&poses[anchor], &poses[i]) > settings.error_budget && i - 1 > anchor {
+            kept.push((i - 1, SelectionReason::ErrorBudget));
+            anchor = i - 1;
+        }
+        let is_mandatory_time = mandatory_times.contains(&candidates[i]);
+        let event = exceeds_event(
+            &poses[anchor],
+            &poses[i],
+            settings.event_translation_threshold,
+            settings.event_rotation_threshold,
+        );
+        if is_mandatory_time || event {
+            // A hard anchor: before accepting it, subdivide the interval from
+            // the current anchor to this frame so every kept step is within the
+            // error budget. Walk forward taking the *next* candidate whenever
+            // the running interval would exceed the budget.
+            while pose_error(&poses[anchor], &poses[i]) > settings.error_budget {
+                let mut advanced = false;
+                for candidate in (anchor + 1)..i {
+                    if pose_error(&poses[anchor], &poses[candidate]) > settings.error_budget {
+                        // Keep the frame just before the over-budget point so
+                        // each kept step stays within budget, then re-anchor.
+                        let step = candidate - 1;
+                        if step > anchor {
+                            kept.push((step, SelectionReason::ErrorBudget));
+                            anchor = step;
+                            advanced = true;
+                        }
+                        break;
+                    }
+                }
+                if !advanced {
+                    // Consecutive candidates are already over budget; accept
+                    // the interval (cannot subdivide below the tick).
+                    break;
+                }
+            }
+            let reason = if is_mandatory_time {
+                SelectionReason::Mandatory
             } else {
                 SelectionReason::Event
             };
             kept.push((i, reason));
-            last_kept = i;
-        } else if error > settings.error_budget {
-            // Insert an intermediate frame to stay within budget.
-            kept.push((i, SelectionReason::ErrorBudget));
-            last_kept = i;
+            anchor = i;
         }
-        if kept.len() >= settings.max_frames {
-            if kept.last().map(|&(idx, _)| idx) != Some(candidates.len() - 1) {
-                kept.push((candidates.len() - 1, SelectionReason::Last));
+        i += 1;
+    }
+
+    // Tail: ensure the interval from the final anchor to the last candidate
+    // also satisfies the error budget.
+    let last_index = candidates.len() - 1;
+    while pose_error(&poses[anchor], &poses[last_index]) > settings.error_budget {
+        let mut advanced = false;
+        for candidate in (anchor + 1)..last_index {
+            if pose_error(&poses[anchor], &poses[candidate]) > settings.error_budget {
+                let step = candidate - 1;
+                if step > anchor && kept.len() < budget_for_anchors {
+                    kept.push((step, SelectionReason::ErrorBudget));
+                    anchor = step;
+                    advanced = true;
+                }
+                break;
             }
+        }
+        if !advanced {
             break;
         }
+    }
+    // Always retain the final candidate pose within the cap.
+    let last_index = candidates.len() - 1;
+    if kept.last().map(|&(idx, _)| idx) != Some(last_index) {
+        kept.push((last_index, SelectionReason::Last));
+    } else if let Some(last) = kept.last_mut() {
+        last.1 = SelectionReason::Last;
     }
 
     // Build the schedule with independent durations, deduplicating any
@@ -179,7 +305,8 @@ pub fn select_pose_schedule(
 /// Pose-space deviation between two poses: the max over nodes of translation
 /// distance (cells) plus a rotation-distance term (radians → cells at a 1:1
 /// weight for budget comparison).
-fn pose_error(a: &BTreeMap<u32, RigidTransform>, b: &BTreeMap<u32, RigidTransform>) -> f64 {
+/// Pose-space deviation between two poses (exposed for error-budget verification).
+pub fn pose_error(a: &BTreeMap<u32, RigidTransform>, b: &BTreeMap<u32, RigidTransform>) -> f64 {
     let mut worst = 0.0f64;
     for (node, ta) in a {
         let Some(tb) = b.get(node) else { continue };
