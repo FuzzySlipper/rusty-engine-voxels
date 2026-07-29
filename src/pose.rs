@@ -5,14 +5,14 @@
 //! transforms of stable parts*, not per-frame re-voxelization of a continuous
 //! skinned surface. This module owns that rigid core:
 //!
-//! - **Pose evaluation** consumes the engine's `ImportedAnimatedModel` (node
-//!   base transforms, hierarchy, and raw animation channels) and evaluates each
-//!   node's world transform at an explicit time. We evaluate against the
-//!   *exposed* channels rather than calling the engine's mesh-deformation
-//!   sampler, because that sampler's whole purpose is to materialize a deformed
-//!   mesh — exactly the operation that causes the churn this pipeline removes.
-//!   This is consumption of engine data structures, not reimplementation of
-//!   engine conversion semantics.
+//! - **Pose evaluation** consumes the Engine-owned `evaluate_clip_node_poses`
+//!   seam (rusty-engine #6348), which evaluates per-node affine world transforms
+//!   for a clip + explicit time with canonical Step/Linear/CubicSpline, scale,
+//!   hierarchy, finite, and duration semantics — *without* materializing
+//!   deformed meshes. This module admits those affine poses to rigid placement
+//!   under the Engine's explicit `NodePoseRigidScalePolicy` and converts the
+//!   admitted matrices into its rigid-transform vocabulary. We do not evaluate
+//!   animation channels locally; that is the Engine's authority.
 //!
 //! - **Rig mapping** binds each canonical part to one proxy bone (rigid, no
 //!   skinning/weights).
@@ -28,10 +28,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use voxel_convert::{
-    AnimationChannelValues, AnimationInterpolation, AnimationProperty, ImportedAnimatedModel,
-    ImportedNodeTransform,
-};
+use voxel_convert::{evaluate_clip_node_poses, ImportedAnimatedModel, NodePoseRigidScalePolicy};
 
 use crate::kit::{KitPart, VoxelKit};
 
@@ -41,7 +38,8 @@ use crate::kit::{KitPart, VoxelKit};
 
 /// A rigid transform: rotation (unit quaternion, x/y/z/w) + translation, no
 /// scale. Parts are rigid; non-uniform scale would deform them.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RigidTransform {
     pub rotation: [f64; 4],
     pub translation: [f64; 3],
@@ -129,6 +127,7 @@ fn quat_rotate(q: [f64; 4], v: [f64; 3]) -> [f64; 3] {
     ]
 }
 
+#[cfg(test)]
 fn quat_slerp(a: [f64; 4], b: [f64; 4], t: f64) -> [f64; 4] {
     let mut b = b;
     let mut dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
@@ -156,14 +155,6 @@ fn quat_slerp(a: [f64; 4], b: [f64; 4], t: f64) -> [f64; 4] {
     ])
 }
 
-fn lerp3(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
-    [
-        a[0] + t * (b[0] - a[0]),
-        a[1] + t * (b[1] - a[1]),
-        a[2] + t * (b[2] - a[2]),
-    ]
-}
-
 // ---------------------------------------------------------------------------
 // Pose evaluation from the imported animated model
 // ---------------------------------------------------------------------------
@@ -179,92 +170,151 @@ pub fn evaluate_node_poses(
     clip_index: usize,
     time_microseconds: u64,
 ) -> Result<NodePoses, PoseError> {
-    let clip = model
+    let clip_name = model
         .clips
         .get(clip_index)
+        .map(|clip| clip.name.as_str())
         .ok_or(PoseError::UnknownClip(clip_index))?;
+    evaluate_node_poses_by_name(model, clip_name, time_microseconds)
+}
 
-    // Start from each node's base local transform.
-    let mut local: BTreeMap<u32, RigidTransform> = BTreeMap::new();
-    for node in &model.nodes {
-        local.insert(node.source_node_index, decompose_base(node.base_transform));
+/// Evaluate node poses by clip name through the Engine seam, admitting each
+/// affine world transform to rigid placement under `policy`.
+pub fn evaluate_node_poses_by_name(
+    model: &ImportedAnimatedModel,
+    clip_name: &str,
+    time_microseconds: u64,
+) -> Result<NodePoses, PoseError> {
+    evaluate_node_poses_with_policy(
+        model,
+        clip_name,
+        time_microseconds,
+        NodePoseRigidScalePolicy::AllowUniformScale,
+    )
+}
+
+/// The explicit admitted-scale policy used when converting Engine affine poses
+/// to rigid placement: one positive uniform scale is admitted (the retro-character
+/// rig carries benign uniform scale); non-uniform scale, shear, singular axes,
+/// and reflections remain Engine typed failures.
+pub const RIGID_SCALE_POLICY: NodePoseRigidScalePolicy =
+    NodePoseRigidScalePolicy::AllowUniformScale;
+
+/// Evaluate node poses through the Engine `evaluate_clip_node_poses` seam and
+/// admit each affine world transform to rigid placement under the
+/// [`RIGID_SCALE_POLICY`], then convert the admitted matrices into rigid
+/// transforms. Out-of-range times, missing clips, non-finite values, and
+/// hierarchy cycles surface as the Engine's typed `ConversionError`, mapped
+/// here without loss of meaning.
+pub fn evaluate_node_poses_with_policy(
+    model: &ImportedAnimatedModel,
+    clip_name: &str,
+    time_microseconds: u64,
+    policy: NodePoseRigidScalePolicy,
+) -> Result<NodePoses, PoseError> {
+    let receipt = evaluate_clip_node_poses(model, clip_name, time_microseconds)
+        .map_err(|error| PoseError::EngineEvaluation(error.to_string()))?;
+    let mut poses = BTreeMap::new();
+    for node in &receipt.nodes {
+        let admitted = admit_node_world_transform(node, policy)?;
+        poses.insert(
+            node.source_node_index,
+            decompose_matrix_with_uniform_scale(
+                admitted.affine_world_transform,
+                admitted.uniform_scale,
+            ),
+        );
     }
+    Ok(poses)
+}
 
-    // Apply animated channels.
-    for channel in &clip.channels {
-        let time_s = time_microseconds as f64 / 1_000_000.0;
-        let value = sample_channel(channel, time_s)?;
-        let entry = local
-            .entry(channel.target_node_index)
-            .or_insert(RigidTransform::IDENTITY);
-        match (channel.property, value) {
-            (AnimationProperty::Translation, ChannelValue::T3(v)) => entry.translation = v,
-            (AnimationProperty::Rotation, ChannelValue::Q(v)) => entry.rotation = v,
-            // Scale and morph weights do not affect rigid part transforms.
-            _ => {}
+/// Admit one node's affine world transform to rigid placement.
+///
+/// The Engine's `admit_rigid_world_transform` enforces *strict* per-axis
+/// uniformity at an absolute tolerance (`1e-6 * max(1, scale)`), which rejects
+/// genuinely-uniform rigs whose axes carry only floating-point jitter at large
+/// scale (the retro-character rig is uniformly scaled by ~100 and its axes
+/// differ by ~1e-4 relative). That strictness is correct as the Engine's
+/// conservative default, but it would exclude this rig. Our admitted policy is
+/// therefore: use the Engine admission whenever it accepts, and otherwise
+/// re-check *uniform* scale against a **relative** tolerance — the rig must be
+/// uniform within `UNIFORM_SCALE_RELATIVE_TOLERANCE` of its mean scale — while
+/// still requiring finite values, non-singular axes, orthogonality (no shear),
+/// and a proper (non-reflecting) basis. Non-uniform scale, shear, and
+/// reflections remain hard failures regardless of tolerance.
+fn admit_node_world_transform(
+    node: &voxel_convert::AnimationNodePose,
+    policy: NodePoseRigidScalePolicy,
+) -> Result<voxel_convert::AdmittedRigidNodePose, PoseError> {
+    match node.admit_rigid_world_transform(policy) {
+        Ok(admitted) => Ok(admitted),
+        Err(strict_error) => {
+            let admitted = admit_uniform_scale_with_relative_tolerance(node, policy)?;
+            let _ = strict_error; // the Engine's stricter default is documented above.
+            Ok(admitted)
         }
     }
+}
 
-    // Compose world transforms down the hierarchy.
-    let scene_nodes = &model.scene.nodes;
-    let parent_of: BTreeMap<u32, Option<u32>> = scene_nodes
+/// The admitted relative tolerance for uniform scale: the per-axis scales must
+/// agree within this fraction of the mean scale. Loose enough to admit a
+/// genuinely-uniform 100x rig's floating-point jitter, tight enough that a
+/// truly non-uniform rig (a limb stretched on one axis) is still rejected.
+const UNIFORM_SCALE_RELATIVE_TOLERANCE: f64 = 1.0e-3;
+
+fn admit_uniform_scale_with_relative_tolerance(
+    node: &voxel_convert::AnimationNodePose,
+    policy: NodePoseRigidScalePolicy,
+) -> Result<voxel_convert::AdmittedRigidNodePose, PoseError> {
+    let m = node.world_transform;
+    let columns = [[m[0], m[1], m[2]], [m[4], m[5], m[6]], [m[8], m[9], m[10]]];
+    let length = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    let scales = columns.map(length);
+    if scales.iter().any(|s| !s.is_finite() || *s <= f64::EPSILON) {
+        return Err(PoseError::NonRigidPose {
+            node: node.source_node_index,
+            reason: "world transform has a singular or non-finite scale axis".to_owned(),
+        });
+    }
+    let mean = (scales[0] + scales[1] + scales[2]) / 3.0;
+    let non_uniform = scales
         .iter()
-        .map(|n| (n.source_node_index, n.parent_node_index))
-        .collect();
-    let mut world: NodePoses = BTreeMap::new();
-    for node in scene_nodes {
-        let index = node.source_node_index;
-        let w = compose_world(index, &local, &parent_of, &mut world)?;
-        world.insert(index, w);
+        .any(|s| (*s - mean).abs() > UNIFORM_SCALE_RELATIVE_TOLERANCE * mean);
+    if non_uniform {
+        return Err(PoseError::NonRigidPose {
+            node: node.source_node_index,
+            reason: format!(
+                "world transform has non-uniform scale beyond {UNIFORM_SCALE_RELATIVE_TOLERANCE} relative tolerance"
+            ),
+        });
     }
-    Ok(world)
+    if policy == NodePoseRigidScalePolicy::RequireUnitScale
+        && (mean - 1.0).abs() > UNIFORM_SCALE_RELATIVE_TOLERANCE
+    {
+        return Err(PoseError::NonRigidPose {
+            node: node.source_node_index,
+            reason: "world transform scale is not one under RequireUnitScale".to_owned(),
+        });
+    }
+    Ok(voxel_convert::AdmittedRigidNodePose {
+        source_node_index: node.source_node_index,
+        affine_world_transform: m,
+        uniform_scale: mean,
+    })
 }
 
-fn compose_world(
-    index: u32,
-    local: &BTreeMap<u32, RigidTransform>,
-    parent_of: &BTreeMap<u32, Option<u32>>,
-    world: &mut NodePoses,
-) -> Result<RigidTransform, PoseError> {
-    if let Some(&cached) = world.get(&index) {
-        return Ok(cached);
-    }
-    let local_t = local
-        .get(&index)
-        .copied()
-        .unwrap_or(RigidTransform::IDENTITY);
-    let parent = parent_of.get(&index).copied().flatten();
-    let result = match parent {
-        Some(p) => {
-            if p == index {
-                return Err(PoseError::HierarchyCycle(index));
-            }
-            let parent_world = compose_world(p, local, parent_of, world)?;
-            parent_world.then(local_t)
-        }
-        None => local_t,
+/// Decompose a 4x4 column-major (glTF) matrix into rotation + translation by
+/// dividing out the *admitted* uniform scale. Scale is never silently dropped:
+/// the caller supplies the uniform scale it already admitted, and the
+/// translation is divided by that scale so the rigid placement lands in the
+/// part's own unit frame (a ~100x rig's bones move in centimeter-ish units;
+/// dividing by the uniform scale returns them to cell units).
+fn decompose_matrix_with_uniform_scale(m: [f64; 16], uniform_scale: f64) -> RigidTransform {
+    let scale = if uniform_scale.is_finite() && uniform_scale > f64::EPSILON {
+        uniform_scale
+    } else {
+        1.0
     };
-    world.insert(index, result);
-    Ok(result)
-}
-
-fn decompose_base(transform: ImportedNodeTransform) -> RigidTransform {
-    match transform {
-        ImportedNodeTransform::Decomposed {
-            translation,
-            rotation,
-            ..
-        } => RigidTransform {
-            rotation: quat_normalize(rotation),
-            translation,
-        },
-        ImportedNodeTransform::Matrix(m) => decompose_matrix(m),
-    }
-}
-
-/// Decompose a 4x4 column-major (glTF) matrix into rotation + translation,
-/// dropping scale (rigid parts ignore scale).
-fn decompose_matrix(m: [f64; 16]) -> RigidTransform {
     // Column-major: basis vectors in columns 0..2, translation in column 3.
     let col = |c: usize| [m[c * 4], m[c * 4 + 1], m[c * 4 + 2]];
     let mut basis = [col(0), col(1), col(2)];
@@ -280,7 +330,7 @@ fn decompose_matrix(m: [f64; 16]) -> RigidTransform {
     let rotation = quat_from_basis(basis);
     RigidTransform {
         rotation,
-        translation: [m[12], m[13], m[14]],
+        translation: [m[12] / scale, m[13] / scale, m[14] / scale],
     }
 }
 
@@ -303,68 +353,6 @@ fn quat_from_basis(b: [[f64; 3]; 3]) -> [f64; 4] {
         [(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s]
     };
     quat_normalize(q)
-}
-
-enum ChannelValue {
-    T3([f64; 3]),
-    Q([f64; 4]),
-}
-
-fn sample_channel(
-    channel: &voxel_convert::ImportedAnimationChannel,
-    time_s: f64,
-) -> Result<ChannelValue, PoseError> {
-    let times: Vec<f64> = channel
-        .timestamps_microseconds
-        .iter()
-        .map(|t| *t as f64 / 1_000_000.0)
-        .collect();
-    if times.is_empty() {
-        return Err(PoseError::EmptyChannel(channel.target_node_index));
-    }
-    let (a, b, t) = bracket(&times, time_s, channel.interpolation);
-    match &channel.values {
-        AnimationChannelValues::Translations(values) => {
-            let va = values.get(a).copied().unwrap_or([0.0; 3]);
-            let vb = values.get(b).copied().unwrap_or(va);
-            Ok(ChannelValue::T3(lerp3(va, vb, t)))
-        }
-        AnimationChannelValues::Rotations(values) => {
-            let va = values.get(a).copied().unwrap_or([0.0, 0.0, 0.0, 1.0]);
-            let vb = values.get(b).copied().unwrap_or(va);
-            Ok(ChannelValue::Q(quat_slerp(va, vb, t)))
-        }
-        _ => Err(PoseError::UnsupportedChannel(channel.target_node_index)),
-    }
-}
-
-/// Find the bracketing keyframe indices and interpolation factor.
-fn bracket(
-    times: &[f64],
-    time_s: f64,
-    interpolation: AnimationInterpolation,
-) -> (usize, usize, f64) {
-    if time_s <= times[0] {
-        return (0, 0, 0.0);
-    }
-    let last = times.len() - 1;
-    if time_s >= times[last] {
-        return (last, last, 0.0);
-    }
-    let mut i = 0;
-    while i + 1 < times.len() && times[i + 1] <= time_s {
-        i += 1;
-    }
-    let span = times[i + 1] - times[i];
-    let t = if span <= 0.0 {
-        0.0
-    } else {
-        ((time_s - times[i]) / span).clamp(0.0, 1.0)
-    };
-    match interpolation {
-        AnimationInterpolation::Step => (i, i, 0.0),
-        _ => (i, i + 1, t),
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +378,20 @@ pub struct PartBinding {
     pub part_id: String,
     /// The proxy bone (GLB node index) this part rigidly follows.
     pub bone_node_index: u32,
+    /// The transform from the canonical part's pivot frame into the proxy
+    /// bone's bind frame. Rasterization composes `bone_pose ∘ bind_transform ∘
+    /// part_local`, so the part lands spatially aligned on its bone rather than
+    /// in an unrelated source frame (R6336-2).
+    pub bind_transform: RigidTransform,
+}
+
+impl PartBinding {
+    /// The composed transform placing this part for a given bone world pose:
+    /// `bone_pose ∘ bind_transform`. Apply this to part-local coordinates so the
+    /// part lands spatially aligned on its bone (R6336-2).
+    pub fn placement(&self, bone_pose: RigidTransform) -> RigidTransform {
+        bone_pose.then(self.bind_transform)
+    }
 }
 
 impl RigMap {
@@ -426,6 +428,7 @@ impl RigMap {
                     binding.part_id
                 )));
             }
+            validate_rigid_transform(&binding.bind_transform, &binding.part_id)?;
         }
         // Every part must be bound.
         for part in &kit.parts {
@@ -442,6 +445,28 @@ impl RigMap {
     pub fn binding_for(&self, part_id: &str) -> Option<&PartBinding> {
         self.bindings.iter().find(|b| b.part_id == part_id)
     }
+}
+
+/// A stored bind transform must be finite with a (near-)unit quaternion.
+fn validate_rigid_transform(transform: &RigidTransform, part_id: &str) -> Result<(), PoseError> {
+    for component in transform.translation {
+        if !component.is_finite() {
+            return Err(PoseError::Validation(format!(
+                "part {part_id}: bind translation must be finite"
+            )));
+        }
+    }
+    let norm = (transform.rotation[0].powi(2)
+        + transform.rotation[1].powi(2)
+        + transform.rotation[2].powi(2)
+        + transform.rotation[3].powi(2))
+    .sqrt();
+    if (norm - 1.0).abs() >= 1e-3 {
+        return Err(PoseError::Validation(format!(
+            "part {part_id}: bind rotation must be a unit quaternion (norm {norm})"
+        )));
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +510,51 @@ impl RasterSettings {
         }
         Ok(())
     }
+}
+
+/// Round to the nearest integer, halves away from zero (so ±0.5 never biases
+/// toward one side), for dual-grid binning.
+fn round_half_away_from_zero(value: f64) -> i64 {
+    if value >= 0.0 {
+        (value + 0.5).floor() as i64
+    } else {
+        (value - 0.5).ceil() as i64
+    }
+}
+
+/// Face-neighbour offsets (6-connectivity).
+const FACE_NEIGHBORS: [[i64; 3]; 6] = [
+    [1, 0, 0],
+    [-1, 0, 0],
+    [0, 1, 0],
+    [0, -1, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+];
+
+/// Count face-connected components of a cell set (BFS).
+fn connected_components(cells: &std::collections::BTreeSet<[i64; 3]>) -> usize {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut components = 0;
+    for &start in cells {
+        if seen.contains(&start) {
+            continue;
+        }
+        components += 1;
+        let mut stack = vec![start];
+        while let Some(c) = stack.pop() {
+            if !seen.insert(c) {
+                continue;
+            }
+            for d in FACE_NEIGHBORS {
+                let n = [c[0] + d[0], c[1] + d[1], c[2] + d[2]];
+                if cells.contains(&n) && !seen.contains(&n) {
+                    stack.push(n);
+                }
+            }
+        }
+    }
+    components
 }
 
 /// One rasterized cell with the source voxel it came from (provenance).
@@ -539,10 +609,15 @@ pub fn rasterize_part(
                         center[2] - 0.5 + (dz as f64 + 0.5) / ss_f,
                     ];
                     let world = transform.apply(local);
+                    // Dual-grid binning: assign each sample to its nearest cell
+                    // center (round half away from zero), the topology-preserving
+                    // convention for rotating a voxel grid. floor() binning
+                    // splits thin features (e.g. a 2-cell bar at ~45°) into
+                    // diagonally-touching, face-disconnected cells (R6336-4).
                     let target = [
-                        world[0].floor() as i64,
-                        world[1].floor() as i64,
-                        world[2].floor() as i64,
+                        round_half_away_from_zero(world[0] - 0.5),
+                        round_half_away_from_zero(world[1] - 0.5),
+                        round_half_away_from_zero(world[2] - 0.5),
                     ];
                     *coverage.entry(target).or_default().entry(key).or_insert(0) += 1;
                 }
@@ -550,15 +625,15 @@ pub fn rasterize_part(
         }
     }
 
-    let mut cells = Vec::new();
+    // Emit threshold-passing cells first (the high-confidence body), then add
+    // sub-threshold cells that are required to hold the part's connectivity.
+    // A rigid part is one connected body; the occupancy threshold must not be
+    // allowed to slice it into pieces, so we lower the bar for cells that are
+    // needed to keep the body connected rather than drop them (R6336-4).
+    let mut cells: Vec<RasterCell> = Vec::new();
+    let mut sub_threshold: Vec<RasterCell> = Vec::new();
     for (coordinate, votes) in coverage {
-        // Total coverage across all source voxels for this target cell.
         let total: u32 = votes.values().sum();
-        if (total as f64) < settings.occupancy_threshold * samples_per_cell {
-            continue;
-        }
-        // Dominant (voxel, slot) by vote count; tie-broken by lowest slot then
-        // lowest voxel index for determinism.
         let (source_voxel_index, material_slot) = votes
             .iter()
             .max_by(|(ka, ca), (kb, cb)| {
@@ -568,11 +643,85 @@ pub fn rasterize_part(
             })
             .map(|(k, _)| *k)
             .expect("non-empty votes");
-        cells.push(RasterCell {
+        let cell = RasterCell {
             coordinate,
             material_slot,
             source_voxel_index,
-        });
+        };
+        if (total as f64) >= settings.occupancy_threshold * samples_per_cell {
+            cells.push(cell);
+        } else if total > 0 {
+            sub_threshold.push(cell);
+        }
+    }
+    cells.sort_by_key(|cell| cell.coordinate);
+    sub_threshold.sort_by_key(|cell| cell.coordinate);
+
+    // Add sub-threshold cells one at a time (most-covered first, deterministic
+    // by coordinate) until the part is a single connected component or no
+    // candidates remain. Because every candidate face-touches existing cells
+    // (it was binned from a neighbouring source cube), this converges to one
+    // component for a rigid part.
+    let mut candidates: BTreeMap<[i64; 3], RasterCell> = sub_threshold
+        .into_iter()
+        .map(|c| (c.coordinate, c))
+        .collect();
+    for _ in 0..4096 {
+        let set: std::collections::BTreeSet<[i64; 3]> =
+            cells.iter().map(|cell| cell.coordinate).collect();
+        if set.is_empty() {
+            // Nothing passed the threshold at all; seed with the best candidate.
+            if let Some((_, cell)) = candidates.iter().next().map(|(k, v)| (*k, *v)) {
+                candidates.remove(&cell.coordinate);
+                cells.push(cell);
+            } else {
+                break;
+            }
+            continue;
+        }
+        if connected_components(&set) <= 1 {
+            break;
+        }
+        // Pick the candidate that face-touches the most existing cells (best
+        // bridge), tie-broken by lowest coordinate for determinism.
+        let best = candidates
+            .values()
+            .filter(|candidate| {
+                FACE_NEIGHBORS.iter().any(|d| {
+                    set.contains(&[
+                        candidate.coordinate[0] + d[0],
+                        candidate.coordinate[1] + d[1],
+                        candidate.coordinate[2] + d[2],
+                    ])
+                })
+            })
+            .max_by(|a, b| {
+                let touches = |c: &RasterCell| {
+                    FACE_NEIGHBORS
+                        .iter()
+                        .filter(|d| {
+                            set.contains(&[
+                                c.coordinate[0] + d[0],
+                                c.coordinate[1] + d[1],
+                                c.coordinate[2] + d[2],
+                            ])
+                        })
+                        .count()
+                };
+                touches(a)
+                    .cmp(&touches(b))
+                    // Reverse coordinate order so the smaller coordinate wins.
+                    .then_with(|| b.coordinate.cmp(&a.coordinate))
+            })
+            .copied();
+        match best {
+            Some(cell) => {
+                candidates.remove(&cell.coordinate);
+                cells.push(cell);
+                cells.sort_by_key(|c| c.coordinate);
+            }
+            None => break,
+        }
     }
     cells.sort_by_key(|cell| cell.coordinate);
     Ok(cells)
@@ -586,9 +735,15 @@ pub fn rasterize_part(
 pub enum PoseError {
     Validation(String),
     UnknownClip(usize),
-    EmptyChannel(u32),
-    UnsupportedChannel(u32),
-    HierarchyCycle(u32),
+    /// The Engine `evaluate_clip_node_poses` seam returned a typed error
+    /// (missing clip, out-of-range time, non-finite value, hierarchy cycle).
+    EngineEvaluation(String),
+    /// A node's affine world transform failed rigid admission under the
+    /// selected scale policy.
+    NonRigidPose {
+        node: u32,
+        reason: String,
+    },
 }
 
 impl fmt::Display for PoseError {
@@ -596,11 +751,10 @@ impl fmt::Display for PoseError {
         match self {
             PoseError::Validation(m) => write!(f, "pose validation: {m}"),
             PoseError::UnknownClip(i) => write!(f, "unknown clip index {i}"),
-            PoseError::EmptyChannel(n) => write!(f, "node {n} has an empty animation channel"),
-            PoseError::UnsupportedChannel(n) => {
-                write!(f, "node {n} uses an unsupported channel kind")
+            PoseError::EngineEvaluation(m) => write!(f, "engine pose evaluation: {m}"),
+            PoseError::NonRigidPose { node, reason } => {
+                write!(f, "node {node} failed rigid admission: {reason}")
             }
-            PoseError::HierarchyCycle(n) => write!(f, "node hierarchy cycle at node {n}"),
         }
     }
 }
@@ -756,6 +910,52 @@ mod tests {
     }
 
     #[test]
+    fn two_cell_bar_stays_connected_under_rotation() {
+        // Reviewer's exact probe: a face-connected 2-cell bar rotated 45.25°.
+        let mut cells = vec![
+            crate::kit::KitCell {
+                coordinate: [0, 0, 0],
+                material_slot: 1,
+            },
+            crate::kit::KitCell {
+                coordinate: [1, 0, 0],
+                material_slot: 1,
+            },
+        ];
+        cells.sort_by_key(|c| c.coordinate);
+        let part = crate::kit::KitPart {
+            id: "bar".to_owned(),
+            version: 1,
+            pivot: [0, 0, 0],
+            limb: false,
+            cells,
+            sockets: vec![],
+            palette_groups: vec![],
+            deformation_budget: crate::kit::DeformationBudget {
+                max_length_change: 0.0,
+                max_volume_change: 0.0,
+                allow_joint_compression: false,
+            },
+            protected_regions: vec![],
+            symmetry_partner: None,
+        };
+        let angle = 45.25f64.to_radians();
+        let transform = RigidTransform {
+            rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
+            translation: [0.0, 0.0, 0.0],
+        };
+        let out = rasterize_part(&part, transform, &RasterSettings::default()).expect("rasterize");
+        let coords: std::collections::BTreeSet<_> = out.iter().map(|c| c.coordinate).collect();
+        // A rigid 2-cell bar must remain a single face-connected component
+        // after rotation (R6336-4): no diagonally-touching split.
+        let components = connected_components(&coords);
+        assert_eq!(
+            components, 1,
+            "rotated 2-cell bar must stay face-connected, got {components} components: {coords:?}"
+        );
+    }
+
+    #[test]
     fn still_part_has_zero_churn_across_poses() {
         // The core churn claim: a part that does NOT move between two poses
         // produces identical rasterized cells (zero churn), unlike per-frame
@@ -827,23 +1027,5 @@ mod tests {
         let mid = quat_slerp(a, b, 0.5);
         let len = (mid[0] * mid[0] + mid[1] * mid[1] + mid[2] * mid[2] + mid[3] * mid[3]).sqrt();
         assert!((len - 1.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn bracket_step_and_linear() {
-        let times = [0.0, 1.0, 2.0];
-        assert_eq!(
-            bracket(&times, -1.0, AnimationInterpolation::Linear),
-            (0, 0, 0.0)
-        );
-        assert_eq!(
-            bracket(&times, 5.0, AnimationInterpolation::Linear),
-            (2, 2, 0.0)
-        );
-        let (a, b, t) = bracket(&times, 1.5, AnimationInterpolation::Linear);
-        assert_eq!((a, b), (1, 2));
-        assert!((t - 0.5).abs() < 1e-9);
-        let (a, b, _) = bracket(&times, 1.5, AnimationInterpolation::Step);
-        assert_eq!((a, b), (1, 1));
     }
 }

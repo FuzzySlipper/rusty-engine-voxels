@@ -21,7 +21,7 @@ use crate::project::{
 };
 use crate::quality::{analyze_prepared_quality, VoxelQualityEvidence};
 
-pub const ENGINE_REVISION: &str = "1703f46f1624d32b8324f831107a068d5f66ab30";
+pub const ENGINE_REVISION: &str = "a867fa9cd2caa7238619a6ef0100412e34fea19a";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]

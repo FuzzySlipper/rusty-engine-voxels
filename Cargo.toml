@@ -20,15 +20,15 @@ name = "rusty-engine-voxels-studio-adapter"
 path = "src/bin/studio-adapter.rs"
 
 [dependencies]
-render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
-render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
+render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
+render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
-svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
-voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
-voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
-voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1703f46f1624d32b8324f831107a068d5f66ab30" }
+svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
+voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
+voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
+voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
 
 [lints.rust]
 unsafe_code = "forbid"

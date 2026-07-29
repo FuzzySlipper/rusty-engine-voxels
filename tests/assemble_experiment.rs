@@ -1,0 +1,185 @@
+use std::path::{Path, PathBuf};
+
+use rusty_engine_voxels::assemble::{
+    assemble_rough_schedule, select_pose_schedule, PoseSelectionSettings, SelectionReason,
+};
+use rusty_engine_voxels::kit::load_kit;
+use rusty_engine_voxels::pose::{RasterSettings, RigMap};
+use voxel_convert::{import_animated_mesh_source, MeshSourceFormat, MeshSourceImportRequest};
+
+fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
+}
+
+const RIFLEMAN_KIT: &str = "content/characters/rifleman/character.json";
+const RIFLEMAN_RIG_MAP: &str = "content/characters/rifleman/rig-map.json";
+const RETRO_GLB: &str = "content/sources/kenney-retro-character/character-medium.glb";
+
+fn import_retro() -> voxel_convert::ImportedAnimatedMeshSource {
+    let bytes = std::fs::read(root().join(RETRO_GLB)).expect("read retro glb");
+    import_animated_mesh_source(&MeshSourceImportRequest {
+        source_asset_id: "mesh-animation/retro-character".to_owned(),
+        asset_version: 1,
+        source_path: RETRO_GLB.to_owned(),
+        format: MeshSourceFormat::Glb,
+        source_bytes: bytes,
+        expected_source_sha256: None,
+        mesh_primitive: None,
+    })
+    .expect("import retro character")
+}
+
+fn load_rig_map() -> RigMap {
+    let text = std::fs::read_to_string(root().join(RIFLEMAN_RIG_MAP)).expect("read rig map");
+    serde_json::from_str(&text).expect("parse rig map")
+}
+
+#[test]
+fn run_schedule_keeps_mandatory_frames_with_independent_durations() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    let schedule = select_pose_schedule(
+        &imported.model,
+        run_index,
+        &PoseSelectionSettings::default(),
+    )
+    .expect("select run schedule");
+
+    // Must keep first and last, and produce a bounded stepped schedule.
+    assert!(schedule.len() >= 2);
+    assert_eq!(schedule[0].reason, SelectionReason::First);
+    assert_eq!(schedule[schedule.len() - 1].reason, SelectionReason::Last);
+    assert!(schedule.len() <= PoseSelectionSettings::default().max_frames);
+
+    // Independent durations are exact, positive, and cover the clip.
+    let clip_duration = imported.model.clips[run_index].duration_microseconds;
+    let total: u64 = schedule.iter().map(|p| p.duration_microseconds).sum();
+    for pose in &schedule {
+        assert!(
+            pose.duration_microseconds > 0,
+            "each pose holds a positive duration"
+        );
+    }
+    // First pose starts at 0; durations tile to the clip end.
+    assert_eq!(schedule[0].time_microseconds, 0);
+    assert_eq!(
+        schedule[0].time_microseconds + total,
+        clip_duration,
+        "schedule must tile the full clip duration"
+    );
+
+    // Deterministic.
+    let again = select_pose_schedule(
+        &imported.model,
+        run_index,
+        &PoseSelectionSettings::default(),
+    )
+    .expect("reselect");
+    assert_eq!(schedule, again);
+}
+
+#[test]
+fn walk_and_run_schedules_produce_coherent_rough_assemblies() {
+    let kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit");
+    let imported = import_retro();
+    let rig_map = load_rig_map();
+    rig_map.validate(&kit, &imported.model).expect("rig map");
+    let settings = RasterSettings::default();
+
+    // Use run (index of "run") and idle as the walk-ish clip for schedule variety.
+    for clip_name in ["run", "idle"] {
+        let clip_index = imported
+            .model
+            .clips
+            .iter()
+            .position(|c| c.name == clip_name)
+            .expect("clip present");
+        let schedule = select_pose_schedule(
+            &imported.model,
+            clip_index,
+            &PoseSelectionSettings::default(),
+        )
+        .expect("schedule");
+        let frames = assemble_rough_schedule(
+            &kit,
+            &rig_map,
+            &imported.model,
+            clip_index,
+            &schedule,
+            &settings,
+        )
+        .expect("assemble schedule");
+
+        assert_eq!(frames.len(), schedule.len());
+        for frame in &frames {
+            // Every frame is coherent: non-empty, bounded, mostly canonical.
+            assert!(!frame.is_empty(), "{clip_name} frame must be non-empty");
+            let (lo, hi) = frame.bounds().expect("bounds");
+            assert!(hi[1] > lo[1], "{clip_name} frame has vertical extent");
+            // Fusion candidates are a minority of the frame (joints, not everything).
+            let fusion = frame.fusion_candidates();
+            assert!(
+                fusion < frame.len(),
+                "{clip_name}: fusion candidates {fusion} should be < frame size {}",
+                frame.len()
+            );
+        }
+
+        // A still region across two poses has zero churn in that region: the
+        // head (a single rigid part) should be identical between the first two
+        // frames if its bone doesn't move; more robustly, the set of part ids
+        // present is stable across all frames.
+        let parts_per_frame: Vec<std::collections::BTreeSet<u32>> = frames
+            .iter()
+            .map(|f| f.voxels.iter().map(|v| v.part_id).collect())
+            .collect();
+        let first = &parts_per_frame[0];
+        for parts in &parts_per_frame {
+            assert_eq!(
+                parts, first,
+                "{clip_name}: part composition must be stable across frames"
+            );
+        }
+    }
+}
+
+#[test]
+fn schedule_error_stays_within_budget() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    let settings = PoseSelectionSettings::default();
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
+
+    // The selector must not keep every candidate frame (it reduces), and must
+    // keep mandatory event frames in a run cycle (legs cross).
+    let candidate_count = 60usize; // rough upper bound of ticks
+    assert!(
+        schedule.len() < candidate_count.max(4),
+        "selector should reduce, not keep everything"
+    );
+    // In a run cycle there is at least one non-trivial event/error-budget frame
+    // beyond first/last.
+    let intermediate = schedule
+        .iter()
+        .filter(|p| {
+            matches!(
+                p.reason,
+                SelectionReason::Event | SelectionReason::ErrorBudget
+            )
+        })
+        .count();
+    assert!(
+        intermediate >= 1,
+        "a run cycle should surface event or error-budget frames"
+    );
+}

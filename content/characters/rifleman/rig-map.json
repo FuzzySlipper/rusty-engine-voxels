@@ -1,18 +1,226 @@
 {
   "schemaVersion": 1,
   "bindings": [
-    { "partId": "head", "boneNodeIndex": 26 },
-    { "partId": "torso", "boneNodeIndex": 23 },
-    { "partId": "pelvis", "boneNodeIndex": 21 },
-    { "partId": "left_upper_arm", "boneNodeIndex": 29 },
-    { "partId": "left_lower_arm", "boneNodeIndex": 30 },
-    { "partId": "right_upper_arm", "boneNodeIndex": 40 },
-    { "partId": "right_lower_arm", "boneNodeIndex": 41 },
-    { "partId": "left_upper_leg", "boneNodeIndex": 50 },
-    { "partId": "left_lower_leg", "boneNodeIndex": 51 },
-    { "partId": "right_upper_leg", "boneNodeIndex": 55 },
-    { "partId": "right_lower_leg", "boneNodeIndex": 56 },
-    { "partId": "rifle", "boneNodeIndex": 42 },
-    { "partId": "backpack", "boneNodeIndex": 23 }
+    {
+      "partId": "head",
+      "boneNodeIndex": 26,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          0.0,
+          31.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "torso",
+      "boneNodeIndex": 23,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          0.0,
+          23.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "pelvis",
+      "boneNodeIndex": 21,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          0.0,
+          16.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "left_upper_arm",
+      "boneNodeIndex": 29,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          -4.0,
+          24.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "left_lower_arm",
+      "boneNodeIndex": 30,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          -4.0,
+          20.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "right_upper_arm",
+      "boneNodeIndex": 40,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          4.0,
+          24.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "right_lower_arm",
+      "boneNodeIndex": 41,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          4.0,
+          20.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "left_upper_leg",
+      "boneNodeIndex": 50,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          -2.0,
+          11.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "left_lower_leg",
+      "boneNodeIndex": 51,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          -2.0,
+          4.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "right_upper_leg",
+      "boneNodeIndex": 55,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          2.0,
+          11.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "right_lower_leg",
+      "boneNodeIndex": 56,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          2.0,
+          4.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "partId": "rifle",
+      "boneNodeIndex": 42,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          4.0,
+          18.0,
+          -1.0
+        ]
+      }
+    },
+    {
+      "partId": "backpack",
+      "boneNodeIndex": 23,
+      "bindTransform": {
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "translation": [
+          0.0,
+          28.0,
+          2.0
+        ]
+      }
+    }
   ]
 }

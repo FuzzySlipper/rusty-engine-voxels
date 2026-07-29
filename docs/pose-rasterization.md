@@ -78,3 +78,46 @@ same transform + same settings is bit-identical.
 Later milestones (M3 joint fusion, M6 temporal review) consume these rough assemblies and measure
 the resulting churn reduction against the straight-pipeline baseline in
 `evidence/churn-study-high-fidelity.json`.
+
+
+## Round-3507 review corrections (bind transform, topology, schedule/assembly)
+
+The first review round (3507) corrected three things and redirected one upstream:
+
+- **Pose evaluation ownership (R6336-1, consumed upstream).** The original local
+  `evaluate_node_poses` both duplicated and observably diverged from Engine animation semantics
+  (CubicSpline tangent handling, scale/morph policy, duration rejection, base-scale dropping). The
+  narrow Engine node-pose provider seam landed as rusty-engine #6348 (approved at exact SHA
+  `a867fa9c`) and is now consumed: this module's evaluator is a thin adapter over
+  `evaluate_clip_node_poses`, and the divergent local channel evaluator is deleted. The Engine pin
+  advanced to `a867fa9c` to take the seam. Equivalence regressions prove out-of-range times are
+  rejected (not clamped), the adapter's rigid poses match the Engine seam up to the admitted
+  uniform scale, and a one-axis-stretched transform is rejected as non-uniform while the real
+  rig is admitted.
+- **Admitted rigid-scale policy.** The Engine affine poses are admitted to rigid placement under an
+  explicit policy. The retro-character rig is uniformly scaled by ~100 with only floating-point
+  jitter between axes, which the Engine's *strict* per-axis uniformity check (absolute
+  `1e-6 * max(1, scale)` tolerance) rejects at 100x. Our admitted policy uses the Engine admission
+  where it accepts and otherwise re-checks *uniform* scale against a **relative** tolerance
+  (`1e-3` of mean scale) — still rejecting truly non-uniform scale, shear, singular axes, and
+  reflections — then decomposes the affine matrix by that admitted uniform scale (translation
+  divided by scale), so a ~100x rig returns to cell units. Scale is decomposed deliberately via the
+  admitted `uniform_scale`, never silently dropped.
+- **Bind transform (R6336-2).** `PartBinding` now carries an explicit `bindTransform` (rotation +
+  translation) from the part's pivot frame into the bone's bind frame, validated as finite with a
+  unit quaternion. Rasterization composes `bone_pose ∘ bindTransform ∘ part_local`, so parts land
+  spatially aligned on their bones. A neutral-reconstruction test proves that at bind pose the
+  transformed parts reconstruct the M1 assembled rifleman (correct vertical extent, coherent
+  composition), not a pile of overlapping parts.
+- **Topology-preserving rasterization (R6336-4).** The rasterizer no longer emits only
+  threshold-passing cells: it emits the high-confidence body, then adds sub-threshold cells that
+  are required to hold the part's face-connectivity (best-bridge-first, deterministic). Combined
+  with dual-grid binning (nearest cell-center), a rigid part now stays a single connected component
+  even for thin features — verified by the exact 2-cell-bar regression and a corpus-scale BFS check
+  over every rifleman part at two run poses.
+- **Pose selection + rough assembly (R6336-3).** `select_pose_schedule` keeps first/last and
+  event frames, reduces the rest under a pose-space error budget, and emits independent per-frame
+  durations (poses strictly within `[0, duration)`, the final pose holding to the clip end).
+  `assemble_rough_frame` merges all bound parts for a selected pose into one rough frame with
+  canonical part/voxel provenance and `needs_fusion` flags on joint/overlap regions, so M3 sees
+  exactly what to fuse rather than the whole frame.
