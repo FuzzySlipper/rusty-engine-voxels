@@ -283,3 +283,104 @@ fn error_budget_intervals_stay_within_budget() {
         );
     }
 }
+
+// --- R6336-9 regressions: mandatory capacity, true tail, per-step feasibility ---
+
+#[test]
+fn mandatory_capacity_overflow_is_typed_impossibility_not_silent_drop() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // max_frames=3 + three distinct mandatory timestamps (none equal to first or
+    // last) needs 5 slots; the selector must reject with a typed impossibility
+    // error rather than silently drop a mandatory anchor.
+    let settings = PoseSelectionSettings {
+        max_frames: 3,
+        mandatory_timestamps: vec![133_333, 266_666, 400_000],
+        ..PoseSelectionSettings::default()
+    };
+    let result = select_pose_schedule(&imported.model, run_index, &settings);
+    assert!(
+        result.is_err(),
+        "mandatory anchors that cannot fit under the cap must be a typed error, not a silent drop"
+    );
+
+    // The same anchors DO fit when the cap allows first+last+3, and all are retained.
+    let fitting = PoseSelectionSettings {
+        max_frames: 8,
+        mandatory_timestamps: vec![133_333, 266_666, 400_000],
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &fitting).expect("schedule");
+    for time in [133_333u64, 266_666, 400_000] {
+        assert!(
+            schedule
+                .iter()
+                .any(|p| p.time_microseconds == time && p.reason == SelectionReason::Mandatory),
+            "mandatory timestamp {time} must be retained when the cap allows it"
+        );
+    }
+}
+
+#[test]
+fn tight_cap_keeps_true_tail_not_truncated_candidate() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // A very tight cap must still label the actual final tick (the true tail of
+    // the native timeline) as Last, not an early truncated candidate.
+    let settings = PoseSelectionSettings {
+        max_frames: 2,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
+    let last = schedule.last().expect("non-empty schedule");
+    assert_eq!(last.reason, SelectionReason::Last);
+    // The true tail is the largest candidate tick below the clip duration.
+    let clip = &imported.model.clips[run_index];
+    let duration = clip.duration_microseconds;
+    let tick = 16_667u64.max(duration / 256);
+    let mut expected_tail = 0u64;
+    let mut t = 0u64;
+    while t < duration {
+        expected_tail = t;
+        t += tick;
+    }
+    assert_eq!(
+        last.time_microseconds, expected_tail,
+        "the Last pose must be the true tail of the native timeline, not a truncated candidate"
+    );
+}
+
+#[test]
+fn below_max_step_budget_is_typed_impossibility() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // A budget between the clip's min and max adjacent-step errors is still
+    // unsatisfiable somewhere (some adjacent step exceeds it), so it must be a
+    // typed impossibility error. The reviewer's 0.05 is below the max step.
+    let settings = PoseSelectionSettings {
+        error_budget: 0.05,
+        event_translation_threshold: 1.0e9,
+        event_rotation_threshold: 1.0e9,
+        ..PoseSelectionSettings::default()
+    };
+    let result = select_pose_schedule(&imported.model, run_index, &settings);
+    assert!(
+        result.is_err(),
+        "a budget below the maximum indivisible-step error must be a typed impossibility error"
+    );
+}

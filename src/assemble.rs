@@ -137,9 +137,11 @@ pub fn select_pose_schedule(
     if duration == 0 {
         return Ok(Vec::new());
     }
-    // Candidate pose times strictly within [0, duration). The clip end is the
-    // boundary the final selected pose holds to, never itself a selected pose
-    // (a pose at the end would have zero hold).
+    // Build the complete bounded native timeline strictly within [0, duration),
+    // independent of the output cap, so tight caps never truncate away the true
+    // tail (R6336-9). The clip end is the boundary the final selected pose holds
+    // to, never itself a selected pose. The timeline is bounded only by the
+    // native tick, never by max_frames.
     let tick = 16_667u64.max(duration / 256);
     let mut candidates: Vec<u64> = Vec::new();
     let mut t = 0u64;
@@ -147,7 +149,6 @@ pub fn select_pose_schedule(
         candidates.push(t);
         t += tick;
     }
-    candidates.truncate(settings.max_frames * 4);
     debug_assert!(!candidates.is_empty());
 
     // Caller-authored mandatory timestamps are added to the candidate set
@@ -166,79 +167,110 @@ pub fn select_pose_schedule(
     }
     candidates.sort_unstable();
 
+    // Mandatory-capacity preflight (R6336-9): first + last + every mandatory
+    // anchor must fit under the hard cap. If they cannot, no schedule can honor
+    // both the cap and the mandatory anchors, so reject with a typed
+    // impossibility error rather than silently dropping a mandatory timestamp.
+    // (First and last share no timestamp with a distinct mandatory time here.)
+    let distinct_mandatory = mandatory_times
+        .iter()
+        .filter(|&&t| t != candidates[0] && t != *candidates.last().expect("non-empty"))
+        .count();
+    let required = 2 + distinct_mandatory; // first + last + distinct mandatories
+    if required > settings.max_frames {
+        return Err(PoseError::Validation(format!(
+            "max_frames {} cannot hold first + last + {distinct_mandatory} mandatory timestamps (need {required}); either raise max_frames or drop mandatory anchors",
+            settings.max_frames
+        )));
+    }
+
     // Evaluate poses for candidates.
     let poses: Vec<BTreeMap<u32, RigidTransform>> = candidates
         .iter()
         .map(|&time| evaluate_node_poses(model, clip_index, time))
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Error-budget feasibility: the budget can only be honored at the
-    // clip's tick resolution if it is at least the minimum adjacent-tick pose
-    // error. A budget below that floor is unsatisfiable — no subdivision can
-    // help — so reject it with a typed impossibility error naming the floor
-    // rather than silently returning an over-budget schedule (R6336-7).
-    let min_intertick = poses
+    // Error-budget feasibility (R6336-9): a budget below the MAXIMUM adjacent
+    // indivisible-step error cannot be honored, because somewhere in the clip
+    // two consecutive ticks already exceed it and no subdivision can shrink a
+    // single tick step. Reject with a typed impossibility error naming that
+    // floor rather than accept a schedule that violates the interval invariant
+    // on some step. (Using the minimum, as before, could pass a clip that still
+    // has an over-budget adjacent step elsewhere.)
+    let max_intertick = poses
         .windows(2)
         .map(|pair| pose_error(&pair[0], &pair[1]))
-        .fold(f64::INFINITY, f64::min);
-    if settings.error_budget < min_intertick {
+        .fold(0.0f64, f64::max);
+    if settings.error_budget < max_intertick {
         return Err(PoseError::Validation(format!(
-            "errorBudget {} is unsatisfiable: the run clip's minimum inter-tick pose error is {min_intertick}; no tick-resolution schedule can stay within it",
+            "errorBudget {} is unsatisfiable at tick resolution: the clip's maximum indivisible adjacent-step pose error is {max_intertick}; either raise the budget to at least that floor or sample more finely",
             settings.error_budget
         )));
     }
 
-    // Reserve one slot for the final pose, so the cap is never exceeded.
-    let budget_for_anchors = settings.max_frames - 1;
+    // Hard anchors are ONLY first, last, and caller-authored mandatory
+    // timestamps (R6336-9). Events are best-effort, not requirements, so a
+    // motion-rich clip does not become infeasible. Up-front feasibility: if
+    // first + last + mandatory do not fit under the cap, that is a typed
+    // impossibility, never a silent drop.
+    let final_index = candidates.len() - 1;
+    let distinct_mandatory = mandatory_times
+        .iter()
+        .filter(|&&t| t != candidates[0] && t != candidates[final_index])
+        .count();
+    let required = 2 + distinct_mandatory;
+    if required > settings.max_frames {
+        return Err(PoseError::Validation(format!(
+            "max_frames {} cannot hold first + last + {distinct_mandatory} mandatory timestamps (need {required}); either raise max_frames or drop mandatory anchors",
+            settings.max_frames
+        )));
+    }
 
+    // Build the schedule: keep first, then walk keeping mandatory/event anchors
+    // and subdividing for the error budget, all within the hard cap, and always
+    // keep the final pose as Last. Mandatory anchors are never dropped; events
+    // and error-budget anchors fill remaining slots best-effort.
     let mut kept: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
     let mut anchor = 0usize;
     let mut i = 1usize;
-    while i < candidates.len() {
-        if kept.len() >= budget_for_anchors {
-            break; // leave room for the final pose
-        }
-        // Error-budget invariant: whenever the interval from the current anchor
-        // to the *next* candidate exceeds the budget, keep the current
-        // candidate as an anchor so no kept interval ever exceeds the budget.
-        if pose_error(&poses[anchor], &poses[i]) > settings.error_budget && i - 1 > anchor {
+    while i <= final_index {
+        // Slots still required ahead: remaining mandatory anchors + the final pose.
+        let mandatory_ahead = mandatory_times
+            .iter()
+            .filter(|&&t| {
+                t != candidates[final_index]
+                    && candidates
+                        .binary_search(&t)
+                        .map(|idx| idx >= i)
+                        .unwrap_or(false)
+            })
+            .count();
+        let reserved = 1 + mandatory_ahead; // final pose + remaining mandatories
+        let optional_budget = settings.max_frames.saturating_sub(kept.len() + reserved);
+
+        let is_mandatory_time = mandatory_times.contains(&candidates[i]);
+        let is_last = i == final_index;
+        let event = !is_last
+            && exceeds_event(
+                &poses[anchor],
+                &poses[i],
+                settings.event_translation_threshold,
+                settings.event_rotation_threshold,
+            );
+
+        // Error-budget subdivision toward this candidate, only within optional budget.
+        if pose_error(&poses[anchor], &poses[i]) > settings.error_budget
+            && i - 1 > anchor
+            && (optional_budget > 0 || is_mandatory_time || is_last)
+        {
             kept.push((i - 1, SelectionReason::ErrorBudget));
             anchor = i - 1;
         }
-        let is_mandatory_time = mandatory_times.contains(&candidates[i]);
-        let event = exceeds_event(
-            &poses[anchor],
-            &poses[i],
-            settings.event_translation_threshold,
-            settings.event_rotation_threshold,
-        );
-        if is_mandatory_time || event {
-            // A hard anchor: before accepting it, subdivide the interval from
-            // the current anchor to this frame so every kept step is within the
-            // error budget. Walk forward taking the *next* candidate whenever
-            // the running interval would exceed the budget.
-            while pose_error(&poses[anchor], &poses[i]) > settings.error_budget {
-                let mut advanced = false;
-                for candidate in (anchor + 1)..i {
-                    if pose_error(&poses[anchor], &poses[candidate]) > settings.error_budget {
-                        // Keep the frame just before the over-budget point so
-                        // each kept step stays within budget, then re-anchor.
-                        let step = candidate - 1;
-                        if step > anchor {
-                            kept.push((step, SelectionReason::ErrorBudget));
-                            anchor = step;
-                            advanced = true;
-                        }
-                        break;
-                    }
-                }
-                if !advanced {
-                    // Consecutive candidates are already over budget; accept
-                    // the interval (cannot subdivide below the tick).
-                    break;
-                }
-            }
-            let reason = if is_mandatory_time {
+
+        if is_mandatory_time || is_last || (event && optional_budget > 0) {
+            let reason = if is_last {
+                SelectionReason::Last
+            } else if is_mandatory_time {
                 SelectionReason::Mandatory
             } else {
                 SelectionReason::Event
@@ -247,34 +279,6 @@ pub fn select_pose_schedule(
             anchor = i;
         }
         i += 1;
-    }
-
-    // Tail: ensure the interval from the final anchor to the last candidate
-    // also satisfies the error budget.
-    let last_index = candidates.len() - 1;
-    while pose_error(&poses[anchor], &poses[last_index]) > settings.error_budget {
-        let mut advanced = false;
-        for candidate in (anchor + 1)..last_index {
-            if pose_error(&poses[anchor], &poses[candidate]) > settings.error_budget {
-                let step = candidate - 1;
-                if step > anchor && kept.len() < budget_for_anchors {
-                    kept.push((step, SelectionReason::ErrorBudget));
-                    anchor = step;
-                    advanced = true;
-                }
-                break;
-            }
-        }
-        if !advanced {
-            break;
-        }
-    }
-    // Always retain the final candidate pose within the cap.
-    let last_index = candidates.len() - 1;
-    if kept.last().map(|&(idx, _)| idx) != Some(last_index) {
-        kept.push((last_index, SelectionReason::Last));
-    } else if let Some(last) = kept.last_mut() {
-        last.1 = SelectionReason::Last;
     }
 
     // Build the schedule with independent durations, deduplicating any

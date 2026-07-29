@@ -66,6 +66,24 @@ This is the technical crux: naive per-voxel rotation leaves holes and unstable t
 supersample-then-vote approach keeps rigid parts **hole-free and face-connected**. Same part +
 same transform + same settings is bit-identical.
 
+## The admitted rasterization contract (R6336-8/10)
+
+The admitted settings are deliberately bounded to the range where the conservative guarantee is
+honest:
+
+- **Volume and connectivity are guaranteed.** `occupancy_threshold` is admitted only up to
+  **majority coverage (0.5)**. At majority-or-better coverage, the volume-floor + connectivity
+  repairs keep a rigid part's full source volume (or a conservative dilation of it) and a single
+  connected, thick body. A supermajority threshold (> 0.5) is anti-conservative at low supersample
+  — rotated geometry rarely covers a supermajority of any cell, so volume collapses below any
+  useful floor — and is rejected as **outside the contract** rather than repaired dishonestly.
+- **Small-cavity preservation is a documented limitation, not an invariant.** Conservative
+  dilation (the thing that keeps thin features connected) can fill a small interior hollow when a
+  shell is rotated. The contract guarantees volume/connectivity/thickness; it does not guarantee
+  that a small enclosed cavity survives. This is recorded honestly rather than claimed as a
+  property, and a dedicated test documents the edge while still asserting the volume/connectivity
+  guarantee that does hold.
+
 ## Corpus and verification
 
 - The rig-map validates against the rifleman kit and the retro-character animated model.
