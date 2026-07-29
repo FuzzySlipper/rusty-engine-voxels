@@ -572,9 +572,16 @@ impl Default for RasterSettings {
 
 impl RasterSettings {
     pub fn validate(&self) -> Result<(), PoseError> {
-        if self.supersample == 0 || self.supersample > 8 {
+        // Supersample must be at least 2: at supersample 1 each source voxel
+        // contributes a single sample, so a rotated thin part (e.g. a 2-cell
+        // bar at ~30-45°) scatters into diagonally-touching or lost cells with
+        // no intermediate samples to bridge them — topology and volume cannot
+        // be preserved (R6336-12). Supersample 1 is only safe for axis-aligned,
+        // non-rotated geometry, which is not this pipeline's case, so it is
+        // outside the conservative contract.
+        if self.supersample < 2 || self.supersample > 8 {
             return Err(PoseError::Validation(format!(
-                "supersample must be within 1..=8, got {}",
+                "supersample must be within 2..=8 to preserve topology for rotated parts, got {}",
                 self.supersample
             )));
         }
@@ -1076,6 +1083,82 @@ mod tests {
         );
         // Whether the 3x3x3 interior cavity survives is NOT asserted: it is the
         // documented small-cavity limitation, recorded here as the honest edge.
+    }
+
+    #[test]
+    fn supersample_one_is_outside_the_conservative_contract() {
+        // R6336-12: at supersample 1 each source voxel contributes a single
+        // sample, so a rotated thin part (a 2-cell bar at ~30-45°) scatters
+        // into diagonally-touching or lost cells with no intermediate samples
+        // to bridge them — topology and volume cannot be preserved. It is only
+        // safe for axis-aligned, non-rotated geometry (not this pipeline), so
+        // it is rejected as outside the contract.
+        let mut cells = vec![
+            crate::kit::KitCell {
+                coordinate: [0, 0, 0],
+                material_slot: 1,
+            },
+            crate::kit::KitCell {
+                coordinate: [1, 0, 0],
+                material_slot: 1,
+            },
+        ];
+        cells.sort_by_key(|c| c.coordinate);
+        let part = crate::kit::KitPart {
+            id: "bar".to_owned(),
+            version: 1,
+            pivot: [0, 0, 0],
+            limb: true,
+            cells,
+            sockets: vec![],
+            palette_groups: vec![],
+            deformation_budget: crate::kit::DeformationBudget {
+                max_length_change: 0.0,
+                max_volume_change: 0.0,
+                allow_joint_compression: false,
+            },
+            protected_regions: vec![],
+            symmetry_partner: None,
+        };
+        let angle = std::f64::consts::PI / 4.0;
+        let transform = RigidTransform {
+            rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
+            translation: [0.0, 0.0, 0.0],
+        };
+        let settings = RasterSettings {
+            supersample: 1,
+            occupancy_threshold: 0.5,
+        };
+        assert!(
+            rasterize_part(&part, transform, &settings).is_err(),
+            "supersample 1 must be rejected as outside the conservative contract"
+        );
+
+        // At the admitted supersample the same bar stays both present and
+        // face-connected across the 30-45° range that broke at supersample 1.
+        let good = RasterSettings {
+            supersample: 2,
+            occupancy_threshold: 0.5,
+        };
+        for deg in [30.0_f64, 45.0, 45.25] {
+            let angle = deg * std::f64::consts::PI / 180.0;
+            let t = RigidTransform {
+                rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
+                translation: [0.0, 0.0, 0.0],
+            };
+            let out = rasterize_part(&part, t, &good).expect("bar rasterize");
+            assert!(
+                out.len() >= 2,
+                "the bar must not collapse below its source volume at {deg}°"
+            );
+            let set: std::collections::BTreeSet<[i64; 3]> =
+                out.iter().map(|c| c.coordinate).collect();
+            assert_eq!(
+                connected_components(&set),
+                1,
+                "the bar must stay one connected body at {deg}°"
+            );
+        }
     }
 
     #[test]

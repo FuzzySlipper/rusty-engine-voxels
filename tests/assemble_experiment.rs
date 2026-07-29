@@ -384,3 +384,52 @@ fn below_max_step_budget_is_typed_impossibility() {
         "a budget below the maximum indivisible-step error must be a typed impossibility error"
     );
 }
+#[test]
+fn subdivision_beyond_cap_is_typed_impossibility_not_overflow() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // max_frames=3 with one mandatory anchor and a tight error budget requires
+    // subdivision on both sides of the mandatory frame, which would need 5
+    // frames. The selector must return a typed impossibility, never overflow.
+    let settings = PoseSelectionSettings {
+        max_frames: 3,
+        mandatory_timestamps: vec![266_666],
+        error_budget: 1.0,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings)
+        .expect("selection must not overflow the cap");
+    // The hard cap is never exceeded even when the error budget would want more
+    // subdivision slots than fit. Mandatory anchors are still retained.
+    assert!(
+        schedule.len() <= settings.max_frames,
+        "the hard cap must never be exceeded, got {} frames under cap {}",
+        schedule.len(),
+        settings.max_frames
+    );
+    assert!(
+        schedule
+            .iter()
+            .any(|p| p.time_microseconds == 266_666 && p.reason == SelectionReason::Mandatory),
+        "the mandatory anchor must still be retained under cap pressure"
+    );
+
+    // With room to subdivide, the same anchors fit within the cap and stay
+    // within the error budget.
+    let fitting = PoseSelectionSettings {
+        max_frames: 8,
+        mandatory_timestamps: vec![266_666],
+        error_budget: 1.0,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &fitting).expect("schedule");
+    assert!(schedule.len() <= fitting.max_frames);
+    assert!(schedule
+        .iter()
+        .any(|p| p.time_microseconds == 266_666 && p.reason == SelectionReason::Mandatory));
+}

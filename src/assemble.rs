@@ -258,10 +258,15 @@ pub fn select_pose_schedule(
                 settings.event_rotation_threshold,
             );
 
-        // Error-budget subdivision toward this candidate, only within optional budget.
+        // Error-budget subdivision is best-effort within optional slots: the
+        // hard cap is a hard ceiling (never exceeded), and the error budget is
+        // satisfied whenever a subdivision slot is available. When no optional
+        // slot remains, the selector keeps only hard anchors and accepts the
+        // larger interval — the cap is never violated to satisfy the budget
+        // (R6336-11).
         if pose_error(&poses[anchor], &poses[i]) > settings.error_budget
             && i - 1 > anchor
-            && (optional_budget > 0 || is_mandatory_time || is_last)
+            && optional_budget > 0
         {
             kept.push((i - 1, SelectionReason::ErrorBudget));
             anchor = i - 1;
