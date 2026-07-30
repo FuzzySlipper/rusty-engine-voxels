@@ -13,7 +13,7 @@ use serde_json::json;
 
 const HIGH_FIDELITY_PROJECT_FILE: &str =
     "content/projects/retro-character-high-fidelity.project.json";
-const STUDIO_PROTOCOL_VERSION: u64 = 11;
+const STUDIO_PROTOCOL_VERSION: u64 = 12;
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
@@ -575,11 +575,13 @@ fn format_study_prices_candidate_encodings_against_real_corpus() {
     assert!(study.streams.binary_reference_bytes < study.streams.packed_base64_bytes);
     assert!(study.streams.binary_reference_bytes < study.streams.expanded_json_bytes);
 
-    // Flipbook frames genuinely deform: most vertex data changes pose-to-pose,
-    // index topology barely does. The harness must report that honestly.
+    // Flipbook frames genuinely deform. Engine's deterministic greedy mesher
+    // recomputes rectangles per pose, so both vertex data and index topology
+    // now change materially. The harness must report that honestly.
     let delta = study.delta.expect("flipbook should produce delta evidence");
     assert!(delta.average_changed_vertex_fraction > 0.5);
-    assert!(delta.average_changed_index_fraction < 0.05);
+    assert!(delta.average_changed_index_fraction > 0.15);
+    assert!(delta.average_changed_index_fraction < 0.5);
     assert!(delta.binary_savings_fraction > 0.25);
     // Timing passes are recorded, not thresholded (machine-specific).
     assert!(study.timing.expanded_json_parse_microseconds > 0);

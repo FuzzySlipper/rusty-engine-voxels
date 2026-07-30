@@ -47,13 +47,35 @@ pub fn save_project(
     loaded: &LoadedProject,
     project: &VoxelLabProject,
 ) -> Result<LoadedProject, String> {
+    let staged = stage_project(loaded, project)?;
+    atomic_write(&staged.path, staged.canonical_json.as_bytes())?;
+    load_project(&staged.root, &staged.relative_path)
+}
+
+pub(crate) fn stage_project(
+    loaded: &LoadedProject,
+    project: &VoxelLabProject,
+) -> Result<LoadedProject, String> {
     project.validate()?;
     let canonical_json = format!(
         "{}\n",
         serde_json::to_string_pretty(project).map_err(|error| error.to_string())?
     );
-    atomic_write(&loaded.path, canonical_json.as_bytes())?;
-    load_project(&loaded.root, &loaded.relative_path)
+    let byte_count = u64::try_from(canonical_json.len())
+        .map_err(|_| "project encoding length does not fit u64".to_owned())?;
+    if byte_count > MAX_PROJECT_BYTES {
+        return Err(format!(
+            "project encoding exceeds the {MAX_PROJECT_BYTES}-byte project limit"
+        ));
+    }
+    Ok(LoadedProject {
+        root: loaded.root.clone(),
+        relative_path: loaded.relative_path.clone(),
+        path: loaded.path.clone(),
+        project_hash: sha256(canonical_json.as_bytes()),
+        canonical_json,
+        project: project.clone(),
+    })
 }
 
 pub fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {

@@ -78,9 +78,10 @@ numbers.
 The resulting implementation keeps canonical voxel-object JSON unchanged and moves derived mesh
 streams into deterministic `packedStreamsLeV1` resources. This adapter atomically publishes those
 resources into the ignored `.studio-cache` and sends compact content-addressed manifests through
-Studio protocol 11. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
-a 24,805-byte control response plus 34,541,056 raw resource bytes. The complete before/after and
-Node/Chromium parse observations are in `evidence/mesh-data-plane.json`.
+Studio protocol 12. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
+a roughly 24.7 KiB control response plus 11,712,856 raw resource bytes with the current greedy
+mesher. The original before/after and Node/Chromium parse observations remain in
+`evidence/mesh-data-plane.json` with their exact historical Engine revision.
 
 ```bash
 cargo run --locked --bin voxel-lab -- format-study \

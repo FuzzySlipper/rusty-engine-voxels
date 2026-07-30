@@ -107,6 +107,12 @@ pub struct RuntimeProject {
 
 pub fn load_runtime_project(root: &Path, relative_project: &str) -> Result<RuntimeProject, String> {
     let loaded = load_project(root, relative_project)?;
+    load_runtime_project_from_loaded(loaded)
+}
+
+pub(crate) fn load_runtime_project_from_loaded(
+    loaded: LoadedProject,
+) -> Result<RuntimeProject, String> {
     let mut objects = BTreeMap::new();
     let mut canonical_object_bytes = 0usize;
     let mut admission_and_meshing_microseconds = 0u128;

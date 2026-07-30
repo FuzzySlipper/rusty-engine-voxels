@@ -408,6 +408,7 @@ mod tests {
                 indices: vertices,
                 quads: 0,
                 faces_emitted: 0,
+                source_faces: 0,
                 faces_culled: 0,
             },
         }

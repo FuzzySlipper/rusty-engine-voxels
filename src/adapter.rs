@@ -22,17 +22,22 @@ use crate::mesh_resource_cache::{
 };
 use crate::model::{
     experiment_color, ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial,
-    ProjectVoxelObjectInstance,
+    ProjectVoxelObjectInstance, MAX_JSON_SAFE_ENTITY_ID,
 };
-use crate::project::{read_bounded, safe_join, save_project, LoadedProject, MAX_SOURCE_BYTES};
+use crate::project::{
+    atomic_write, load_project, read_bounded, safe_join, save_project, stage_project,
+    LoadedProject, MAX_SOURCE_BYTES,
+};
 use crate::runtime::{
-    complete_packed_projection, load_runtime_project, project_runtime_with_instance_frame,
-    projection_for_object, resolve_frame, RuntimeProject,
+    complete_packed_projection, load_runtime_project, load_runtime_project_from_loaded,
+    project_runtime_with_instance_frame, projection_for_object, resolve_frame, RuntimeProject,
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
-const PROTOCOL_VERSION: u64 = 11;
+const PROTOCOL_VERSION: u64 = 12;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
+const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
+const MAX_VOXEL_OBJECT_INSTANCE_BATCH: usize = 32;
 const VOXEL_OBJECT_COMPONENT_TYPE_ID: &str = "rusty.voxel-object.instance";
 const VOXEL_OBJECT_INSPECTOR_CONTRACT_ID: &str = "rusty.studio.voxel-object-authoring";
 
@@ -95,6 +100,7 @@ const OPERATIONS: &[&str] = &[
     "discardVoxelObjectConversion",
     "prepareVoxelObjectPlacement",
     "attachVoxelObjectInstance",
+    "attachVoxelObjectInstances",
     "previewVoxelObjectInstance",
     "closeProject",
 ];
@@ -180,6 +186,7 @@ impl StudioAdapter {
             "applyVoxelObjectConversion" => self.apply_conversion(&request_id, request),
             "discardVoxelObjectConversion" => self.discard_conversion(&request_id, request),
             "attachVoxelObjectInstance" => self.attach_instance(&request_id, request),
+            "attachVoxelObjectInstances" => self.attach_instances(&request_id, request),
             "previewVoxelObjectInstance" => self.preview_instance(&request_id, request),
             "closeProject" => {
                 self.open = None;
@@ -619,6 +626,200 @@ impl StudioAdapter {
         ))
     }
 
+    fn attach_instances(
+        &mut self,
+        request_id: &str,
+        request: Value,
+    ) -> Result<Value, AdapterError> {
+        let input: AttachInstancesRequest = decode_request(request)?;
+        self.ensure_project_hash(&input.expected_project_hash)?;
+        if input.placements.is_empty() || input.placements.len() > MAX_VOXEL_OBJECT_INSTANCE_BATCH {
+            return Err(AdapterError::at(
+                "voxelObject.invalidPlacementBatch",
+                "placements",
+                format!(
+                    "voxel-object placement batch must contain 1..={MAX_VOXEL_OBJECT_INSTANCE_BATCH} entries"
+                ),
+            ));
+        }
+
+        let mut request_instance_ids = BTreeSet::new();
+        for (index, placement) in input.placements.iter().enumerate() {
+            if !request_instance_ids.insert(placement.instance.instance_id.as_str()) {
+                return Err(AdapterError::at(
+                    "voxelObject.duplicatePlacementIdentity",
+                    format!("placements[{index}].instance.instanceId"),
+                    format!(
+                        "placement repeats instance identity {:?}",
+                        placement.instance.instance_id
+                    ),
+                ));
+            }
+        }
+
+        let open = self.require_open()?.clone();
+        let current =
+            load_runtime_project(&open.root, &open.relative_path).map_err(AdapterError::project)?;
+        if current.loaded.project_hash != input.expected_project_hash {
+            return Err(AdapterError::at(
+                "project.staleHash",
+                "expectedProjectHash",
+                format!(
+                    "expected {}, current project is {}",
+                    input.expected_project_hash, current.loaded.project_hash
+                ),
+            ));
+        }
+
+        let existing_instance_ids = current
+            .loaded
+            .project
+            .instances
+            .iter()
+            .map(|instance| instance.instance_id.as_str())
+            .collect::<BTreeSet<_>>();
+        if let Some((index, placement)) =
+            input.placements.iter().enumerate().find(|(_, placement)| {
+                existing_instance_ids.contains(placement.instance.instance_id.as_str())
+            })
+        {
+            return Err(AdapterError::at(
+                "voxelObject.instanceIdentityCollision",
+                format!("placements[{index}].instance.instanceId"),
+                format!(
+                    "placement collides with existing instance {:?}",
+                    placement.instance.instance_id
+                ),
+            ));
+        }
+
+        let mut project = current.loaded.project.clone();
+        let mut next_owner_entity_id = project
+            .instances
+            .iter()
+            .map(|instance| instance.entity_id)
+            .max()
+            .unwrap_or(0);
+        let mut receipt_placements = Vec::with_capacity(input.placements.len());
+        for (index, placement) in input.placements.into_iter().enumerate() {
+            if placement.scene_id != project.entry_scene {
+                return Err(AdapterError::at(
+                    "project.unknownScene",
+                    format!("placements[{index}].sceneId"),
+                    "scene is not the voxel lab entry scene",
+                ));
+            }
+            if !placement.instance.material_overrides.is_empty() {
+                return Err(AdapterError::at(
+                    "adapter.unsupportedMaterialOverride",
+                    format!("placements[{index}].instance.materialOverrides"),
+                    "voxel lab instances do not yet persist material overrides",
+                ));
+            }
+            let object = current
+                .objects
+                .get(&placement.instance.voxel_object_asset_id)
+                .ok_or_else(|| {
+                    AdapterError::at(
+                        "project.unknownAsset",
+                        format!("placements[{index}].instance.voxelObjectAssetId"),
+                        "voxel object is not loaded",
+                    )
+                })?;
+            resolve_frame(object, &placement.instance.frame).map_err(AdapterError::project)?;
+            next_owner_entity_id = next_owner_entity_id
+                .checked_add(1)
+                .filter(|entity_id| *entity_id <= MAX_JSON_SAFE_ENTITY_ID)
+                .ok_or_else(|| {
+                    AdapterError::at(
+                        "voxelObject.ownerIdentityExhausted",
+                        format!("placements[{index}]"),
+                        "cannot allocate another JSON-safe entity owner",
+                    )
+                })?;
+            let frame_kind = match &placement.instance.frame {
+                ProjectFrameSelection::Default => "default",
+                ProjectFrameSelection::Clip { .. } => "clip",
+            };
+            receipt_placements.push(json!({
+                "sceneId": placement.scene_id,
+                "instanceId": placement.instance.instance_id,
+                "assetId": placement.instance.voxel_object_asset_id,
+                "frameKind": frame_kind,
+                "ownerEntityId": next_owner_entity_id,
+            }));
+            project.instances.push(ProjectVoxelObjectInstance {
+                entity_id: next_owner_entity_id,
+                instance_id: placement.instance.instance_id,
+                voxel_object_asset_id: placement.instance.voxel_object_asset_id,
+                frame: placement.instance.frame,
+                translation: placement.instance.translation,
+                rotation: placement.instance.rotation,
+                scale: placement.instance.scale,
+                collision_policy: ProjectCollisionPolicy::None,
+            });
+        }
+        project
+            .instances
+            .sort_by(|left, right| left.instance_id.cmp(&right.instance_id));
+        project.revision = project
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| AdapterError::project("project revision is exhausted"))?;
+
+        let staged_loaded =
+            stage_project(&current.loaded, &project).map_err(AdapterError::project)?;
+        let staged_runtime = load_runtime_project_from_loaded(staged_loaded.clone())
+            .map_err(AdapterError::project)?;
+        let mut staged_projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, staged_mesh_resources) =
+            project_readout_from_runtime(&staged_runtime, &mut staged_projector)
+                .map_err(AdapterError::project)?;
+        let result = response(
+            "projectMutationApplied",
+            request_id,
+            json!({
+                "receipt": {
+                    "kind": "voxelObjectInstancesAttached",
+                    "placements": receipt_placements,
+                },
+                "project": readout,
+            }),
+        );
+        let response_bytes = serde_json::to_vec(&result)
+            .map_err(|error| AdapterError::new("adapter.responseEncode", error.to_string()))?;
+        if response_bytes.len() > MAX_RESPONSE_BYTES {
+            return Err(AdapterError::new(
+                "adapter.responseTooLarge",
+                format!(
+                    "batch mutation response is {} bytes, exceeding the {MAX_RESPONSE_BYTES}-byte bound",
+                    response_bytes.len()
+                ),
+            ));
+        }
+
+        let final_current =
+            load_project(&open.root, &open.relative_path).map_err(AdapterError::project)?;
+        if final_current.project_hash != input.expected_project_hash {
+            return Err(AdapterError::at(
+                "project.staleHash",
+                "expectedProjectHash",
+                format!(
+                    "expected {}, current project is {}",
+                    input.expected_project_hash, final_current.project_hash
+                ),
+            ));
+        }
+        atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
+            .map_err(AdapterError::project)?;
+        self.open = Some(staged_loaded);
+        self.runtime = Some(staged_runtime);
+        self.projector = staged_projector;
+        self.mesh_resources = staged_mesh_resources;
+        self.playback.clear();
+        Ok(result)
+    }
+
     fn preview_instance(
         &mut self,
         request_id: &str,
@@ -967,6 +1168,26 @@ struct AttachInstanceRequest {
     #[serde(rename = "requestId")]
     _request_id: String,
     expected_project_hash: String,
+    scene_id: String,
+    instance: AttachInstance,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AttachInstancesRequest {
+    #[serde(rename = "type")]
+    _type: String,
+    #[serde(rename = "protocolVersion")]
+    _protocol_version: u64,
+    #[serde(rename = "requestId")]
+    _request_id: String,
+    expected_project_hash: String,
+    placements: Vec<AttachPlacement>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AttachPlacement {
     scene_id: String,
     instance: AttachInstance,
 }

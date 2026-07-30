@@ -43,10 +43,18 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 11 only as an
-explicit host boundary; protocol 11 is not the voxel project schema and is not an industry voxel
-standard. The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/
-mutation/close, and never serializes its posture into this project's durable instance frame.
+cadence, and visual presentation. The project adapter implements Studio protocol 12 only as an
+explicit host boundary; protocol 12 is neither the voxel project schema nor an industry voxel
+standard. The retained single-placement operation remains an explicit one-instance upsert.
+Protocol 12 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
+duplicate or existing identities, stale project hashes, invalid later entries, exhausted JSON-safe
+owner IDs, oversized project/readout encodings, and unsupported material overrides before replacing
+the project document once. Owner IDs and the receipt preserve request order even though canonical
+instances are sorted by authored identity. Complete runtime admission and renderer projection are
+staged before publication, and a fresh adapter process reconstructs the same accepted owners.
+
+The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/mutation/close,
+and never serializes its posture into this project's durable instance frame.
 Studio advances that player one virtual frame only after the shared renderer accepts the previous
 pose and its authored duration elapses. `once` settles paused on the terminal pose and Play restarts
 from frame zero; repeat and ping-pong continue through the same acknowledgement-paced path.
@@ -86,10 +94,13 @@ concrete consumers prove otherwise.
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked
-corpus against candidate mesh-payload encodings so the upstream voxel data-plane decision (rusty-engine
-#6331) starts from corpus evidence rather than preference. Those measurements selected Engine's
-`packedStreamsLeV1` presentation resources. Canonical schema-1 voxel-object JSON remains unchanged;
-the resource cache is disposable and regenerates from the admitted object.
+corpus against candidate mesh-payload encodings so the upstream voxel data-plane decision
+(rusty-engine #6331) starts from corpus evidence rather than preference. Those measurements selected
+Engine's `packedStreamsLeV1` presentation resources. Canonical schema-1 voxel-object JSON remains
+unchanged; the resource cache is disposable and regenerates from the admitted object. Checked
+`evidence/format-study-*.json` files retain their original Engine revision as historical decision
+evidence. The live gate recomputes the study against the current provider pin instead of treating
+those older measurements as current certification.
 
 Open/read, conversion candidate, discard, and applied-instance playback responses carry the
 manifest for the exact projection they return. The adapter retains the canonical manifest across
@@ -105,23 +116,25 @@ Findings on the checked corpus, with the harness's stated interpretation limits:
 
 - **Packed typed-array payloads are not a blanket byte win.** Positions/normals here are cell-quantized,
   so many coordinates are small integers that serialize to 1–3 JSON bytes — cheaper than 4 packed bytes
-  plus base64's 4/3 overhead. At the baseline grid packed base64 is a wash (1.01× expanded JSON); at the
-  high-fidelity grid it is only ~0.84×. Full binary is a consistent ~0.63–0.76× lower bound. The leverage
-  of packing is primarily parse cost and payload structure, not raw bytes.
-- **Frame-to-frame vertex data barely overlaps.** Across the 14 unique meshes, ~64–67% of vertex
-  attribute values change between poses and no mesh is fully shared with the base. Whole-mesh delta
-  encoding does not pay for itself under text accounting (net-negative) and saves only ~43–45% under
-  binary accounting. Vertex deduplication across frames is a dead end for this corpus.
-- **Index topology is nearly static** (~0.7–3.6% changed). If a delta scheme is pursued, it should key on
-  shared index streams, not shared vertex data.
+  plus base64's 4/3 overhead. With the current greedy mesher, baseline packed base64 is a wash (1.03×
+  expanded JSON) while high fidelity is ~0.85×. Full binary remains about 0.64–0.77×. The leverage of
+  packing is still primarily parse cost and payload structure, with a useful high-fidelity byte win.
+- **Frame-to-frame vertex data barely overlaps.** Across the 14 unique high-fidelity meshes, about 74%
+  of vertex attribute values change between poses and no mesh is fully shared with the base. Whole-mesh
+  delta encoding remains net-negative under text accounting and saves about 34% under binary
+  accounting. Vertex deduplication across frames remains a poor fit for this corpus.
+- **Greedy meshing makes topology pose-dependent.** About 24% of high-fidelity index values now change
+  between poses because independently merged rectangles differ with each silhouette. The earlier
+  pre-greedy finding that index topology was nearly static remains useful provenance, but it is not a
+  current encoding assumption.
 - **The real cliff is total transferred volume per define/open,** not per-value cost — the 54.5 MB
   `openProject` response that trips Studio's 32 MiB cap (#6329) is the same data regardless of text vs.
   packed encoding. The durable fix is architectural (resource-referenced or chunked mesh payloads), with
   encoding as a secondary multiplier.
 
-On the high-fidelity corpus, the former complete projection was 54,564,714 JSON bytes. The checked
-resource implementation returns a 24,805-byte complete Studio response plus 34,541,056 packed
-bytes, and a steady-state playback response remains 1,213 bytes. One local observation measured
-the compact response at 0.207 ms in Node `JSON.parse` and 0.4 ms in Chromium, versus the earlier
-2,028 ms-per-pass host-neutral expanded-JSON proxy. See
-`evidence/mesh-data-plane.json`; timings are observations rather than thresholds.
+On the high-fidelity corpus, the former complete projection was 54,564,714 JSON bytes. At the
+current provider pin, greedy meshing plus resource publication returns a roughly 24.7 KiB complete
+Studio response and 11,712,856 raw resource bytes; steady-state playback remains about 1.2 KiB. The
+older exact response, resource, Node, and Chromium measurements remain in
+`evidence/mesh-data-plane.json` under their recorded Engine revision; timings are observations rather
+than thresholds.

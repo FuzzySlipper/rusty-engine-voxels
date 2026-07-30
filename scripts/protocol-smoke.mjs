@@ -12,7 +12,7 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
-const PROTOCOL_VERSION = 11;
+const PROTOCOL_VERSION = 12;
 const initialRequests = [
   { type: 'describe', protocolVersion: PROTOCOL_VERSION, requestId: 'describe-smoke' },
   {
@@ -50,6 +50,99 @@ if (opened.project.projection.ops.length !== 3
   throw new Error('Studio open response omitted the checked voxel object projection');
 }
 const baselineResources = validateMeshResources(root, opened.project.meshResources);
+if (!described.adapter.operations.includes('attachVoxelObjectInstances')) {
+  throw new Error('protocol 12 describe omitted attachVoxelObjectInstances');
+}
+
+const batchRoot = mkdtempSync(join(tmpdir(), 'rusty-engine-voxels-batch-'));
+let batchReceipt;
+let batchProjectHash;
+try {
+  cpSync(join(root, 'content'), join(batchRoot, 'content'), { recursive: true });
+  const batchProjectPath = join(batchRoot, 'content/projects/voxel-lab.project.json');
+  const batchResponses = runRequests(adapter, [
+    {
+      type: 'openProject',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'batch-open-smoke',
+      root: batchRoot,
+      projectFile: 'content/projects/voxel-lab.project.json',
+    },
+    {
+      type: 'attachVoxelObjectInstances',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'batch-attach-smoke',
+      expectedProjectHash: opened.project.identity.projectHash,
+      placements: [
+        voxelObjectPlacement('smoke-request-first'),
+        voxelObjectPlacement('smoke-request-second'),
+      ],
+    },
+  ], 'batch attachment');
+  const batchApplied = batchResponses[1];
+  if (batchApplied?.type !== 'projectMutationApplied'
+    || batchApplied.receipt.kind !== 'voxelObjectInstancesAttached'
+    || batchApplied.receipt.placements.length !== 2
+    || batchApplied.receipt.placements[0]?.instanceId !== 'smoke-request-first'
+    || batchApplied.receipt.placements[0]?.ownerEntityId !== 2
+    || batchApplied.receipt.placements[1]?.instanceId !== 'smoke-request-second'
+    || batchApplied.receipt.placements[1]?.ownerEntityId !== 3
+    || batchApplied.project.voxelObjectAuthoring.instances.length !== 3) {
+    throw new Error('managed protocol 12 decoder did not accept the ordered batch receipt');
+  }
+  batchReceipt = batchApplied.receipt;
+  batchProjectHash = batchApplied.project.identity.projectHash;
+
+  const reopenedBatch = decodeStudioAdapterResponse(JSON.parse(
+    openProject(
+      adapter,
+      batchRoot,
+      'content/projects/voxel-lab.project.json',
+      'batch-restart',
+    ).line,
+  ));
+  if (reopenedBatch.type !== 'projectOpened'
+    || reopenedBatch.project.identity.projectHash !== batchProjectHash
+    || reopenedBatch.project.voxelObjectAuthoring.instances.length !== 3) {
+    throw new Error('protocol 12 batch did not survive a fresh adapter process');
+  }
+
+  const beforeRejectedBatch = readFileSync(batchProjectPath);
+  const rejectedResponses = runRequests(adapter, [
+    {
+      type: 'openProject',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'batch-rejection-open-smoke',
+      root: batchRoot,
+      projectFile: 'content/projects/voxel-lab.project.json',
+    },
+    {
+      type: 'attachVoxelObjectInstances',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'batch-rejection-smoke',
+      expectedProjectHash: batchProjectHash,
+      placements: [
+        voxelObjectPlacement('valid-before-invalid'),
+        voxelObjectPlacement('invalid-later', 'voxel-object/missing'),
+      ],
+    },
+    {
+      type: 'readProject',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'batch-rejection-read-smoke',
+    },
+  ], 'batch rejection');
+  const batchRejected = rejectedResponses[1];
+  const afterRejectedBatch = readFileSync(batchProjectPath);
+  if (batchRejected?.type !== 'rejected'
+    || rejectedResponses[2]?.type !== 'projectRead'
+    || rejectedResponses[2].project.identity.projectHash !== batchProjectHash
+    || !beforeRejectedBatch.equals(afterRejectedBatch)) {
+    throw new Error('invalid later batch placement changed canonical project state');
+  }
+} finally {
+  rmSync(batchRoot, { force: true, recursive: true });
+}
 
 const highFidelity = openProject(adapter, root, 'content/projects/retro-character-high-fidelity.project.json', 'high-fidelity');
 const parseStarted = performance.now();
@@ -198,9 +291,42 @@ console.log(JSON.stringify({
   highFidelityControlResponseBytes: Buffer.byteLength(highFidelity.line),
   highFidelityPackedResourceBytes: highFidelityResources.byteLength,
   highFidelityNodeJsonParseMilliseconds: Number(nodeJsonParseMilliseconds.toFixed(3)),
+  batchPlacements: batchReceipt.placements.length,
+  batchOwnerEntityIds: batchReceipt.placements.map((placement) => placement.ownerEntityId),
+  batchRestartHash: batchProjectHash,
+  invalidLaterBatchRejected: true,
   missingAssetRejected: true,
   corruptAssetRejected: true,
 }));
+
+function runRequests(adapterPath, requests, label) {
+  const result = spawnSync(adapterPath, [], {
+    encoding: 'utf8',
+    input: `${requests.map((request) => JSON.stringify(request)).join('\n')}\n`,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Studio adapter ${label} exited ${String(result.status)}: ${result.stderr}`);
+  }
+  return result.stdout.trim().split('\n').map((line) =>
+    decodeStudioAdapterResponse(JSON.parse(line))
+  );
+}
+
+function voxelObjectPlacement(instanceId, assetId = 'voxel-object/retro-character') {
+  return {
+    sceneId: 'scene/voxel-lab',
+    instance: {
+      instanceId,
+      voxelObjectAssetId: assetId,
+      frame: { kind: 'default' },
+      translation: [0, 0, 0],
+      rotation: [0, 0, 0, 1],
+      scale: [1, 1, 1],
+      materialOverrides: [],
+    },
+  };
+}
 
 function openProject(adapterPath, projectRoot, projectFile, suffix) {
   const result = spawnSync(adapterPath, [], {

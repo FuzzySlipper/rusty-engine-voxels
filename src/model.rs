@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use voxel_convert::{AnimationAnchorPolicy, AnimationEndPolicy};
 
 pub const PROJECT_SCHEMA_VERSION: u32 = 2;
+pub const MAX_JSON_SAFE_ENTITY_ID: u64 = (1_u64 << 53) - 1;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -202,7 +203,10 @@ impl VoxelLabProject {
         )?;
         let mut entity_ids = BTreeSet::new();
         for instance in &self.instances {
-            if instance.entity_id == 0 || !entity_ids.insert(instance.entity_id) {
+            if instance.entity_id == 0
+                || instance.entity_id > MAX_JSON_SAFE_ENTITY_ID
+                || !entity_ids.insert(instance.entity_id)
+            {
                 return Err(format!(
                     "instance {} has an invalid or duplicate entity id {}",
                     instance.instance_id, instance.entity_id
