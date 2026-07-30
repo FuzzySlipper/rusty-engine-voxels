@@ -203,7 +203,6 @@ fn regenerate_lock(candidate: &Path, _previous: &str, _commit: &str) -> Result<(
             "metadata",
             "--format-version",
             "1",
-            "--no-deps",
             "--manifest-path",
             manifest,
         ],
