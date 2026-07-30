@@ -28,7 +28,7 @@ use serde::Serialize;
 use svc_mesh::MeshPayload;
 
 use crate::base64::{decode as base64_decode, encode as base64_encode};
-use crate::conversion::ENGINE_REVISION;
+use crate::provider_pin::engine_revision;
 use crate::runtime::{load_runtime_project, RuntimeProject};
 
 /// Round-trips each encoding implementation through several repetitions so
@@ -143,7 +143,7 @@ pub fn run_format_study(
     let timing = measure_timing(&expanded_json, &packed_base64)?;
 
     Ok(FormatStudyEvidence {
-        engine_revision: ENGINE_REVISION.to_owned(),
+        engine_revision: engine_revision()?,
         project_file: relative_project.to_owned(),
         project_hash: runtime.loaded.project_hash.clone(),
         asset_id: object.asset_id().to_owned(),

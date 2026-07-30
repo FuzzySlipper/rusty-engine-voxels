@@ -22,6 +22,7 @@ path = "src/bin/studio-adapter.rs"
 [dependencies]
 render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
 render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "a867fa9cd2caa7238619a6ef0100412e34fea19a" }
+rusty-engine-voxels-revision = { path = "tools/engine-revision" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"

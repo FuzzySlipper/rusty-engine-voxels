@@ -5,17 +5,13 @@ VOXEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VOXEL_SOURCE_FILE="$VOXEL_ROOT/engine-source.json"
 VOXEL_CACHE_ROOT="${RUSTY_ENGINE_VOXELS_STUDIO_CACHE_ROOT:-$VOXEL_ROOT/.studio-cache/provider}"
 
+"$VOXEL_ROOT/scripts/engine-revision" check >/dev/null
+
 mapfile -t VOXEL_SOURCE < <(
   node --input-type=module -e '
     import { readFileSync } from "node:fs";
     const source = JSON.parse(readFileSync(process.argv[1], "utf8"));
-    if (source.schemaVersion !== 1
-      || !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(source.publicRepository)
-      || !/^[0-9a-f]{40}$/.test(source.commit)
-      || source.studioDirectory !== "studio") {
-      throw new Error("engine-source.json is not a supported exact Studio provider pin");
-    }
-    console.log(source.publicRepository);
+    console.log(source.repository);
     console.log(source.commit);
   ' "$VOXEL_SOURCE_FILE"
 )

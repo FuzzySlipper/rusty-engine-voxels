@@ -20,7 +20,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::conversion::ENGINE_REVISION;
+use crate::provider_pin::engine_revision;
 use crate::runtime::load_runtime_project;
 
 /// Number of equal-height bands the object's Y extent is split into. Regions
@@ -131,7 +131,7 @@ pub fn run_churn_study(root: &Path, relative_project: &str) -> Result<ChurnStudy
     }
 
     Ok(ChurnStudyEvidence {
-        engine_revision: ENGINE_REVISION.to_owned(),
+        engine_revision: engine_revision()?,
         project_file: relative_project.to_owned(),
         asset_id: object.asset_id().to_owned(),
         content_hash: object.content_hash().to_owned(),

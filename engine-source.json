@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "publicRepository": "https://github.com/FuzzySlipper/rusty-engine",
+  "repository": "https://github.com/FuzzySlipper/rusty-engine",
   "commit": "a867fa9cd2caa7238619a6ef0100412e34fea19a",
   "studioDirectory": "studio"
 }

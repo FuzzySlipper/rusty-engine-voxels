@@ -58,13 +58,18 @@ link without requiring a generic downstream component schema.
 
 ## Provider pin
 
-Rust dependencies and `engine-source.json` resolve the same exact public Rusty Engine commit. The
-former pins reusable Rust crates; the latter pins the separately isolated Studio/renderer
-workspace. Updating the provider is an explicit two-pin change followed by both `scripts/verify.sh`
-and `scripts/verify-studio.sh`.
+`engine-source.json` is the sole authored Rusty Engine identity. The six direct Rust dependencies,
+their generated Cargo lock entries, runtime evidence readout, and managed Studio checkout all
+derive from that exact public commit. `scripts/engine-revision check` is the common strict validator;
+`scripts/engine-revision update <sha>` prepares a bounded projection change through a disposable
+worktree. It does not infer or rewrite Studio protocol compatibility, historical evidence, or prose.
+Those remain intentional work followed by both `scripts/verify.sh` and `scripts/verify-studio.sh`.
 
 The managed Studio launcher clones that revision into `.studio-cache`. It never inspects a sibling
 `rusty-engine` checkout, and the ordinary Rust gate has no Node or browser dependency.
+
+The complete operator and rollback contract is in
+[`engine-revision-updates.md`](engine-revision-updates.md).
 
 ## Future experiments
 

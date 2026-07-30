@@ -19,9 +19,8 @@ use crate::project::{
     atomic_write, load_project, read_bounded, safe_join, save_project, sha256, LoadedProject,
     MAX_SOURCE_BYTES,
 };
+use crate::provider_pin::engine_revision;
 use crate::quality::{analyze_prepared_quality, VoxelQualityEvidence};
-
-pub const ENGINE_REVISION: &str = "a867fa9cd2caa7238619a6ef0100412e34fea19a";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -208,7 +207,7 @@ pub fn publish_project_conversion(
     };
 
     Ok(ConversionEvidence {
-        engine_revision: ENGINE_REVISION.to_owned(),
+        engine_revision: engine_revision()?,
         source_sha256: candidate.source_sha256.clone(),
         plan_hash: prepared.prepared.plan().plan_hash.clone(),
         settings_sha256: candidate.settings_sha256.clone(),

@@ -91,6 +91,15 @@ cargo run --locked --bin voxel-lab -- format-study \
 ## Commands
 
 ```bash
+# Check the canonical Engine source against all Rust and lockfile projections.
+./scripts/engine-revision check
+
+# Prove an exact public revision and preview the bounded carrier diff.
+./scripts/engine-revision update <40-character-public-sha> --dry-run
+
+# Prepare the same validated revision update in the working tree.
+./scripts/engine-revision update <40-character-public-sha>
+
 # Rebuild the canonical object and update its content-addressed project reference.
 cargo run --locked --bin voxel-lab -- convert
 
@@ -112,6 +121,12 @@ cargo run --locked --bin voxel-lab -- load
 # Or let den-serve own the process and LAN address.
 den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels
 ```
+
+`engine-source.json` is the only authored Engine identity. The update command projects it into the
+six direct Rust dependencies and the generated Cargo lockfile without rewriting historical
+evidence, protocol compatibility, or prose. See
+[`docs/engine-revision-updates.md`](docs/engine-revision-updates.md) for the failure, dry-run, and
+rollback contract.
 
 `studio.sh` checks out the exact provider revision from `engine-source.json` into the ignored
 `.studio-cache`, installs its locked Studio workspace, builds this repository's Rust adapter, and

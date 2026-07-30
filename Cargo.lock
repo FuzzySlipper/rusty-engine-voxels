@@ -469,6 +469,7 @@ version = "0.1.0"
 dependencies = [
  "render-model",
  "render-projection",
+ "rusty-engine-voxels-revision",
  "serde",
  "serde_json",
  "sha2",
@@ -476,6 +477,14 @@ dependencies = [
  "voxel-asset",
  "voxel-convert",
  "voxel-object-runtime",
+]
+
+[[package]]
+name = "rusty-engine-voxels-revision"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -258,10 +258,7 @@ pub fn select_pose_schedule(
         while pose_error(&poses[anchor], &poses[hard_index]) > settings.error_budget {
             // Only subdivide while there is room under the cap for this
             // subdivision plus every hard anchor still to come.
-            let remaining_hard = hard
-                .iter()
-                .filter(|&&(idx, _)| idx >= hard_index)
-                .count();
+            let remaining_hard = hard.iter().filter(|&&(idx, _)| idx >= hard_index).count();
             let room = settings
                 .max_frames
                 .saturating_sub(required.len() + remaining_hard - 1);
@@ -563,4 +560,3 @@ mod tests {
         assert!(!exceeds_event(&a, &c, 2.0, 0.35));
     }
 }
-

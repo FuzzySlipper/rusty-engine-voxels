@@ -3,6 +3,15 @@ set -euo pipefail
 
 VOXEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+"$VOXEL_ROOT/scripts/engine-revision" check
+CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision" \
+  cargo fmt --manifest-path "$VOXEL_ROOT/tools/engine-revision/Cargo.toml" -- --check
+CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision" \
+  cargo clippy --locked --all-targets \
+    --manifest-path "$VOXEL_ROOT/tools/engine-revision/Cargo.toml" -- -D warnings
+CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision" \
+  cargo test --locked --all-targets \
+    --manifest-path "$VOXEL_ROOT/tools/engine-revision/Cargo.toml"
 cargo fmt --manifest-path "$VOXEL_ROOT/Cargo.toml" -- --check
 cargo clippy --locked --all-targets \
   --manifest-path "$VOXEL_ROOT/Cargo.toml" \

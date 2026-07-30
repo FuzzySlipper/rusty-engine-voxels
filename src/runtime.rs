@@ -17,9 +17,9 @@ use voxel_object_runtime::{
     VoxelObjectPlaybackStatus, VoxelObjectPlayer, VoxelObjectRuntimeLimits,
 };
 
-use crate::conversion::ENGINE_REVISION;
 use crate::model::{ProjectFrameSelection, ProjectMaterial, ProjectVoxelObjectInstance};
 use crate::project::{load_project, read_bounded_text, safe_join, LoadedProject, MAX_OBJECT_BYTES};
+use crate::provider_pin::engine_revision;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -224,7 +224,7 @@ pub fn verify_runtime_project(
     let frame_switch = benchmark_frame_switches(&runtime, object, &clip)?;
     let behavior = verify_runtime_behavior(&runtime, object, &clip)?;
     Ok(RuntimeEvidence {
-        engine_revision: ENGINE_REVISION.to_owned(),
+        engine_revision: engine_revision()?,
         project_hash: runtime.loaded.project_hash,
         asset_id: readout.asset_id.to_owned(),
         content_hash: readout.content_hash.to_owned(),
