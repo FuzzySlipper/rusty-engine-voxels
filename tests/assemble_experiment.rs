@@ -216,6 +216,59 @@ fn max_frames_cap_is_never_exceeded() {
 }
 
 #[test]
+fn error_budget_and_event_share_one_optional_slot_without_overflow() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|clip| clip.name == "run")
+        .expect("run clip");
+    let settings = PoseSelectionSettings {
+        max_frames: 3,
+        error_budget: 0.5,
+        event_translation_threshold: 0.5,
+        event_rotation_threshold: 0.5,
+        ..PoseSelectionSettings::default()
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &settings)
+        .expect("one optional slot should produce a bounded schedule");
+    assert!(
+        schedule.len() <= settings.max_frames,
+        "error-budget and event frames must share the one optional slot; got {} frames under cap {}",
+        schedule.len(),
+        settings.max_frames
+    );
+    assert_eq!(
+        schedule.first().map(|pose| pose.reason),
+        Some(SelectionReason::First)
+    );
+    assert_eq!(
+        schedule.last().map(|pose| pose.reason),
+        Some(SelectionReason::Last)
+    );
+
+    let mandatory_settings = PoseSelectionSettings {
+        mandatory_timestamps: vec![266_666],
+        ..settings
+    };
+    let mandatory_schedule = select_pose_schedule(&imported.model, run_index, &mandatory_settings)
+        .expect("required anchors should fit exactly at the cap");
+    assert!(mandatory_schedule.len() <= mandatory_settings.max_frames);
+    assert_eq!(
+        mandatory_schedule.first().map(|pose| pose.reason),
+        Some(SelectionReason::First)
+    );
+    assert_eq!(
+        mandatory_schedule.last().map(|pose| pose.reason),
+        Some(SelectionReason::Last)
+    );
+    assert!(mandatory_schedule.iter().any(|pose| {
+        pose.time_microseconds == 266_666 && pose.reason == SelectionReason::Mandatory
+    }));
+}
+
+#[test]
 fn mandatory_timestamps_are_always_retained() {
     let imported = import_retro();
     let run_index = imported

@@ -1,4 +1,5 @@
 /target/
+/tools/engine-revision/target/
 /.studio-cache/
 /.runtime/
 *.pending

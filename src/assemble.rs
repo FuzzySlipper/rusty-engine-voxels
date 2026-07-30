@@ -246,7 +246,7 @@ pub fn select_pose_schedule(
             })
             .count();
         let reserved = 1 + mandatory_ahead; // final pose + remaining mandatories
-        let optional_budget = settings.max_frames.saturating_sub(kept.len() + reserved);
+        let mut optional_budget = settings.max_frames.saturating_sub(kept.len() + reserved);
 
         let is_mandatory_time = mandatory_times.contains(&candidates[i]);
         let is_last = i == final_index;
@@ -269,6 +269,7 @@ pub fn select_pose_schedule(
         {
             kept.push((i - 1, SelectionReason::ErrorBudget));
             anchor = i - 1;
+            optional_budget -= 1;
         }
 
         if is_mandatory_time || is_last || (event && optional_budget > 0) {
