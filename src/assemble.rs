@@ -226,71 +226,70 @@ pub fn select_pose_schedule(
         )));
     }
 
-    // Build the schedule: keep first, then walk keeping mandatory/event anchors
-    // and subdividing for the error budget, all within the hard cap, and always
-    // keep the final pose as Last. Mandatory anchors are never dropped; events
-    // and error-budget anchors fill remaining slots best-effort.
-    let mut kept: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
-    let mut anchor = 0usize;
-    let mut i = 1usize;
-    while i <= final_index {
-        // Slots still required ahead: remaining mandatory anchors + the final pose.
-        let mandatory_ahead = mandatory_times
-            .iter()
-            .filter(|&&t| {
-                t != candidates[final_index]
-                    && candidates
-                        .binary_search(&t)
-                        .map(|idx| idx >= i)
-                        .unwrap_or(false)
-            })
-            .count();
-        let reserved = 1 + mandatory_ahead; // final pose + remaining mandatories
-        let optional_budget = settings.max_frames.saturating_sub(kept.len() + reserved);
-
-        let is_mandatory_time = mandatory_times.contains(&candidates[i]);
-        let is_last = i == final_index;
-        let event = !is_last
-            && exceeds_event(
-                &poses[anchor],
-                &poses[i],
-                settings.event_translation_threshold,
-                settings.event_rotation_threshold,
-            );
-
-        // Error-budget subdivision is best-effort within optional slots: the
-        // hard cap is a hard ceiling (never exceeded), and the error budget is
-        // satisfied whenever a subdivision slot is available. When no optional
-        // slot remains, the selector keeps only hard anchors and accepts the
-        // larger interval — the cap is never violated to satisfy the budget
-        // (R6336-11).
-        if pose_error(&poses[anchor], &poses[i]) > settings.error_budget
-            && i - 1 > anchor
-            && optional_budget > 0
-        {
-            kept.push((i - 1, SelectionReason::ErrorBudget));
-            anchor = i - 1;
+    // The cap contract (R6336-11): the hard cap is a true ceiling, never
+    // exceeded. Hard anchors (first, last, mandatory) are always kept. The
+    // error budget is honored best-effort: insert in-budget subdivisions while
+    // they fit under the cap, prioritizing mandatory/event anchors. The only
+    // impossibility is when the hard anchors alone exceed the cap (already
+    // preflighted above) — never an over-cap or over-budget-by-omission output.
+    let mut hard: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
+    for i in 1..final_index {
+        if mandatory_times.contains(&candidates[i]) {
+            hard.push((i, SelectionReason::Mandatory));
+        } else if exceeds_event(
+            &poses[hard.last().expect("non-empty").0],
+            &poses[i],
+            settings.event_translation_threshold,
+            settings.event_rotation_threshold,
+        ) {
+            hard.push((i, SelectionReason::Event));
         }
+    }
+    hard.push((final_index, SelectionReason::Last));
+    hard.dedup_by_key(|entry| entry.0);
 
-        if is_mandatory_time || is_last || (event && optional_budget > 0) {
-            let reason = if is_last {
-                SelectionReason::Last
-            } else if is_mandatory_time {
-                SelectionReason::Mandatory
-            } else {
-                SelectionReason::Event
-            };
-            kept.push((i, reason));
-            anchor = i;
+    // Walk the hard anchors, inserting error-budget subdivisions where the
+    // interval exceeds the budget AND there is room under the cap. Subdivisions
+    // are best-effort: they are skipped when the cap is full, so the schedule
+    // never exceeds the cap.
+    let mut required: Vec<(usize, SelectionReason)> = vec![hard[0]];
+    for &(hard_index, reason) in hard.iter().skip(1) {
+        let mut anchor = required.last().expect("non-empty").0;
+        while pose_error(&poses[anchor], &poses[hard_index]) > settings.error_budget {
+            // Only subdivide while there is room under the cap for this
+            // subdivision plus every hard anchor still to come.
+            let remaining_hard = hard
+                .iter()
+                .filter(|&&(idx, _)| idx >= hard_index)
+                .count();
+            let room = settings
+                .max_frames
+                .saturating_sub(required.len() + remaining_hard - 1);
+            if room == 0 {
+                break; // cap full: accept the larger interval, never overflow.
+            }
+            let mut best = anchor;
+            for candidate in (anchor + 1)..hard_index {
+                if pose_error(&poses[anchor], &poses[candidate]) <= settings.error_budget {
+                    best = candidate;
+                } else {
+                    break;
+                }
+            }
+            if best == anchor {
+                break; // adjacent ticks already over budget; cannot subdivide.
+            }
+            required.push((best, SelectionReason::ErrorBudget));
+            anchor = best;
         }
-        i += 1;
+        required.push((hard_index, reason));
     }
 
     // Build the schedule with independent durations, deduplicating any
     // consecutive identical timestamps (an event frame landing exactly on the
     // final tick must not produce a zero-duration pose).
     let mut times: Vec<(u64, SelectionReason)> = Vec::new();
-    for &(idx, reason) in &kept {
+    for &(idx, reason) in &required {
         let time = candidates[idx];
         if times.last().map(|&(t, _)| t) == Some(time) {
             // Keep the more meaningful reason (Last/Event over ErrorBudget).
@@ -564,3 +563,4 @@ mod tests {
         assert!(!exceeds_event(&a, &c, 2.0, 0.35));
     }
 }
+
