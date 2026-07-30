@@ -78,7 +78,7 @@ numbers.
 The resulting implementation keeps canonical voxel-object JSON unchanged and moves derived mesh
 streams into deterministic `packedStreamsLeV1` resources. This adapter atomically publishes those
 resources into the ignored `.studio-cache` and sends compact content-addressed manifests through
-Studio protocol 9. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
+Studio protocol 11. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
 a 24,805-byte control response plus 34,541,056 raw resource bytes. The complete before/after and
 Node/Chromium parse observations are in `evidence/mesh-data-plane.json`.
 
@@ -137,7 +137,7 @@ The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,
 reading, inspecting sources, preparing/previewing/applying/discarding voxel-object conversions,
 attaching transformed voxel-object instances, and transiently playing reopened applied instances.
-Other protocol-9 operations fail with a typed
+Other protocol-11 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
 Applied playback retains the admitted object and renderer projector for the open project. After the

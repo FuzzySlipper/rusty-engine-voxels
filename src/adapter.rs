@@ -31,8 +31,10 @@ use crate::runtime::{
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
-const PROTOCOL_VERSION: u64 = 9;
+const PROTOCOL_VERSION: u64 = 11;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
+const VOXEL_OBJECT_COMPONENT_TYPE_ID: &str = "rusty.voxel-object.instance";
+const VOXEL_OBJECT_INSPECTOR_CONTRACT_ID: &str = "rusty.studio.voxel-object-authoring";
 
 const OPERATIONS: &[&str] = &[
     "describe",
@@ -91,6 +93,7 @@ const OPERATIONS: &[&str] = &[
     "previewVoxelObjectConversion",
     "applyVoxelObjectConversion",
     "discardVoxelObjectConversion",
+    "prepareVoxelObjectPlacement",
     "attachVoxelObjectInstance",
     "previewVoxelObjectInstance",
     "closeProject",
@@ -207,6 +210,10 @@ impl StudioAdapter {
                     "projectKind": "rustyEngineVoxelLab",
                     "projectSchemaVersion": 1,
                     "operations": OPERATIONS,
+                    "entityInspectorContracts": [{
+                        "contractId": VOXEL_OBJECT_INSPECTOR_CONTRACT_ID,
+                        "contractVersion": 1,
+                    }],
                 }
             }),
         )
@@ -1135,6 +1142,21 @@ fn project_readout_from_runtime(
             })
         })
         .collect::<Vec<_>>();
+    let entity_components = loaded
+        .project
+        .instances
+        .iter()
+        .map(|instance| {
+            json!({
+                "ownerEntityId": instance.entity_id,
+                "componentTypeId": VOXEL_OBJECT_COMPONENT_TYPE_ID,
+                "inspectorContract": {
+                    "contractId": VOXEL_OBJECT_INSPECTOR_CONTRACT_ID,
+                    "contractVersion": 1,
+                },
+            })
+        })
+        .collect::<Vec<_>>();
     let mut assets = vec![json!({
         "assetId": loaded.project.conversion.source_asset_id,
         "kind": "mesh-animation",
@@ -1274,20 +1296,8 @@ fn project_readout_from_runtime(
             "clipIds": loaded.project.conversion.clips.iter().map(|clip| clip.source_clip_name.clone()).collect::<Vec<_>>(),
             "sourcePath": loaded.project.conversion.source_path,
         }],
+        "entityComponents": entity_components,
         "meshResources": &projection.mesh_resources,
-        "loadingBay": {
-            "sceneName": "Voxel Lab",
-            "entityCount": loaded.project.instances.len(),
-            "doorCount": 0,
-            "switchCount": 0,
-            "enemyCount": 0,
-            "encounterCount": 0,
-            "extractionBeaconCount": 0,
-            "navigatorCount": 0,
-            "playerControllerCount": 0,
-            "weaponCount": 0,
-            "voxelEnvironment": "voxelObjectExperiment",
-        },
         "projection": projection.frame,
         "projectionReadout": projection_readout(loaded.project.revision, loaded.project.instances.len()),
     });

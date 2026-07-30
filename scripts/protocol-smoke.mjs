@@ -12,11 +12,12 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
+const PROTOCOL_VERSION = 11;
 const initialRequests = [
-  { type: 'describe', protocolVersion: 9, requestId: 'describe-smoke' },
+  { type: 'describe', protocolVersion: PROTOCOL_VERSION, requestId: 'describe-smoke' },
   {
     type: 'openProject',
-    protocolVersion: 9,
+    protocolVersion: PROTOCOL_VERSION,
     requestId: 'open-smoke',
     root,
     projectFile: 'content/projects/voxel-lab.project.json',
@@ -92,7 +93,7 @@ const inspectRequests = [
   initialRequests[1],
   {
     type: 'inspectVoxelObjectSource',
-    protocolVersion: 9,
+    protocolVersion: PROTOCOL_VERSION,
     requestId: 'inspect-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sourceKind: 'animated',
@@ -125,7 +126,7 @@ const playbackRequests = [
   initialRequests[1],
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 9,
+    protocolVersion: PROTOCOL_VERSION,
     requestId: 'scrub-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -135,7 +136,7 @@ const playbackRequests = [
   },
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 9,
+    protocolVersion: PROTOCOL_VERSION,
     requestId: 'play-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -145,7 +146,7 @@ const playbackRequests = [
   },
   {
     type: 'previewVoxelObjectInstance',
-    protocolVersion: 9,
+    protocolVersion: PROTOCOL_VERSION,
     requestId: 'sample-smoke',
     expectedProjectHash: opened.project.identity.projectHash,
     sceneId: 'scene/voxel-lab',
@@ -206,7 +207,7 @@ function openProject(adapterPath, projectRoot, projectFile, suffix) {
     encoding: 'utf8',
     input: `${JSON.stringify({
       type: 'openProject',
-      protocolVersion: 9,
+      protocolVersion: PROTOCOL_VERSION,
       requestId: `open-${suffix}`,
       root: projectRoot,
       projectFile,
@@ -239,7 +240,7 @@ function openFailureProject(adapterPath, projectRoot, suffix) {
     encoding: 'utf8',
     input: `${JSON.stringify({
       type: 'openProject',
-      protocolVersion: 9,
+      protocolVersion: PROTOCOL_VERSION,
       requestId: `open-${suffix}`,
       root: projectRoot,
       projectFile: 'content/projects/voxel-lab.project.json',

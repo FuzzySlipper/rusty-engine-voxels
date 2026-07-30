@@ -43,8 +43,8 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 9 only as an
-explicit host boundary; protocol 9 is not the voxel project schema and is not an industry voxel
+cadence, and visual presentation. The project adapter implements Studio protocol 11 only as an
+explicit host boundary; protocol 11 is not the voxel project schema and is not an industry voxel
 standard. The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/
 mutation/close, and never serializes its posture into this project's durable instance frame.
 Studio advances that player one virtual frame only after the shared renderer accepts the previous
