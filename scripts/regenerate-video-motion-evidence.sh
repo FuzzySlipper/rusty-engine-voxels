@@ -61,8 +61,4 @@ cargo run --quiet --manifest-path "$VOXEL_ROOT/Cargo.toml" \
   --motion "$PROXY_MOTION" \
   --output "$MOTION"
 
-install -m 0644 "$VIDEO" "$VOXEL_ROOT/$VIDEO_PATH"
-install -m 0644 "$LANDMARKS" "$VOXEL_ROOT/$LANDMARKS_PATH"
-install -m 0644 "$FITTED" "$VOXEL_ROOT/$FITTED_PATH"
-install -m 0644 "$PROXY_MOTION" "$VOXEL_ROOT/$PROXY_MOTION_PATH"
-install -m 0644 "$MOTION" "$VOXEL_ROOT/$MOTION_PATH"
+"$VOXEL_ROOT/scripts/publish-video-motion-evidence.sh" "$VOXEL_ROOT" "$STAGING"

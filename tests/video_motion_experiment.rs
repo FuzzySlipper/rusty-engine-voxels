@@ -96,6 +96,46 @@ fn checked_multiview_fit_is_fixed_length_contact_corrected_and_reproducible() {
         .expect_err("out-of-view weapon endpoint must reject");
     assert_eq!(error.code, "videoMotion.invalidWeaponEndpoint");
 
+    let mut adjacent: serde_json::Value =
+        serde_json::from_str(&landmark_json).expect("adjacent value");
+    adjacent["frames"][5]["views"][0]["observationKind"] =
+        serde_json::json!("interpolatedDetectionGap");
+    adjacent["frames"][6]["views"][0]["observationKind"] =
+        serde_json::json!("interpolatedDetectionGap");
+    let error = fit_multiview_landmarks_json(&serde_json::to_string(&adjacent).unwrap())
+        .expect_err("adjacent interpolations must reject");
+    assert_eq!(error.code, "videoMotion.invalidInterpolation");
+
+    let mut repeated: serde_json::Value =
+        serde_json::from_str(&landmark_json).expect("repeated value");
+    repeated["frames"][4]["views"][0]["observationKind"] =
+        serde_json::json!("interpolatedDetectionGap");
+    repeated["frames"][9]["views"][0]["observationKind"] =
+        serde_json::json!("interpolatedDetectionGap");
+    let error = fit_multiview_landmarks_json(&serde_json::to_string(&repeated).unwrap())
+        .expect_err("repeated interpolations must reject");
+    assert_eq!(error.code, "videoMotion.invalidInterpolation");
+
+    let mut forged: serde_json::Value = serde_json::from_str(&landmark_json).expect("forged value");
+    let (gap_frame, gap_view) = forged["frames"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .find_map(|(frame_index, frame)| {
+            frame["views"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .position(|view| view["observationKind"] == "interpolatedDetectionGap")
+                .map(|view_index| (frame_index, view_index))
+        })
+        .unwrap();
+    forged["frames"][gap_frame]["views"][gap_view]["landmarks"][0]["x"] = serde_json::json!(0.5);
+    let error = fit_multiview_landmarks_json(&serde_json::to_string(&forged).unwrap())
+        .expect_err("forged interpolation must reject");
+    assert_eq!(error.code, "videoMotion.invalidInterpolation");
+
     let proxy: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(root().join(PROXY_MOTION)).expect("proxy motion"),
     )

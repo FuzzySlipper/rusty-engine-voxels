@@ -17,7 +17,10 @@ and its license remain beside it.
 regeneration. It renders every view with Blender, encodes the panels losslessly,
 decodes that video through the pinned MediaPipe Pose Landmarker, invokes the
 Rust fitter and retargeter, and serializes the resulting Rust-owned transforms
-as `motion.glb`.
+as `motion.glb`. All five checked artifacts are staged before publication; the
+publisher restores every original if any destination update fails. The ordinary
+evidence check injects a failure after each of the five writes and requires all
+original bytes to remain exact.
 
 The MediaPipe package is pinned to 0.10.35. Its external full float16 model is
 pinned by SHA-256
@@ -36,7 +39,9 @@ Contact correction detects low, slow feet. A contact run keeps its fitted foot
 fixed and translates the complete proxy, preserving every bone length. The
 checked run has one three-frame right-foot contact. Two isolated MediaPipe
 detection gaps are explicitly marked and interpolated at half observation
-weight; endpoint and adjacent gaps reject during evidence generation.
+weight. Rust admission independently requires at most one isolated gap per
+view, detected neighbors, and exact neighboring-observation averages; endpoint,
+adjacent, repeated, and forged interpolation values reject.
 
 The checked character is unarmed. Its per-view grip and muzzle landmarks are
 therefore explicitly identified as `inferredFromRightHandAxis`, rather than

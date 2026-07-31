@@ -522,7 +522,105 @@ fn validate_document(document: &LandmarkDocument) -> Result<(), VideoMotionError
             let WeaponEndpointKind::InferredFromRightHandAxis = view.weapon_endpoint_kind;
         }
     }
+    validate_interpolation_schedule(document)?;
     Ok(())
+}
+
+fn validate_interpolation_schedule(document: &LandmarkDocument) -> Result<(), VideoMotionError> {
+    for camera in &document.cameras {
+        let interpolated = document
+            .frames
+            .iter()
+            .enumerate()
+            .filter_map(|(frame_index, frame)| {
+                frame
+                    .views
+                    .iter()
+                    .find(|view| view.view_id == camera.id)
+                    .filter(|view| {
+                        view.observation_kind == ObservationKind::InterpolatedDetectionGap
+                    })
+                    .map(|view| (frame_index, view))
+            })
+            .collect::<Vec<_>>();
+        if interpolated.len() > 1 {
+            return Err(VideoMotionError::new(
+                "videoMotion.invalidInterpolation",
+                format!("views.{}", camera.id),
+                "each view may contain at most one isolated interpolated detection",
+            ));
+        }
+        let Some((frame_index, interpolated_view)) = interpolated.first().copied() else {
+            continue;
+        };
+        let previous = view_for_camera(&document.frames[frame_index - 1], &camera.id);
+        let following = view_for_camera(&document.frames[frame_index + 1], &camera.id);
+        if previous.observation_kind != ObservationKind::Detected
+            || following.observation_kind != ObservationKind::Detected
+            || !interpolation_matches(interpolated_view, previous, following)
+        {
+            return Err(VideoMotionError::new(
+                "videoMotion.invalidInterpolation",
+                format!("frames[{frame_index}].views.{}", camera.id),
+                "interpolation must exactly average two detected neighboring observations",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn view_for_camera<'a>(frame: &'a LandmarkFrame, camera_id: &str) -> &'a ViewObservation {
+    frame
+        .views
+        .iter()
+        .find(|view| view.view_id == camera_id)
+        .expect("validated frame contains every camera exactly once")
+}
+
+fn interpolation_matches(
+    interpolated: &ViewObservation,
+    previous: &ViewObservation,
+    following: &ViewObservation,
+) -> bool {
+    interpolated
+        .landmarks
+        .iter()
+        .zip(&previous.landmarks)
+        .zip(&following.landmarks)
+        .all(|((value, left), right)| {
+            nearly_equal(value.x, midpoint(left.x, right.x))
+                && nearly_equal(value.y, midpoint(left.y, right.y))
+                && nearly_equal(
+                    value.visibility,
+                    midpoint(left.visibility, right.visibility),
+                )
+                && nearly_equal(value.presence, midpoint(left.presence, right.presence))
+        })
+        && [
+            (
+                interpolated.weapon_endpoints.grip,
+                previous.weapon_endpoints.grip,
+                following.weapon_endpoints.grip,
+            ),
+            (
+                interpolated.weapon_endpoints.muzzle,
+                previous.weapon_endpoints.muzzle,
+                following.weapon_endpoints.muzzle,
+            ),
+        ]
+        .iter()
+        .all(|(value, left, right)| {
+            nearly_equal(value.x, midpoint(left.x, right.x))
+                && nearly_equal(value.y, midpoint(left.y, right.y))
+        })
+}
+
+fn midpoint(left: f64, right: f64) -> f64 {
+    (left + right) / 2.0
+}
+
+fn nearly_equal(left: f64, right: f64) -> bool {
+    (left - right).abs() <= 1.0e-12
 }
 
 fn triangulate_landmark(
