@@ -21,6 +21,7 @@ const FACE_NEIGHBORS: [[i64; 3]; 6] = [
     [0, 0, -1],
     [0, 0, 1],
 ];
+type CanonicalOriginMap = BTreeMap<(u32, u32), BTreeMap<[i64; 3], u16>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -654,7 +655,7 @@ fn apply_diff(
             .at_operation(index));
         }
     }
-    validate_candidate(base, &cells, &anchors, policy)?;
+    validate_candidate(base, previous, next, &cells, &anchors, policy)?;
     result.frame.voxels = cells.into_values().collect();
     result.frame.generated_voxels = result
         .frame
@@ -812,6 +813,11 @@ fn apply_operation(
                 .collect::<Vec<_>>();
             for mut cell in copies {
                 cell.coordinate = translate(cell.coordinate, *offset)?;
+                // A copy is new authored geometry, not a second authority for
+                // the canonical source voxel it was shaped from.
+                cell.origin = FusedVoxelOrigin::AuthoredEdit {
+                    operation_index: u32::try_from(operation_index).unwrap_or(u32::MAX),
+                };
                 cells.entry(cell.coordinate).or_insert(cell);
             }
         }
@@ -923,6 +929,8 @@ fn apply_operation(
 
 fn validate_candidate(
     base: &FusedFrame,
+    previous: Option<&FusedFrame>,
+    next: Option<&FusedFrame>,
     cells: &BTreeMap<[i64; 3], FusedVoxelCell>,
     anchors: &BTreeMap<String, [i64; 3]>,
     policy: &EditPolicy,
@@ -936,8 +944,43 @@ fn validate_candidate(
             ));
         }
     }
-    let base_origins = canonical_origin_map(base.voxels.iter());
-    let candidate_origins = canonical_origin_map(cells.values());
+    let base_origins = canonical_origin_map(base.voxels.iter())?;
+    let previous_origins = previous
+        .map(|frame| canonical_origin_map(frame.voxels.iter()))
+        .transpose()?;
+    let next_origins = next
+        .map(|frame| canonical_origin_map(frame.voxels.iter()))
+        .transpose()?;
+    let candidate_origins = canonical_origin_map(cells.values())?;
+    for (identity, candidate_footprint) in &candidate_origins {
+        let allowed_count = base_origins
+            .get(identity)
+            .map_or(0, BTreeMap::len)
+            .max(
+                previous_origins
+                    .as_ref()
+                    .and_then(|origins| origins.get(identity))
+                    .map_or(0, BTreeMap::len),
+            )
+            .max(
+                next_origins
+                    .as_ref()
+                    .and_then(|origins| origins.get(identity))
+                    .map_or(0, BTreeMap::len),
+            )
+            .max(1);
+        if candidate_footprint.len() > allowed_count {
+            return Err(EditError::new(
+                "edit.duplicateCanonicalIdentity",
+                "voxels",
+                format!(
+                    "canonical identity {identity:?} has {} occupied records; \
+                     authoritative base/neighbor frames allow at most {allowed_count}",
+                    candidate_footprint.len(),
+                ),
+            ));
+        }
+    }
     for origin in &policy.protected_origins {
         if candidate_origins.get(origin) != base_origins.get(origin) {
             return Err(EditError::new(
@@ -1204,26 +1247,40 @@ fn connect_region(
 
 fn canonical_origin_map<'a>(
     cells: impl IntoIterator<Item = &'a FusedVoxelCell>,
-) -> BTreeMap<(u32, u32), ([i64; 3], u16)> {
-    cells
-        .into_iter()
-        .filter_map(|cell| match cell.origin {
-            FusedVoxelOrigin::Canonical {
-                part_id,
-                source_voxel_index,
-            } => Some((
-                (part_id, source_voxel_index),
-                (cell.coordinate, cell.material_slot),
-            )),
-            _ => None,
-        })
-        .collect()
+) -> Result<CanonicalOriginMap, EditError> {
+    let mut origins = CanonicalOriginMap::new();
+    for cell in cells {
+        if let FusedVoxelOrigin::Canonical {
+            part_id,
+            source_voxel_index,
+        } = cell.origin
+        {
+            let identity = (part_id, source_voxel_index);
+            if origins
+                .entry(identity)
+                .or_default()
+                .insert(cell.coordinate, cell.material_slot)
+                .is_some()
+            {
+                return Err(EditError::new(
+                    "edit.duplicateCanonicalIdentity",
+                    "voxels",
+                    format!(
+                        "canonical identity {identity:?} repeats occupied coordinate {:?}",
+                        cell.coordinate
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(origins)
 }
 
-fn part_cells(origins: &BTreeMap<(u32, u32), ([i64; 3], u16)>, part: u32) -> BTreeSet<[i64; 3]> {
+fn part_cells(origins: &CanonicalOriginMap, part: u32) -> BTreeSet<[i64; 3]> {
     origins
         .iter()
-        .filter_map(|((part_id, _), (coordinate, _))| (*part_id == part).then_some(*coordinate))
+        .filter(|((part_id, _), _)| *part_id == part)
+        .flat_map(|(_, footprint)| footprint.keys().copied())
         .collect()
 }
 
@@ -1380,7 +1437,7 @@ pub fn build_agent_input_bundle(
         .iter()
         .map(|cell| cell.coordinate)
         .collect::<BTreeSet<_>>();
-    let origins = canonical_origin_map(current.voxels.iter());
+    let origins = canonical_origin_map(current.voxels.iter())?;
     let canonical_parts = kit
         .parts
         .iter()

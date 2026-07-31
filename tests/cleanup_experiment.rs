@@ -86,8 +86,16 @@ fn replay_one(
 #[test]
 fn every_edit_operation_is_closed_bounded_and_executable() {
     let base = synthetic_frame(&[[0, 0, 0], [1, 0, 0], [2, 0, 0]]);
-    let previous = synthetic_frame(&[[0, 0, 0], [0, 1, 0]]);
-    let next = synthetic_frame(&[[0, 0, 0], [0, 0, 1]]);
+    let mut previous = synthetic_frame(&[[0, 0, 0], [0, 1, 0]]);
+    previous.voxels[1].origin = FusedVoxelOrigin::Canonical {
+        part_id: 1,
+        source_voxel_index: 0,
+    };
+    let mut next = synthetic_frame(&[[0, 0, 0], [0, 0, 1]]);
+    next.voxels[1].origin = FusedVoxelOrigin::Canonical {
+        part_id: 2,
+        source_voxel_index: 0,
+    };
     let policy = open_policy(10_000);
     let region = EditBounds {
         min: [-2, -2, -2],
@@ -317,6 +325,51 @@ fn safety_rejections_are_typed_fail_atomic_and_neighbor_local() {
 }
 
 #[test]
+fn copy_and_temporal_restore_cannot_duplicate_canonical_authority() {
+    let base = synthetic_frame(&[[0, 0, 0]]);
+    let policy = open_policy(16);
+    let copied = replay_one(
+        &base,
+        None,
+        None,
+        &policy,
+        FrameEditOperation::CopyCanonicalRegion {
+            source: EditBounds::point([0, 0, 0]),
+            offset: [0, 2, 0],
+        },
+    )
+    .unwrap();
+    let canonical = copied
+        .frame
+        .voxels
+        .iter()
+        .filter(|cell| matches!(cell.origin, FusedVoxelOrigin::Canonical { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(canonical.len(), 1);
+    assert!(copied.frame.voxels.iter().any(|cell| {
+        cell.coordinate == [0, 2, 0] && matches!(cell.origin, FusedVoxelOrigin::AuthoredEdit { .. })
+    }));
+
+    let previous = synthetic_frame(&[[0, 2, 0]]);
+    let base_before = serde_json::to_vec(&base).unwrap();
+    let previous_before = serde_json::to_vec(&previous).unwrap();
+    let error = replay_one(
+        &base,
+        Some(&previous),
+        None,
+        &policy,
+        FrameEditOperation::RestoreFromPreviousFrame {
+            region: EditBounds::point([0, 2, 0]),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code(), "edit.duplicateCanonicalIdentity");
+    assert_eq!(error.operation_index(), None);
+    assert_eq!(serde_json::to_vec(&base).unwrap(), base_before);
+    assert_eq!(serde_json::to_vec(&previous).unwrap(), previous_before);
+}
+
+#[test]
 fn checked_rifleman_forearm_defect_is_fixed_by_replayable_dsl_diff() {
     let kit = load_kit(&root(), RIFLEMAN_KIT).unwrap();
     let source_bytes = std::fs::read(root().join(RETRO_GLB)).unwrap();
@@ -466,23 +519,33 @@ fn checked_rifleman_forearm_defect_is_fixed_by_replayable_dsl_diff() {
         &removed
     );
 
+    let mut hand_policy = EditPolicy::for_kit(
+        &kit,
+        vec![EditBounds {
+            min: [-1_000_000; 3],
+            max: [1_000_000; 3],
+        }],
+        original.voxels.len(),
+    )
+    .unwrap();
     let removable = original
         .voxels
         .iter()
         .find(|cell| {
             matches!(
                 cell.origin,
-                FusedVoxelOrigin::Canonical { part_id, .. }
-                    if kit.parts[part_id as usize].id == "rifle"
+                FusedVoxelOrigin::Canonical {
+                    part_id,
+                    source_voxel_index
+                }
+                    if kit.parts[part_id as usize].id == "backpack"
+                        && !hand_policy
+                            .protected_origins
+                            .contains(&(part_id, source_voxel_index))
             )
         })
         .unwrap();
-    let mut hand_policy = EditPolicy::for_kit(
-        &kit,
-        vec![EditBounds::point(removable.coordinate)],
-        original.voxels.len(),
-    )
-    .unwrap();
+    hand_policy.declared_regions = vec![EditBounds::point(removable.coordinate)];
     hand_policy.connected_parts.clear();
     let hand_edit = replay_one(
         original,
@@ -522,7 +585,7 @@ fn checked_rifleman_forearm_defect_is_fixed_by_replayable_dsl_diff() {
             "deterministicReplay": fixed == repeated
         },
         "handEdit": {
-            "part": "rifle",
+            "part": "backpack",
             "operation": "remove_voxel",
             "beforeVoxels": original.voxels.len(),
             "afterVoxels": hand_edit.frame.voxels.len()

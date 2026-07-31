@@ -59,11 +59,10 @@ accepted diff list.
 rifleman's left lower arm, supplies the defective frame with its previous and
 next neighbors, and restores the defect solely through
 `restore_from_previous_frame`. Replaying the recorded diff yields the identical
-1,359-voxel result. A separate `remove_voxel` hand edit removes one rifle voxel,
-proving that cleanup is not add-only.
+1,391-voxel result. A separate `remove_voxel` hand edit removes one unprotected
+backpack voxel, proving that cleanup is not add-only.
 
 The same suite executes and round-trips all 17 operation shapes and verifies
 typed failures for undeclared regions, invalid palette slots, voxel quota,
 protected-origin changes, missing required anchors, and disconnected required
 components. Exact checked facts are in `evidence/cleanup-loop.json`.
-

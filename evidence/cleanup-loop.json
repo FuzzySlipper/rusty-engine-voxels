@@ -4,7 +4,7 @@
     "differenceOverlays": 2,
     "idPasses": 3,
     "multiviewPasses": 3,
-    "structuralWarnings": 12,
+    "structuralWarnings": 6,
     "styleRules": 2,
     "temporalFrames": 3
   },
@@ -30,7 +30,7 @@
     "afterVoxels": 1390,
     "beforeVoxels": 1391,
     "operation": "remove_voxel",
-    "part": "rifle"
+    "part": "backpack"
   },
   "nonclaims": [
     "Diagnostic multiview and ID passes are deterministic agent-facing projections, not final art renders.",
