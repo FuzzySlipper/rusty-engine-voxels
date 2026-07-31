@@ -13,10 +13,11 @@ use serde::{Deserialize, Serialize};
 use voxel_convert::ImportedAnimatedModel;
 
 use crate::assemble::{
-    socket_constrained_part_placements, DiscardedCanonicalVoxel, RoughFrame, SelectedPose,
+    assemble_rough_frame, socket_constrained_part_placements, DiscardedCanonicalVoxel, RoughFrame,
+    SelectedPose,
 };
 use crate::kit::{VoxelKit, MAX_COORDINATE_ABS};
-use crate::pose::{RigMap, RigidTransform};
+use crate::pose::{RasterSettings, RigMap, RigidTransform};
 
 const FACE_NEIGHBORS: [[i64; 3]; 6] = [
     [-1, 0, 0],
@@ -220,6 +221,16 @@ impl fmt::Display for FusionError {
 
 impl std::error::Error for FusionError {}
 
+/// Immutable source authority required to validate and fuse rough frames.
+#[derive(Debug, Clone, Copy)]
+pub struct FusionContext<'a> {
+    pub kit: &'a VoxelKit,
+    pub rig_map: &'a RigMap,
+    pub model: &'a ImportedAnimatedModel,
+    pub clip_index: usize,
+    pub raster_settings: &'a RasterSettings,
+}
+
 /// Fuse and validate one rough pose.
 ///
 /// # Errors
@@ -227,19 +238,19 @@ impl std::error::Error for FusionError {}
 /// Returns a typed [`FusionError`] when settings, pose evaluation, socket
 /// bridging, quotas, or structural hard gates cannot be satisfied.
 pub fn fuse_rough_frame(
-    kit: &VoxelKit,
-    rig_map: &RigMap,
-    model: &ImportedAnimatedModel,
-    clip_index: usize,
+    context: FusionContext<'_>,
     selected: &SelectedPose,
     rough: &RoughFrame,
     settings: FusionSettings,
 ) -> Result<FusedFrame, FusionError> {
     settings.validate()?;
-    kit.validate()
+    context
+        .kit
+        .validate()
         .map_err(|error| FusionError::new("fusion.invalidKit", error.to_string()))?;
-    rig_map
-        .validate(kit, model)
+    context
+        .rig_map
+        .validate(context.kit, context.model)
         .map_err(|error| FusionError::new("fusion.invalidRigMap", error.to_string()))?;
     if rough.time_microseconds != selected.time_microseconds
         || rough.duration_microseconds != selected.duration_microseconds
@@ -249,21 +260,37 @@ pub fn fuse_rough_frame(
             "rough frame time/duration does not match the selected pose",
         ));
     }
+    let expected_rough = assemble_rough_frame(
+        context.kit,
+        context.rig_map,
+        context.model,
+        context.clip_index,
+        selected,
+        context.raster_settings,
+    )
+    .map_err(|error| FusionError::new("fusion.roughFrameValidation", error.to_string()))?;
+    if rough.discarded_overlaps != expected_rough.discarded_overlaps {
+        return Err(FusionError::new(
+            "fusion.overlapLedgerMismatch",
+            "discarded-overlap diagnostics do not match authoritative rasterization",
+        ));
+    }
     let placements_by_id = socket_constrained_part_placements(
-        kit,
-        rig_map,
-        model,
-        clip_index,
+        context.kit,
+        context.rig_map,
+        context.model,
+        context.clip_index,
         selected.time_microseconds,
     )
     .map_err(|error| FusionError::new("fusion.poseEvaluation", error.to_string()))?;
-    let placements: Vec<RigidTransform> = kit
+    let placements: Vec<RigidTransform> = context
+        .kit
         .parts
         .iter()
         .map(|part| placements_by_id[&part.id])
         .collect();
 
-    let mut cells = canonical_cells(kit, rough)?;
+    let mut cells = canonical_cells(context.kit, rough)?;
     let maximum_total_cells = cells
         .len()
         .checked_add(settings.max_generated_voxels)
@@ -280,7 +307,7 @@ pub fn fuse_rough_frame(
         .map(|cell| cell.coordinate)
         .collect();
 
-    for joint in socket_joints(kit, &placements)? {
+    for joint in socket_joints(context.kit, &placements)? {
         add_socket_bridge(
             &mut cells,
             &joint,
@@ -296,10 +323,10 @@ pub fn fuse_rough_frame(
         fill_one_voxel_cavities(&mut cells, &seam_coordinates, maximum_total_cells)?;
     }
     if settings.enforce_minimum_limb_thickness {
-        enforce_minimum_limb_thickness(kit, rough, &mut cells, maximum_total_cells)?;
+        enforce_minimum_limb_thickness(context.kit, rough, &mut cells, maximum_total_cells)?;
     }
     if settings.restore_ground_contact {
-        restore_ground_contact(kit, &mut cells, maximum_total_cells)?;
+        restore_ground_contact(context.kit, &mut cells, maximum_total_cells)?;
     }
     if settings.remove_isolated_generated_voxels {
         remove_isolated_generated_voxels(&mut cells);
@@ -341,7 +368,7 @@ pub fn fuse_rough_frame(
         )
     });
 
-    validate_structural_frame(kit, &placements, rough, &frame, settings)?;
+    validate_structural_frame(context.kit, &placements, rough, &frame, settings)?;
     Ok(frame)
 }
 
@@ -381,10 +408,7 @@ fn applied_operations(
 /// Returns the first typed fusion or structural failure without publishing a
 /// partial schedule.
 pub fn fuse_rough_schedule(
-    kit: &VoxelKit,
-    rig_map: &RigMap,
-    model: &ImportedAnimatedModel,
-    clip_index: usize,
+    context: FusionContext<'_>,
     selected: &[SelectedPose],
     rough: &[RoughFrame],
     settings: FusionSettings,
@@ -402,9 +426,7 @@ pub fn fuse_rough_schedule(
     selected
         .iter()
         .zip(rough)
-        .map(|(pose, frame)| {
-            fuse_rough_frame(kit, rig_map, model, clip_index, pose, frame, settings)
-        })
+        .map(|(pose, frame)| fuse_rough_frame(context, pose, frame, settings))
         .collect()
 }
 
@@ -906,21 +928,14 @@ fn validate_structural_frame(
                 format!("part {} has no canonical geometry in the frame", part.id),
             ));
         }
-        let discarded_for_part = frame
-            .discarded_origins
-            .iter()
-            .filter(|discarded| discarded.part_id == part_index as u32)
-            .count();
-        if kit.invariants.protected_parts.contains(&part.id)
-            && part_cells.len() + discarded_for_part < part.cells.len()
+        if kit.invariants.protected_parts.contains(&part.id) && part_cells.len() < part.cells.len()
         {
             return Err(FusionError::new(
                 "fusion.protectedRegionRemoved",
                 format!(
-                    "protected part {} retained {} cells plus {} explained overlaps from {} canonical cells",
+                    "protected part {} retained {} cells from {} canonical cells",
                     part.id,
                     part_cells.len(),
-                    discarded_for_part,
                     part.cells.len()
                 ),
             ));
@@ -950,19 +965,11 @@ fn validate_structural_frame(
                     )
                 })
                 .count();
-            let discarded = frame
-                .discarded_origins
-                .iter()
-                .filter(|origin| {
-                    origin.part_id == part_index as u32
-                        && protected_indices.contains(&origin.source_voxel_index)
-                })
-                .count();
-            if retained + discarded < protected_indices.len() {
+            if retained < protected_indices.len() {
                 return Err(FusionError::new(
                     "fusion.protectedRegionRemoved",
                     format!(
-                        "part {} protected region {:?}..{:?} retained {retained} cells plus {discarded} explained overlaps from {} canonical cells",
+                        "part {} protected region {:?}..{:?} retained {retained} cells from {} canonical cells",
                         part.id,
                         region.min,
                         region.max,

@@ -26,6 +26,12 @@ canonical origin. A collision winner is chosen by:
 The occupied coordinate still has one owner. The loser record is diagnostic
 provenance, not a second geometry authority.
 
+Fusion receives the exact raster settings alongside the rough frame and
+authoritatively re-runs M2 overlap resolution before cleanup. The supplied
+discard ledger must match that result exactly; forged, altered, duplicated, or
+missing records reject with `fusion.overlapLedgerMismatch`. Discard records are
+never counted as preserved protected geometry.
+
 ## Fusion and cleanup
 
 `fusion::fuse_rough_frame` performs one bounded transaction:

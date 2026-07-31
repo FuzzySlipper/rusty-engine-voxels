@@ -3,10 +3,10 @@ use std::path::{Path, PathBuf};
 
 use rusty_engine_voxels::assemble::{
     assemble_rough_schedule, select_pose_schedule, socket_constrained_part_placements,
-    PoseSelectionSettings,
+    DiscardedCanonicalVoxel, PoseSelectionSettings,
 };
 use rusty_engine_voxels::fusion::{
-    fuse_rough_frame, fuse_rough_schedule, FusedVoxelOrigin, FusionSettings,
+    fuse_rough_frame, fuse_rough_schedule, FusedVoxelOrigin, FusionContext, FusionSettings,
 };
 use rusty_engine_voxels::kit::load_kit;
 use rusty_engine_voxels::pose::{RasterSettings, RigMap};
@@ -85,35 +85,27 @@ fn run_fusion_is_deterministic_structural_and_joint_local() {
             }
         }
     }
+    let raster_settings = RasterSettings::default();
     let rough = assemble_rough_schedule(
         &kit,
         &rig_map,
         &imported.model,
         clip_index,
         &schedule,
-        &RasterSettings::default(),
+        &raster_settings,
     )
     .expect("rough schedule");
-    let fused = fuse_rough_schedule(
-        &kit,
-        &rig_map,
-        &imported.model,
+    let context = FusionContext {
+        kit: &kit,
+        rig_map: &rig_map,
+        model: &imported.model,
         clip_index,
-        &schedule,
-        &rough,
-        FusionSettings::default(),
-    )
-    .expect("fused schedule");
-    let repeated = fuse_rough_schedule(
-        &kit,
-        &rig_map,
-        &imported.model,
-        clip_index,
-        &schedule,
-        &rough,
-        FusionSettings::default(),
-    )
-    .expect("repeat");
+        raster_settings: &raster_settings,
+    };
+    let fused = fuse_rough_schedule(context, &schedule, &rough, FusionSettings::default())
+        .expect("fused schedule");
+    let repeated =
+        fuse_rough_schedule(context, &schedule, &rough, FusionSettings::default()).expect("repeat");
     assert_eq!(fused, repeated, "fusion must be bit-deterministic");
     assert_eq!(
         serde_json::to_vec(&fused).expect("serialize"),
@@ -249,13 +241,14 @@ fn protected_origin_loss_is_a_typed_hard_failure() {
         &PoseSelectionSettings::default(),
     )
     .expect("schedule");
+    let raster_settings = RasterSettings::default();
     let mut rough = assemble_rough_schedule(
         &kit,
         &rig_map,
         &imported.model,
         clip_index,
         &schedule,
-        &RasterSettings::default(),
+        &raster_settings,
     )
     .expect("rough schedule")
     .remove(0);
@@ -264,24 +257,104 @@ fn protected_origin_loss_is_a_typed_hard_failure() {
         .iter()
         .position(|part| part.id == "head")
         .expect("head") as u32;
-    let removed = rough
+    let removed_index = rough
         .voxels
         .iter()
         .position(|cell| cell.part_id == protected_part)
         .expect("head cell");
-    rough.voxels.remove(removed);
+    let removed = rough.voxels.remove(removed_index);
+    let context = FusionContext {
+        kit: &kit,
+        rig_map: &rig_map,
+        model: &imported.model,
+        clip_index,
+        raster_settings: &raster_settings,
+    };
 
-    let error = fuse_rough_frame(
+    let error = fuse_rough_frame(context, &schedule[0], &rough, FusionSettings::default())
+        .expect_err("protected provenance loss must reject");
+    assert_eq!(error.code(), "fusion.protectedRegionRemoved");
+
+    rough.discarded_overlaps.push(DiscardedCanonicalVoxel {
+        coordinate: removed.coordinate,
+        part_id: removed.part_id,
+        source_voxel_index: removed.source_voxel_index,
+        material_slot: removed.material_slot,
+        winner_part_id: removed.part_id,
+        winner_source_voxel_index: removed.source_voxel_index,
+    });
+    let error = fuse_rough_frame(context, &schedule[0], &rough, FusionSettings::default())
+        .expect_err("forged diagnostics cannot authorize protected provenance loss");
+    assert_eq!(error.code(), "fusion.overlapLedgerMismatch");
+}
+
+#[test]
+fn overlap_ledger_rejects_wrong_duplicate_and_missing_records() {
+    let kit = load_kit(&root(), RIFLEMAN_KIT).expect("kit");
+    let imported = import_retro();
+    let rig_map = load_rig_map();
+    let clip_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|clip| clip.name == "run")
+        .expect("run clip");
+    let schedule = select_pose_schedule(
+        &imported.model,
+        clip_index,
+        &PoseSelectionSettings::default(),
+    )
+    .expect("schedule");
+    let raster_settings = RasterSettings::default();
+    let rough_schedule = assemble_rough_schedule(
         &kit,
         &rig_map,
         &imported.model,
         clip_index,
-        &schedule[0],
-        &rough,
-        FusionSettings::default(),
+        &schedule,
+        &raster_settings,
     )
-    .expect_err("protected provenance loss must reject");
-    assert_eq!(error.code(), "fusion.protectedRegionRemoved");
+    .expect("rough schedule");
+    let frame_index = rough_schedule
+        .iter()
+        .position(|frame| !frame.discarded_overlaps.is_empty())
+        .expect("real corpus has overlap diagnostics");
+    let baseline = &rough_schedule[frame_index];
+    let context = FusionContext {
+        kit: &kit,
+        rig_map: &rig_map,
+        model: &imported.model,
+        clip_index,
+        raster_settings: &raster_settings,
+    };
+
+    let mut duplicate = baseline.clone();
+    duplicate
+        .discarded_overlaps
+        .push(duplicate.discarded_overlaps[0]);
+    let mut missing = baseline.clone();
+    missing.discarded_overlaps.remove(0);
+    let mut wrong = baseline.clone();
+    wrong.discarded_overlaps[0].winner_source_voxel_index ^= 1;
+
+    for (label, malformed) in [
+        ("duplicate", duplicate),
+        ("missing", missing),
+        ("wrong", wrong),
+    ] {
+        let error = fuse_rough_frame(
+            context,
+            &schedule[frame_index],
+            &malformed,
+            FusionSettings::default(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.code(),
+            "fusion.overlapLedgerMismatch",
+            "{label} overlap record must reject"
+        );
+    }
 }
 
 #[test]
@@ -301,22 +374,27 @@ fn generated_quota_rejects_without_mutating_the_rough_frame() {
         &PoseSelectionSettings::default(),
     )
     .expect("schedule");
+    let raster_settings = RasterSettings::default();
     let rough = assemble_rough_schedule(
         &kit,
         &rig_map,
         &imported.model,
         clip_index,
         &schedule,
-        &RasterSettings::default(),
+        &raster_settings,
     )
     .expect("rough schedule")
     .remove(0);
     let before = rough.clone();
-    let error = fuse_rough_frame(
-        &kit,
-        &rig_map,
-        &imported.model,
+    let context = FusionContext {
+        kit: &kit,
+        rig_map: &rig_map,
+        model: &imported.model,
         clip_index,
+        raster_settings: &raster_settings,
+    };
+    let error = fuse_rough_frame(
+        context,
         &schedule[0],
         &rough,
         FusionSettings {
