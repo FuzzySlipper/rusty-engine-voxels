@@ -25,6 +25,7 @@
 //! output.
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -649,6 +650,45 @@ fn connected_components(cells: &std::collections::BTreeSet<[i64; 3]>) -> usize {
     components
 }
 
+/// Nearest cell to `origin` not in `occupied`, searching shells of increasing
+/// max-norm distance; ties within a shell break by squared distance then
+/// coordinate, so the result is deterministic. Every shell cell face-touches a
+/// strictly inner shell cell, so the first free cell found always face-touches
+/// the already-occupied set — displacement can never disconnect the body.
+fn nearest_free_cell(origin: [i64; 3], occupied: &BTreeSet<[i64; 3]>) -> [i64; 3] {
+    let mut radius = 1i64;
+    loop {
+        let mut shell: Vec<[i64; 3]> = Vec::new();
+        for dx in -radius..=radius {
+            for dy in -radius..=radius {
+                for dz in -radius..=radius {
+                    if dx.abs().max(dy.abs()).max(dz.abs()) != radius {
+                        continue;
+                    }
+                    shell.push([dx, dy, dz]);
+                }
+            }
+        }
+        shell.sort_by_key(|offset| {
+            (
+                offset[0] * offset[0] + offset[1] * offset[1] + offset[2] * offset[2],
+                *offset,
+            )
+        });
+        for offset in shell {
+            let candidate = [
+                origin[0] + offset[0],
+                origin[1] + offset[1],
+                origin[2] + offset[2],
+            ];
+            if !occupied.contains(&candidate) {
+                return candidate;
+            }
+        }
+        radius += 1;
+    }
+}
+
 /// One rasterized cell with the source voxel it came from (provenance).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RasterCell {
@@ -662,10 +702,15 @@ pub struct RasterCell {
 /// Each source voxel is treated as an occupied cube. The cube is transformed
 /// into frame space and supersampled; every target frame cell that collects at
 /// least `occupancy_threshold` of its sub-samples is marked occupied, inheriting
-/// the dominant material slot among its covering source voxels. This keeps
-/// rigid parts hole-free and thickness-stable — the churn the straight
-/// per-frame re-voxelization produces is avoided because the part's own cell
-/// set is fixed and only the transform changes.
+/// the dominant material slot among its covering source voxels. On top of that
+/// vote, an injective per-voxel placement guarantees every source voxel owns
+/// one distinct output cell (displacing bin collisions to the nearest free,
+/// face-adjacent cell), and a connectivity repair keeps the body a single
+/// face-connected component — so a rigid part keeps its full source volume (or
+/// a conservative dilation) and stays hole-free and thickness-stable at every
+/// admitted setting. The churn the straight per-frame re-voxelization produces
+/// is avoided because the part's own cell set is fixed and only the transform
+/// changes.
 ///
 /// Deterministic: same part + same transform + same settings → identical cells.
 pub fn rasterize_part(
@@ -749,26 +794,56 @@ pub fn rasterize_part(
     cells.sort_by_key(|cell| cell.coordinate);
     sub_threshold.sort_by_key(|cell| cell.coordinate);
 
-    // Volume floor: a rigid part must not lose more than half its source
-    // volume. Add the most-covered remaining cells (deterministic by coverage
-    // then coordinate) until the floor is met, before connectivity repair.
-    let source_volume = part.cells.len();
-    let volume_floor = source_volume.div_ceil(2);
-    if cells.len() < volume_floor {
-        let mut pool: Vec<(usize, RasterCell)> = sub_threshold
-            .iter()
-            .enumerate()
-            .map(|(i, c)| (i, *c))
-            .collect();
-        // Deterministic: preserve the sorted order; take from the front.
-        let mut take = 0usize;
-        while cells.len() < volume_floor && take < pool.len() {
-            cells.push(pool[take].1);
-            take += 1;
+    // Injective per-voxel placement (R6336-12): every source voxel owns one
+    // distinct output cell, so a rigid part's full source volume is preserved
+    // by construction at every admitted setting — no fractional floor, and no
+    // dependence on supersample density. Each voxel claims the target cell its
+    // transformed center bins to, in deterministic source-coordinate order.
+    // When two distinct voxels bin to the same target cell (e.g. a thin bar
+    // rotated onto a cell diagonal so both centers quantize together), the
+    // later voxel is displaced to the nearest unclaimed cell; the shell search
+    // guarantees the displaced cell face-touches the already-occupied set, so
+    // displacement never disconnects the body. This replaces the old
+    // ceil(source_volume/2) floor, which still accepted losing half a part —
+    // and accepted a two-voxel bar collapsing to one cell outright.
+    let mut occupied: BTreeSet<[i64; 3]> = cells.iter().map(|cell| cell.coordinate).collect();
+    let mut owned: BTreeSet<[i64; 3]> = BTreeSet::new();
+    let mut voxel_order: Vec<usize> = (0..part.cells.len()).collect();
+    voxel_order.sort_by_key(|&index| part.cells[index].coordinate);
+    let mut placed: Vec<RasterCell> = Vec::new();
+    for index in voxel_order {
+        let voxel = &part.cells[index];
+        let center = [
+            voxel.coordinate[0] as f64 + 0.5,
+            voxel.coordinate[1] as f64 + 0.5,
+            voxel.coordinate[2] as f64 + 0.5,
+        ];
+        let world = transform.apply(center);
+        let primary = [
+            round_half_away_from_zero(world[0] - 0.5),
+            round_half_away_from_zero(world[1] - 0.5),
+            round_half_away_from_zero(world[2] - 0.5),
+        ];
+        let target = if !owned.contains(&primary) {
+            primary
+        } else {
+            nearest_free_cell(primary, &occupied)
+        };
+        owned.insert(target);
+        if occupied.insert(target) {
+            placed.push(RasterCell {
+                coordinate: target,
+                material_slot: voxel.material_slot,
+                source_voxel_index: index as u32,
+            });
         }
-        pool.clear();
-        sub_threshold.retain(|c| !cells.iter().any(|x| x.coordinate == c.coordinate));
+    }
+    if !placed.is_empty() {
+        cells.extend(placed);
         cells.sort_by_key(|cell| cell.coordinate);
+        // Placed cells may coincide with sub-threshold candidates; those cells
+        // are occupied now and must not be re-added by connectivity repair.
+        sub_threshold.retain(|cell| !occupied.contains(&cell.coordinate));
     }
 
     // Add sub-threshold cells one at a time (most-covered first, deterministic
@@ -884,6 +959,36 @@ mod tests {
     use crate::kit::{DeformationBudget, KitCell, KitPart};
 
     // --- Conservative rasterizer ---
+
+    fn two_cell_bar() -> KitPart {
+        let mut cells = vec![
+            crate::kit::KitCell {
+                coordinate: [0, 0, 0],
+                material_slot: 1,
+            },
+            crate::kit::KitCell {
+                coordinate: [1, 0, 0],
+                material_slot: 1,
+            },
+        ];
+        cells.sort_by_key(|c| c.coordinate);
+        KitPart {
+            id: "bar".to_owned(),
+            version: 1,
+            pivot: [0, 0, 0],
+            limb: false,
+            cells,
+            sockets: vec![],
+            palette_groups: vec![],
+            deformation_budget: crate::kit::DeformationBudget {
+                max_length_change: 0.0,
+                max_volume_change: 0.0,
+                allow_joint_compression: false,
+            },
+            protected_regions: vec![],
+            symmetry_partner: None,
+        }
+    }
 
     fn solid_part(size: i64, slot: u16) -> KitPart {
         let mut cells = Vec::new();
@@ -1093,33 +1198,7 @@ mod tests {
         // to bridge them — topology and volume cannot be preserved. It is only
         // safe for axis-aligned, non-rotated geometry (not this pipeline), so
         // it is rejected as outside the contract.
-        let mut cells = vec![
-            crate::kit::KitCell {
-                coordinate: [0, 0, 0],
-                material_slot: 1,
-            },
-            crate::kit::KitCell {
-                coordinate: [1, 0, 0],
-                material_slot: 1,
-            },
-        ];
-        cells.sort_by_key(|c| c.coordinate);
-        let part = crate::kit::KitPart {
-            id: "bar".to_owned(),
-            version: 1,
-            pivot: [0, 0, 0],
-            limb: true,
-            cells,
-            sockets: vec![],
-            palette_groups: vec![],
-            deformation_budget: crate::kit::DeformationBudget {
-                max_length_change: 0.0,
-                max_volume_change: 0.0,
-                allow_joint_compression: false,
-            },
-            protected_regions: vec![],
-            symmetry_partner: None,
-        };
+        let part = two_cell_bar();
         let angle = std::f64::consts::PI / 4.0;
         let transform = RigidTransform {
             rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
@@ -1158,6 +1237,153 @@ mod tests {
                 1,
                 "the bar must stay one connected body at {deg}°"
             );
+        }
+    }
+
+    #[test]
+    fn diagonal_bin_collision_preserves_every_source_voxel() {
+        // The exact R6336-12 probe: a valid rigid transform mapping the source
+        // X axis onto the normalized [1,1,1] diagonal, translated so BOTH bar
+        // voxel centers quantize to target cell [0,0,0] (bin offsets -0.3 and
+        // +0.277, the reviewer's values). At supersample 1 this collapsed two
+        // voxels into one output cell with every observed target passing the
+        // threshold, so no repair candidate existed; supersample 1 is now
+        // outside the contract. At admitted settings the injective per-voxel
+        // placement must still give each voxel its own distinct output cell.
+        let part = two_cell_bar();
+        let axis = [0.0, -1.0 / 2.0_f64.sqrt(), 1.0 / 2.0_f64.sqrt()];
+        let theta = (1.0 / 3.0_f64.sqrt()).acos();
+        let (s, c) = (theta / 2.0).sin_cos();
+        let rotation = [axis[0] * s, axis[1] * s, axis[2] * s, c];
+        // Choose the translation so voxel A's center lands at (0.2, 0.2, 0.2):
+        // bin offset -0.3 per axis, exactly the reviewer's collision.
+        let unshifted = RigidTransform {
+            rotation,
+            translation: [0.0, 0.0, 0.0],
+        };
+        let applied = unshifted.apply([0.5, 0.5, 0.5]);
+        let translation = [0.2 - applied[0], 0.2 - applied[1], 0.2 - applied[2]];
+        let transform = RigidTransform {
+            rotation,
+            translation,
+        };
+        // Premise check: both distinct source voxel centers bin to [0, 0, 0].
+        for center in [[0.5, 0.5, 0.5], [1.5, 0.5, 0.5]] {
+            let world = transform.apply(center);
+            let bin = [
+                round_half_away_from_zero(world[0] - 0.5),
+                round_half_away_from_zero(world[1] - 0.5),
+                round_half_away_from_zero(world[2] - 0.5),
+            ];
+            assert_eq!(bin, [0, 0, 0], "the probe must collide both voxel centers");
+        }
+
+        for settings in [
+            RasterSettings {
+                supersample: 2,
+                occupancy_threshold: 0.5,
+            },
+            RasterSettings {
+                supersample: 2,
+                occupancy_threshold: 0.01,
+            },
+            RasterSettings {
+                supersample: 8,
+                occupancy_threshold: 0.5,
+            },
+        ] {
+            let out = rasterize_part(&part, transform, &settings).expect("bar rasterize");
+            assert!(
+                out.len() >= part.cells.len(),
+                "every source voxel must be preserved under the collision probe at {settings:?}: got {} of {}",
+                out.len(),
+                part.cells.len()
+            );
+            let set: std::collections::BTreeSet<[i64; 3]> =
+                out.iter().map(|cell| cell.coordinate).collect();
+            assert_eq!(
+                set.len(),
+                out.len(),
+                "output cells must be distinct at {settings:?}"
+            );
+            assert_eq!(
+                connected_components(&set),
+                1,
+                "the bar must stay one connected body at {settings:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn admitted_boundary_settings_hold_volume_and_connectivity() {
+        // R6336-12 boundary regression: across the full admitted settings
+        // range (lowest/highest supersample, lowest/highest threshold), thin
+        // bars and solid blocks under hostile rotations keep full source
+        // volume (or a conservative dilation), distinct cells, and one
+        // connected component.
+        let boundaries = [
+            RasterSettings {
+                supersample: 2,
+                occupancy_threshold: 0.5,
+            },
+            RasterSettings {
+                supersample: 2,
+                occupancy_threshold: 0.01,
+            },
+            RasterSettings {
+                supersample: 8,
+                occupancy_threshold: 0.5,
+            },
+            RasterSettings {
+                supersample: 8,
+                occupancy_threshold: 0.01,
+            },
+        ];
+        let bar = two_cell_bar();
+        let solid = solid_part(3, 1);
+        let mut transforms: Vec<RigidTransform> = Vec::new();
+        // Z-rotation sweep across the range that thins and scatters bars.
+        for deg in 0..=90 {
+            let angle = (deg as f64) * std::f64::consts::PI / 180.0;
+            transforms.push(RigidTransform {
+                rotation: [0.0, 0.0, (angle / 2.0).sin(), (angle / 2.0).cos()],
+                translation: [0.0, 0.0, 0.0],
+            });
+        }
+        // Diagonal-axis rotations (the collision class) at several tilts.
+        let axis = [0.0, -1.0 / 2.0_f64.sqrt(), 1.0 / 2.0_f64.sqrt()];
+        for deg in [30.0_f64, 45.0, 54.7356, 70.0] {
+            let theta = deg * std::f64::consts::PI / 180.0;
+            let (s, c) = (theta / 2.0).sin_cos();
+            transforms.push(RigidTransform {
+                rotation: [axis[0] * s, axis[1] * s, axis[2] * s, c],
+                translation: [0.13, -0.27, 0.41],
+            });
+        }
+        for (name, part) in [("bar", &bar), ("solid", &solid)] {
+            for settings in &boundaries {
+                for transform in &transforms {
+                    let out = rasterize_part(part, *transform, settings).expect("rasterize");
+                    assert!(
+                        out.len() >= part.cells.len(),
+                        "{name} must keep full source volume at {settings:?}: got {} of {}",
+                        out.len(),
+                        part.cells.len()
+                    );
+                    let set: std::collections::BTreeSet<[i64; 3]> =
+                        out.iter().map(|cell| cell.coordinate).collect();
+                    assert_eq!(
+                        set.len(),
+                        out.len(),
+                        "{name} cells distinct at {settings:?}"
+                    );
+                    assert_eq!(
+                        connected_components(&set),
+                        1,
+                        "{name} must stay one connected body at {settings:?}"
+                    );
+                }
+            }
         }
     }
 

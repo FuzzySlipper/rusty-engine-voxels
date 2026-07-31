@@ -5,10 +5,13 @@
 //! small set of meaningful poses and *assembles* each into a rough voxel frame
 //! from rigid canonical parts. This module owns that selection and assembly:
 //!
-//! - **Pose selection** keeps mandatory frames (first, last, and any frame
-//!   where the motion changes significantly — a pose-space event) and then
-//!   reduces the remaining frames under a pose-space error budget, producing a
-//!   stepped schedule with independent per-frame durations.
+//! - **Pose selection** keeps hard anchors (first, last, and caller-authored
+//!   mandatory timestamps) and stages the complete error-bounded schedule —
+//!   the minimal subdivisions that bring every retained interval within the
+//!   pose-space error budget — failing with a typed impossibility when that
+//!   schedule cannot fit under the hard frame cap. Motion-event frames fill
+//!   leftover slots best-effort. The result is a stepped schedule with
+//!   independent per-frame durations.
 //!
 //! - **Rough assembly** rasterizes every bound part for a selected pose and
 //!   merges the result into one frame, preserving canonical part/voxel
@@ -117,11 +120,18 @@ pub enum SelectionReason {
 
 /// Select a stepped pose schedule for `clip_index` from `model`.
 ///
-/// Walks candidate frames at the clip's native sample ticks, keeps the first
-/// and last, marks frames whose motion from the previous kept frame exceeds the
-/// event thresholds as mandatory, and greedily inserts frames between
-/// mandatory anchors until the pose-space error between consecutive kept
-/// frames is within `error_budget`. Independent durations are the gaps between
+/// Walks candidate frames at the clip's native sample ticks and stages the
+/// complete error-bounded schedule up front: the first and last poses plus
+/// every caller-authored mandatory timestamp are hard anchors, and the minimal
+/// greedy subdivisions that bring every retained interval within
+/// `error_budget` are required frames. Both the hard cap and the error budget
+/// are guarantees, never best-effort (R6336-11): if the staged schedule does
+/// not fit under `max_frames`, selection fails with a typed impossibility
+/// error naming the required frame count — likewise when mandatory anchors
+/// alone overflow the cap, or when the budget is below the clip's maximum
+/// indivisible tick-step error. Event frames (motion deltas beyond the event
+/// thresholds) fill only leftover slots, and only where the split keeps both
+/// halves within budget. Independent durations are the gaps between
 /// consecutive selected times (the last holds to the clip end).
 pub fn select_pose_schedule(
     model: &ImportedAnimatedModel,
@@ -210,78 +220,85 @@ pub fn select_pose_schedule(
 
     // Hard anchors are ONLY first, last, and caller-authored mandatory
     // timestamps (R6336-9). Events are best-effort, not requirements, so a
-    // motion-rich clip does not become infeasible. Up-front feasibility: if
-    // first + last + mandatory do not fit under the cap, that is a typed
-    // impossibility, never a silent drop.
+    // motion-rich clip does not become infeasible.
     let final_index = candidates.len() - 1;
-    let distinct_mandatory = mandatory_times
-        .iter()
-        .filter(|&&t| t != candidates[0] && t != candidates[final_index])
-        .count();
-    let required = 2 + distinct_mandatory;
-    if required > settings.max_frames {
+
+    // Stage the complete error-bounded schedule independent of the output cap
+    // (R6336-11): the hard anchors plus the minimal greedy subdivisions that
+    // bring every retained interval within the error budget. Both the hard cap
+    // and the error budget are guarantees, not best-effort: if the staged
+    // schedule does not fit under max_frames, no schedule can honor cap +
+    // budget + mandatory anchors at once, and that is a typed impossibility —
+    // never a partial schedule that silently exceeds the budget, and never an
+    // overflow of the cap.
+    let mut staged: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
+    let mut anchor = 0usize;
+    for i in 1..=final_index {
+        // Subdivide until the interval anchor→i measures within budget. The
+        // feasibility preflight above guarantees every adjacent tick step is
+        // within budget, so i-1 always strictly improves on anchor and this
+        // loop terminates.
+        while pose_error(&poses[anchor], &poses[i]) > settings.error_budget {
+            if i - 1 == anchor {
+                // Unreachable while the preflight holds; stay honest if the
+                // sampling ever changes.
+                return Err(PoseError::Validation(format!(
+                    "errorBudget {} is unsatisfiable at tick resolution: an indivisible adjacent step before candidate index {i} exceeds it",
+                    settings.error_budget
+                )));
+            }
+            staged.push((i - 1, SelectionReason::ErrorBudget));
+            anchor = i - 1;
+        }
+        if i == final_index {
+            staged.push((i, SelectionReason::Last));
+        } else if mandatory_times.contains(&candidates[i]) {
+            staged.push((i, SelectionReason::Mandatory));
+            anchor = i;
+        }
+    }
+
+    // Cap feasibility (R6336-11): the complete error-bounded schedule must fit
+    // under the hard cap as a whole; otherwise reject with a typed
+    // impossibility naming the required frame count instead of returning a
+    // partial schedule that violates either guarantee.
+    if staged.len() > settings.max_frames {
+        let subdivisions = staged
+            .iter()
+            .filter(|&&(_, reason)| reason == SelectionReason::ErrorBudget)
+            .count();
         return Err(PoseError::Validation(format!(
-            "max_frames {} cannot hold first + last + {distinct_mandatory} mandatory timestamps (need {required}); either raise max_frames or drop mandatory anchors",
-            settings.max_frames
+            "max_frames {} cannot hold the error-bounded schedule: first + last + {distinct_mandatory} mandatory anchors + {subdivisions} required error subdivisions = {} frames; either raise max_frames, relax errorBudget, or drop mandatory anchors",
+            settings.max_frames,
+            staged.len()
         )));
     }
 
-    // Build the schedule: keep first, then walk keeping mandatory/event anchors
-    // and subdividing for the error budget, all within the hard cap, and always
-    // keep the final pose as Last. Mandatory anchors are never dropped; events
-    // and error-budget anchors fill remaining slots best-effort.
-    let mut kept: Vec<(usize, SelectionReason)> = vec![(0, SelectionReason::First)];
-    let mut anchor = 0usize;
+    // Events are best-effort: they fill only the slots the error-bounded
+    // schedule did not need, and an event frame is kept only where splitting
+    // its interval keeps BOTH halves within the error budget, so the measured
+    // interval invariant holds for every returned frame.
+    let mut kept = staged;
+    let mut free_slots = settings.max_frames - kept.len();
     let mut i = 1usize;
-    while i <= final_index {
-        // Slots still required ahead: remaining mandatory anchors + the final pose.
-        let mandatory_ahead = mandatory_times
-            .iter()
-            .filter(|&&t| {
-                t != candidates[final_index]
-                    && candidates
-                        .binary_search(&t)
-                        .map(|idx| idx >= i)
-                        .unwrap_or(false)
-            })
-            .count();
-        let reserved = 1 + mandatory_ahead; // final pose + remaining mandatories
-        let mut optional_budget = settings.max_frames.saturating_sub(kept.len() + reserved);
-
-        let is_mandatory_time = mandatory_times.contains(&candidates[i]);
-        let is_last = i == final_index;
-        let event = !is_last
-            && exceeds_event(
-                &poses[anchor],
-                &poses[i],
-                settings.event_translation_threshold,
-                settings.event_rotation_threshold,
-            );
-
-        // Error-budget subdivision is best-effort within optional slots: the
-        // hard cap is a hard ceiling (never exceeded), and the error budget is
-        // satisfied whenever a subdivision slot is available. When no optional
-        // slot remains, the selector keeps only hard anchors and accepts the
-        // larger interval — the cap is never violated to satisfy the budget.
-        if pose_error(&poses[anchor], &poses[i]) > settings.error_budget
-            && i - 1 > anchor
-            && optional_budget > 0
-        {
-            kept.push((i - 1, SelectionReason::ErrorBudget));
-            anchor = i - 1;
-            optional_budget -= 1;
+    while i < final_index && free_slots > 0 {
+        let pos = kept.partition_point(|&(idx, _)| idx < i);
+        if pos < kept.len() && kept[pos].0 == i {
+            i += 1;
+            continue; // already kept as an anchor or subdivision
         }
-
-        if is_mandatory_time || is_last || (event && optional_budget > 0) {
-            let reason = if is_last {
-                SelectionReason::Last
-            } else if is_mandatory_time {
-                SelectionReason::Mandatory
-            } else {
-                SelectionReason::Event
-            };
-            kept.push((i, reason));
-            anchor = i;
+        let prev = kept[pos - 1].0; // kept[0] is always (0, First)
+        let next = kept[pos].0; // the final pose is always kept
+        if exceeds_event(
+            &poses[prev],
+            &poses[i],
+            settings.event_translation_threshold,
+            settings.event_rotation_threshold,
+        ) && pose_error(&poses[prev], &poses[i]) <= settings.error_budget
+            && pose_error(&poses[i], &poses[next]) <= settings.error_budget
+        {
+            kept.insert(pos, (i, SelectionReason::Event));
+            free_slots -= 1;
         }
         i += 1;
     }

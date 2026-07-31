@@ -196,8 +196,11 @@ fn max_frames_cap_is_never_exceeded() {
         .iter()
         .position(|c| c.name == "run")
         .expect("run clip");
+    // A relaxed budget needs no subdivisions, so even a tight cap fits; the
+    // cap bound still holds and events only fill leftover slots.
     let settings = PoseSelectionSettings {
         max_frames: 3,
+        error_budget: 1.0e9,
         ..PoseSelectionSettings::default()
     };
     let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
@@ -216,7 +219,7 @@ fn max_frames_cap_is_never_exceeded() {
 }
 
 #[test]
-fn error_budget_and_event_share_one_optional_slot_without_overflow() {
+fn overconstrained_budget_under_tight_cap_is_typed_impossibility() {
     let imported = import_retro();
     let run_index = imported
         .model
@@ -224,6 +227,10 @@ fn error_budget_and_event_share_one_optional_slot_without_overflow() {
         .iter()
         .position(|clip| clip.name == "run")
         .expect("run clip");
+    // R6336-11: max_frames=3 with an error budget whose minimal error-bounded
+    // schedule needs far more than 3 frames. The selector must fail with a
+    // typed impossibility — not overflow the cap, and not return a partial
+    // schedule whose retained intervals silently exceed the budget.
     let settings = PoseSelectionSettings {
         max_frames: 3,
         error_budget: 0.5,
@@ -231,41 +238,21 @@ fn error_budget_and_event_share_one_optional_slot_without_overflow() {
         event_rotation_threshold: 0.5,
         ..PoseSelectionSettings::default()
     };
-    let schedule = select_pose_schedule(&imported.model, run_index, &settings)
-        .expect("one optional slot should produce a bounded schedule");
+    let result = select_pose_schedule(&imported.model, run_index, &settings);
     assert!(
-        schedule.len() <= settings.max_frames,
-        "error-budget and event frames must share the one optional slot; got {} frames under cap {}",
-        schedule.len(),
-        settings.max_frames
-    );
-    assert_eq!(
-        schedule.first().map(|pose| pose.reason),
-        Some(SelectionReason::First)
-    );
-    assert_eq!(
-        schedule.last().map(|pose| pose.reason),
-        Some(SelectionReason::Last)
+        result.is_err(),
+        "an error-bounded schedule that cannot fit the cap must be a typed impossibility, got {result:?}"
     );
 
+    // Adding a mandatory anchor cannot make an infeasible selection feasible.
     let mandatory_settings = PoseSelectionSettings {
         mandatory_timestamps: vec![266_666],
         ..settings
     };
-    let mandatory_schedule = select_pose_schedule(&imported.model, run_index, &mandatory_settings)
-        .expect("required anchors should fit exactly at the cap");
-    assert!(mandatory_schedule.len() <= mandatory_settings.max_frames);
-    assert_eq!(
-        mandatory_schedule.first().map(|pose| pose.reason),
-        Some(SelectionReason::First)
+    assert!(
+        select_pose_schedule(&imported.model, run_index, &mandatory_settings).is_err(),
+        "required anchors plus an over-tight budget must remain a typed impossibility"
     );
-    assert_eq!(
-        mandatory_schedule.last().map(|pose| pose.reason),
-        Some(SelectionReason::Last)
-    );
-    assert!(mandatory_schedule.iter().any(|pose| {
-        pose.time_microseconds == 266_666 && pose.reason == SelectionReason::Mandatory
-    }));
 }
 
 #[test]
@@ -362,9 +349,11 @@ fn mandatory_capacity_overflow_is_typed_impossibility_not_silent_drop() {
         "mandatory anchors that cannot fit under the cap must be a typed error, not a silent drop"
     );
 
-    // The same anchors DO fit when the cap allows first+last+3, and all are retained.
+    // The same anchors DO fit when the cap allows the staged error-bounded
+    // schedule (first + last + 3 mandatory + required subdivisions), and all
+    // are retained.
     let fitting = PoseSelectionSettings {
-        max_frames: 8,
+        max_frames: 16,
         mandatory_timestamps: vec![133_333, 266_666, 400_000],
         ..PoseSelectionSettings::default()
     };
@@ -389,9 +378,12 @@ fn tight_cap_keeps_true_tail_not_truncated_candidate() {
         .position(|c| c.name == "run")
         .expect("run clip");
     // A very tight cap must still label the actual final tick (the true tail of
-    // the native timeline) as Last, not an early truncated candidate.
+    // the native timeline) as Last, not an early truncated candidate. (The
+    // relaxed budget keeps the two-frame schedule feasible under the hard
+    // cap/budget contract.)
     let settings = PoseSelectionSettings {
         max_frames: 2,
+        error_budget: 1.0e9,
         ..PoseSelectionSettings::default()
     };
     let schedule = select_pose_schedule(&imported.model, run_index, &settings).expect("schedule");
@@ -455,27 +447,16 @@ fn subdivision_beyond_cap_is_typed_impossibility_not_overflow() {
         error_budget: 1.0,
         ..PoseSelectionSettings::default()
     };
-    let schedule = select_pose_schedule(&imported.model, run_index, &settings)
-        .expect("selection must not overflow the cap");
-    // The hard cap is never exceeded even when the error budget would want more
-    // subdivision slots than fit. Mandatory anchors are still retained.
+    let result = select_pose_schedule(&imported.model, run_index, &settings);
     assert!(
-        schedule.len() <= settings.max_frames,
-        "the hard cap must never be exceeded, got {} frames under cap {}",
-        schedule.len(),
-        settings.max_frames
-    );
-    assert!(
-        schedule
-            .iter()
-            .any(|p| p.time_microseconds == 266_666 && p.reason == SelectionReason::Mandatory),
-        "the mandatory anchor must still be retained under cap pressure"
+        result.is_err(),
+        "an error-bounded schedule that needs more frames than the cap must be a typed impossibility, got {result:?}"
     );
 
     // With room to subdivide, the same anchors fit within the cap and stay
     // within the error budget.
     let fitting = PoseSelectionSettings {
-        max_frames: 8,
+        max_frames: 16,
         mandatory_timestamps: vec![266_666],
         error_budget: 1.0,
         ..PoseSelectionSettings::default()
@@ -485,4 +466,83 @@ fn subdivision_beyond_cap_is_typed_impossibility_not_overflow() {
     assert!(schedule
         .iter()
         .any(|p| p.time_microseconds == 266_666 && p.reason == SelectionReason::Mandatory));
+}
+
+// --- R6336-11: the exact one-mandatory cap-pressure regression ---
+
+#[test]
+fn one_mandatory_cap_pressure_is_typed_impossibility_with_measured_intervals() {
+    let imported = import_retro();
+    let run_index = imported
+        .model
+        .clips
+        .iter()
+        .position(|c| c.name == "run")
+        .expect("run clip");
+    // The exact R6336-11 reproduction: max_frames=3, one mandatory anchor,
+    // event thresholds disabled, admitted error_budget=0.5. The complete
+    // error-bounded schedule needs 24 frames (first + last + 1 mandatory + 21
+    // required error subdivisions), so selection must fail with a typed
+    // impossibility naming the requirement — never five frames under a
+    // three-frame cap, and never a partial schedule whose retained intervals
+    // silently exceed the budget.
+    let settings = PoseSelectionSettings {
+        max_frames: 3,
+        mandatory_timestamps: vec![250_000],
+        event_translation_threshold: 1.0e9,
+        event_rotation_threshold: 1.0e9,
+        error_budget: 0.5,
+    };
+    let result = select_pose_schedule(&imported.model, run_index, &settings);
+    let Err(error) = &result else {
+        panic!("a 24-frame error-bounded schedule under a 3-frame cap must be a typed impossibility, got {result:?}");
+    };
+    let message = error.to_string();
+    assert!(
+        message.contains("cannot hold the error-bounded schedule"),
+        "the impossibility must be the staged-schedule cap error: {message}"
+    );
+    assert!(
+        message.contains("24 frames"),
+        "the impossibility must name the required frame count: {message}"
+    );
+
+    // With a cap that exactly fits the staged schedule, selection succeeds and
+    // BOTH the frame count and every interval's measured error honor the
+    // contract.
+    let fitting = PoseSelectionSettings {
+        max_frames: 24,
+        ..settings
+    };
+    let schedule = select_pose_schedule(&imported.model, run_index, &fitting).expect("schedule");
+    assert_eq!(
+        schedule.len(),
+        24,
+        "the staged error-bounded schedule is exact: first + last + 1 mandatory + 21 subdivisions"
+    );
+    assert_eq!(
+        schedule.first().map(|p| p.reason),
+        Some(SelectionReason::First)
+    );
+    assert_eq!(
+        schedule.last().map(|p| p.reason),
+        Some(SelectionReason::Last)
+    );
+    assert!(schedule
+        .iter()
+        .any(|p| p.time_microseconds == 250_000 && p.reason == SelectionReason::Mandatory));
+    let poses: Vec<_> = schedule
+        .iter()
+        .map(|p| {
+            evaluate_node_poses(&imported.model, run_index, p.time_microseconds).expect("pose")
+        })
+        .collect();
+    for pair in poses.windows(2) {
+        let error = rusty_engine_voxels::assemble::pose_error(&pair[0], &pair[1]);
+        assert!(
+            error <= fitting.error_budget,
+            "every retained interval must measure within budget: {error} > {}",
+            fitting.error_budget
+        );
+    }
 }

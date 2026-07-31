@@ -66,17 +66,27 @@ This is the technical crux: naive per-voxel rotation leaves holes and unstable t
 supersample-then-vote approach keeps rigid parts **hole-free and face-connected**. Same part +
 same transform + same settings is bit-identical.
 
-## The admitted rasterization contract (R6336-8/10)
+## The admitted rasterization contract (R6336-8/10/12)
 
 The admitted settings are deliberately bounded to the range where the conservative guarantee is
 honest:
 
-- **Volume and connectivity are guaranteed.** `occupancy_threshold` is admitted only up to
-  **majority coverage (0.5)**. At majority-or-better coverage, the volume-floor + connectivity
-  repairs keep a rigid part's full source volume (or a conservative dilation of it) and a single
-  connected, thick body. A supermajority threshold (> 0.5) is anti-conservative at low supersample
-  — rotated geometry rarely covers a supermajority of any cell, so volume collapses below any
-  useful floor — and is rejected as **outside the contract** rather than repaired dishonestly.
+- **Volume and connectivity are guaranteed by construction.** `supersample` is admitted only in
+  **2..=8**: at supersample 1 each source voxel contributes a single sample, so a rotated thin
+  part scatters into diagonally-touching or lost cells — and two distinct voxels can quantize to
+  the same target cell with every observed target passing the threshold, leaving no repair
+  candidate at all (R6336-12). `occupancy_threshold` is admitted only up to **majority coverage
+  (0.5)**: a supermajority threshold is anti-conservative at low supersample — rotated geometry
+  rarely covers a supermajority of any cell, so volume collapses below any useful floor — and is
+  rejected as **outside the contract** rather than repaired dishonestly.
+- **The guarantee mechanism is an injective per-voxel placement, not a fractional floor.** Every
+  source voxel owns one distinct output cell: it claims the target cell its transformed center
+  bins to, and bin collisions (two voxels quantizing to the same cell) are displaced to the
+  nearest unclaimed cell by a deterministic shell search that always lands face-adjacent to the
+  occupied set. Combined with the threshold-passing dilation and the connectivity repair, a rigid
+  part keeps its **full source volume** (or a conservative dilation) as a **single connected,
+  thick body** at every admitted setting — replacing the old `ceil(volume/2)` floor, which still
+  accepted losing half a part.
 - **Small-cavity preservation is a documented limitation, not an invariant.** Conservative
   dilation (the thing that keeps thin features connected) can fill a small interior hollow when a
   shell is rotated. The contract guarantees volume/connectivity/thickness; it does not guarantee
@@ -139,3 +149,22 @@ The first review round (3507) corrected three things and redirected one upstream
   `assemble_rough_frame` merges all bound parts for a selected pose into one rough frame with
   canonical part/voxel provenance and `needs_fusion` flags on joint/overlap regions, so M3 sees
   exactly what to fuse rather than the whole frame.
+
+## The pose-selection contract (R6336-7/9/11)
+
+`select_pose_schedule` guarantees **both** the hard frame cap and the error budget — neither is
+best-effort:
+
+- **Hard anchors** are the first pose, the true tail of the native timeline (Last), and every
+  caller-authored mandatory timestamp. If those alone exceed `max_frames`, selection fails with a
+  typed impossibility rather than silently dropping a mandatory anchor.
+- **The complete error-bounded schedule is staged up front**: the hard anchors plus the minimal
+  greedy subdivisions that bring every retained interval within `error_budget`. If the staged
+  schedule does not fit under `max_frames`, selection fails with a typed impossibility naming the
+  required frame count — never an overflow of the cap, and never a partial schedule whose
+  intervals silently exceed the budget.
+- **Feasibility floor**: a budget below the clip's maximum indivisible adjacent-tick pose error is
+  unsatisfiable at tick resolution and is rejected with a typed impossibility naming that floor.
+- **Event frames are best-effort**: they fill only slots the staged schedule did not need, and an
+  event is kept only where splitting its interval keeps both halves within the budget, so every
+  returned interval measures within budget.
