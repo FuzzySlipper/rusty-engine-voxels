@@ -91,6 +91,12 @@ Promote a mechanism upstream only when the experiment demonstrates that it is re
 behavior. Keep subjective art-direction defaults and corpus-specific fixes here unless several
 concrete consumers prove otherwise.
 
+The baked-character experiment currently owns its downstream-first canonical
+kit, pose selection, and deterministic joint-fusion proof. The fusion owner is
+documented in [`joint-fusion.md`](joint-fusion.md). It remains authoring-side
+evidence; no runtime rig, scheduler, or second Engine voxel authority is
+introduced.
+
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked

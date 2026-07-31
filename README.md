@@ -30,6 +30,12 @@ The exact identities, per-clip counts, and explicit-time playback samples are ch
 `evidence/initial-animated-voxel-report.json`. Machine-specific timings are evidence, not pass/fail
 thresholds.
 
+The separate baked-character experiment now has a deterministic exploded-kit
+path through pose selection, socket-constrained rigid placement, conservative
+rasterization, and first-pass joint fusion. See
+[`docs/joint-fusion.md`](docs/joint-fusion.md) and the checked comparison in
+`evidence/joint-fusion-study.json`.
+
 ## High-fidelity experiment
 
 The second experiment re-runs the same retro-character conversion on a much finer grid. The project

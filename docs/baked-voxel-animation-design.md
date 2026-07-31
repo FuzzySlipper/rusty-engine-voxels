@@ -1,6 +1,6 @@
 # Baked Voxel Character Animation — Project Technical Design
 
-**Status:** Design for implementation
+**Status:** In implementation (M1–M3 complete)
 **Supersedes:** `animation-pipeline-idea.md` (rough concept; retained for rationale)
 **Authoring target:** 90s CRPG stepped animation, first-person, 80/20 production cost
 **Baseline corpus:** retro-character (24×36×24) and retro-character-high-fidelity (96×144×96)
@@ -182,6 +182,9 @@ subjective.
   the measurement gate.
 - Runtime output stays the **same canonical voxel-object format and flipbook player** the engine
   already owns — no new runtime format, no rig at runtime.
-- Joint fusion, the exploded kit, and the edit DSL are new authoring-side components; they are
-  upstream `voxel-convert`-class mechanisms, not downstream copies, per this repo's AGENTS.md
-  ownership boundary.
+- The exploded kit and deterministic joint fusion are currently downstream
+  experiment mechanisms, implemented in `kit`, `assemble`, and `fusion`; see
+  [`joint-fusion.md`](joint-fusion.md). They become upstream
+  `voxel-convert`-class candidates only after concrete consumer evidence
+  demonstrates a reusable contract. The future edit DSL remains downstream
+  until the same promotion rule is met.

@@ -4,6 +4,7 @@ mod base64;
 pub mod churn;
 pub mod conversion;
 pub mod format_study;
+pub mod fusion;
 pub mod kit;
 mod mesh_resource_cache;
 pub mod model;

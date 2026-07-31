@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use voxel_convert::ImportedAnimatedModel;
 
-use crate::kit::VoxelKit;
+use crate::kit::{KitPart, VoxelKit};
 use crate::pose::{
     evaluate_node_poses, rasterize_part, PoseError, RasterSettings, RigMap, RigidTransform,
 };
@@ -393,12 +393,26 @@ pub struct AssembledVoxelCell {
     pub needs_fusion: bool,
 }
 
+/// One canonical source voxel discarded during deterministic overlap
+/// resolution. Keeping both sides of the decision makes fusion diagnostics
+/// explainable without retaining a second geometry authority.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DiscardedCanonicalVoxel {
+    pub coordinate: [i64; 3],
+    pub part_id: u32,
+    pub source_voxel_index: u32,
+    pub material_slot: u16,
+    pub winner_part_id: u32,
+    pub winner_source_voxel_index: u32,
+}
+
 /// A rough assembled frame: the union of all bound parts at one pose.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoughFrame {
     pub time_microseconds: u64,
     pub duration_microseconds: u64,
     pub voxels: Vec<AssembledVoxelCell>,
+    pub discarded_overlaps: Vec<DiscardedCanonicalVoxel>,
 }
 
 impl RoughFrame {
@@ -443,7 +457,13 @@ pub fn assemble_rough_frame(
     selected: &SelectedPose,
     settings: &RasterSettings,
 ) -> Result<RoughFrame, PoseError> {
-    let poses = evaluate_node_poses(model, clip_index, selected.time_microseconds)?;
+    let placements = socket_constrained_part_placements(
+        kit,
+        rig_map,
+        model,
+        clip_index,
+        selected.time_microseconds,
+    )?;
     let part_indices: BTreeMap<&str, u32> = kit
         .parts
         .iter()
@@ -454,23 +474,58 @@ pub fn assemble_rough_frame(
     let fusion_margin = 2i64;
     let mut voxels: Vec<AssembledVoxelCell> = Vec::new();
     let mut occupied: BTreeMap<[i64; 3], usize> = BTreeMap::new();
+    let mut discarded_overlaps = Vec::new();
+    let part_depths = part_depths(kit);
 
     for binding in &rig_map.bindings {
         let part = kit
             .part(&binding.part_id)
             .ok_or_else(|| PoseError::Validation(format!("unknown part {}", binding.part_id)))?;
         let part_index = part_indices[binding.part_id.as_str()];
-        let bone = poses
-            .get(&binding.bone_node_index)
-            .copied()
-            .unwrap_or(RigidTransform::IDENTITY);
-        let placement = binding.placement(bone);
+        let placement = placements.get(&binding.part_id).copied().ok_or_else(|| {
+            PoseError::Validation(format!("part {} has no constrained placement", part.id))
+        })?;
         for cell in rasterize_part(part, placement, settings)? {
             let coordinate = cell.coordinate;
-            // Overlap: an earlier part already owns this cell.
-            if occupied.contains_key(&coordinate) {
-                // Mark the existing owner as needing fusion too.
-                if let Some(&owner) = occupied.get(&coordinate) {
+            if let Some(&owner) = occupied.get(&coordinate) {
+                let existing = voxels[owner];
+                let existing_part = &kit.parts[existing.part_id as usize];
+                let incoming_wins = overlap_rank(
+                    part,
+                    cell.source_voxel_index,
+                    part_index,
+                    part_depths[part_index as usize],
+                ) < overlap_rank(
+                    existing_part,
+                    existing.source_voxel_index,
+                    existing.part_id,
+                    part_depths[existing.part_id as usize],
+                );
+                if incoming_wins {
+                    discarded_overlaps.push(DiscardedCanonicalVoxel {
+                        coordinate,
+                        part_id: existing.part_id,
+                        source_voxel_index: existing.source_voxel_index,
+                        material_slot: existing.material_slot,
+                        winner_part_id: part_index,
+                        winner_source_voxel_index: cell.source_voxel_index,
+                    });
+                    voxels[owner] = AssembledVoxelCell {
+                        coordinate,
+                        material_slot: cell.material_slot,
+                        part_id: part_index,
+                        source_voxel_index: cell.source_voxel_index,
+                        needs_fusion: true,
+                    };
+                } else {
+                    discarded_overlaps.push(DiscardedCanonicalVoxel {
+                        coordinate,
+                        part_id: part_index,
+                        source_voxel_index: cell.source_voxel_index,
+                        material_slot: cell.material_slot,
+                        winner_part_id: existing.part_id,
+                        winner_source_voxel_index: existing.source_voxel_index,
+                    });
                     voxels[owner].needs_fusion = true;
                 }
                 continue;
@@ -523,8 +578,212 @@ pub fn assemble_rough_frame(
         time_microseconds: selected.time_microseconds,
         duration_microseconds: selected.duration_microseconds,
         voxels,
+        discarded_overlaps,
     })
 }
+
+/// Evaluate each bound part's bone rotation, then constrain child translations
+/// through the kit's mated sockets.
+///
+/// A proxy bone supplies orientation, but the canonical kit owns exactly where
+/// rigid parts meet. Applying every bone's full world translation independently
+/// can pull a child far from its parent when proxy pivots and kit pivots differ.
+/// The bind pose is unchanged (its sockets already agree); animated poses retain
+/// their bone rotations while child sockets remain attached to the parent.
+///
+/// # Errors
+///
+/// Returns a typed pose validation error for missing bindings/poses, malformed
+/// mates, cycles, or mutually inconsistent multiple mate constraints.
+pub fn socket_constrained_part_placements(
+    kit: &VoxelKit,
+    rig_map: &RigMap,
+    model: &ImportedAnimatedModel,
+    clip_index: usize,
+    time_microseconds: u64,
+) -> Result<BTreeMap<String, RigidTransform>, PoseError> {
+    let poses = evaluate_node_poses(model, clip_index, time_microseconds)?;
+    let raw: BTreeMap<&str, RigidTransform> = rig_map
+        .bindings
+        .iter()
+        .map(|binding| {
+            let bone = poses
+                .get(&binding.bone_node_index)
+                .copied()
+                .ok_or_else(|| {
+                    PoseError::Validation(format!(
+                        "part {} bone {} has no evaluated pose",
+                        binding.part_id, binding.bone_node_index
+                    ))
+                })?;
+            Ok((binding.part_id.as_str(), binding.placement(bone)))
+        })
+        .collect::<Result<_, PoseError>>()?;
+    let mut placed: BTreeMap<String, RigidTransform> = BTreeMap::new();
+    for _ in 0..kit.parts.len() {
+        let mut progressed = false;
+        for part in &kit.parts {
+            if placed.contains_key(&part.id) {
+                continue;
+            }
+            let mates: Vec<_> = part
+                .sockets
+                .iter()
+                .filter_map(|socket| socket.mate.as_deref().map(|mate| (socket, mate)))
+                .collect();
+            if mates.is_empty() {
+                let placement = raw.get(part.id.as_str()).copied().ok_or_else(|| {
+                    PoseError::Validation(format!("part {} has no rig binding", part.id))
+                })?;
+                placed.insert(part.id.clone(), placement);
+                progressed = true;
+                continue;
+            }
+            if !mates.iter().all(|(_, mate)| {
+                mate.split_once('.')
+                    .is_some_and(|(parent, _)| placed.contains_key(parent))
+            }) {
+                continue;
+            }
+            let raw_placement = raw.get(part.id.as_str()).copied().ok_or_else(|| {
+                PoseError::Validation(format!("part {} has no rig binding", part.id))
+            })?;
+            let rotation_only = RigidTransform {
+                rotation: raw_placement.rotation,
+                translation: [0.0; 3],
+            };
+            let mut candidate_translation: Option<[f64; 3]> = None;
+            for (socket, mate) in mates {
+                let (parent_id, parent_socket_id) = mate.split_once('.').ok_or_else(|| {
+                    PoseError::Validation(format!(
+                        "part {} socket {} mate {mate:?} is not <part>.<socket>",
+                        part.id, socket.id
+                    ))
+                })?;
+                let parent = kit.part(parent_id).ok_or_else(|| {
+                    PoseError::Validation(format!(
+                        "part {} socket {} mate part {parent_id} is absent",
+                        part.id, socket.id
+                    ))
+                })?;
+                let parent_socket = parent.socket(parent_socket_id).ok_or_else(|| {
+                    PoseError::Validation(format!(
+                        "part {} socket {} mate {mate} is absent",
+                        part.id, socket.id
+                    ))
+                })?;
+                let parent_placement = placed[parent_id];
+                let target = parent_placement.apply(parent_socket.position);
+                let rotated_child = rotation_only.apply(socket.position);
+                let translation = [
+                    target[0] - rotated_child[0],
+                    target[1] - rotated_child[1],
+                    target[2] - rotated_child[2],
+                ];
+                if let Some(existing) = candidate_translation {
+                    let mismatch = (0..3)
+                        .map(|axis| (existing[axis] - translation[axis]).abs())
+                        .fold(0.0f64, f64::max);
+                    if mismatch > 1.0e-6 {
+                        return Err(PoseError::Validation(format!(
+                            "part {} has inconsistent posed mate constraints (translation mismatch {mismatch})",
+                            part.id
+                        )));
+                    }
+                } else {
+                    candidate_translation = Some(translation);
+                }
+            }
+            placed.insert(
+                part.id.clone(),
+                RigidTransform {
+                    rotation: raw_placement.rotation,
+                    translation: candidate_translation.expect("part has at least one mate"),
+                },
+            );
+            progressed = true;
+        }
+        if placed.len() == kit.parts.len() {
+            return Ok(placed);
+        }
+        if !progressed {
+            break;
+        }
+    }
+    Err(PoseError::Validation(
+        "cannot resolve socket-constrained part placements (mate cycle or missing parent)"
+            .to_owned(),
+    ))
+}
+
+fn overlap_rank(
+    part: &KitPart,
+    source_voxel_index: u32,
+    part_index: u32,
+    parent_depth: usize,
+) -> (bool, bool, usize, u32) {
+    let source = part
+        .cells
+        .get(source_voxel_index as usize)
+        .map(|cell| cell.coordinate)
+        .unwrap_or([0, 0, 0]);
+    let protected = part.protected_regions.iter().any(|region| {
+        (0..3).all(|axis| source[axis] >= region.min[axis] && source[axis] <= region.max[axis])
+    });
+    let occupied: std::collections::BTreeSet<[i64; 3]> =
+        part.cells.iter().map(|cell| cell.coordinate).collect();
+    let surface = FACE_NEIGHBORS.iter().any(|delta| {
+        !occupied.contains(&[
+            source[0] + delta[0],
+            source[1] + delta[1],
+            source[2] + delta[2],
+        ])
+    });
+    (!protected, !surface, parent_depth, part_index)
+}
+
+fn part_depths(kit: &VoxelKit) -> Vec<usize> {
+    let index: BTreeMap<&str, usize> = kit
+        .parts
+        .iter()
+        .enumerate()
+        .map(|(part_index, part)| (part.id.as_str(), part_index))
+        .collect();
+    let mut depths = vec![usize::MAX; kit.parts.len()];
+    for _ in 0..kit.parts.len() {
+        for (part_index, part) in kit.parts.iter().enumerate() {
+            let parent_depth = part
+                .sockets
+                .iter()
+                .filter_map(|socket| socket.mate.as_deref())
+                .filter_map(|mate| mate.split_once('.').map(|(part_id, _)| part_id))
+                .filter_map(|part_id| index.get(part_id).copied())
+                .map(|parent_index| depths[parent_index])
+                .min();
+            let depth = match parent_depth {
+                Some(parent_depth) if parent_depth != usize::MAX => parent_depth.saturating_add(1),
+                Some(_) => continue,
+                None => 0,
+            };
+            depths[part_index] = depths[part_index].min(depth);
+        }
+    }
+    for depth in &mut depths {
+        if *depth == usize::MAX {
+            *depth = kit.parts.len();
+        }
+    }
+    depths
+}
+
+const FACE_NEIGHBORS: [[i64; 3]; 6] = [
+    [-1, 0, 0],
+    [1, 0, 0],
+    [0, -1, 0],
+    [0, 1, 0],
+    [0, 0, -1],
+    [0, 0, 1],
+];
 
 /// Assemble rough frames for a whole selected schedule.
 pub fn assemble_rough_schedule(
@@ -548,12 +807,79 @@ pub fn assemble_rough_schedule(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kit::{DeformationBudget, KitCell, ProtectedRegion};
 
     fn tf(x: f64, y: f64, z: f64) -> RigidTransform {
         RigidTransform {
             rotation: [0.0, 0.0, 0.0, 1.0],
             translation: [x, y, z],
         }
+    }
+
+    fn overlap_part(protected: bool) -> KitPart {
+        let cells = (-1..=1)
+            .flat_map(|x| {
+                (-1..=1).flat_map(move |y| {
+                    (-1..=1).map(move |z| KitCell {
+                        coordinate: [x, y, z],
+                        material_slot: 1,
+                    })
+                })
+            })
+            .collect();
+        KitPart {
+            id: "part".to_owned(),
+            version: 1,
+            pivot: [0, 0, 0],
+            cells,
+            sockets: Vec::new(),
+            palette_groups: vec!["main".to_owned()],
+            limb: false,
+            deformation_budget: DeformationBudget {
+                max_length_change: 0.0,
+                max_volume_change: 0.0,
+                allow_joint_compression: false,
+            },
+            protected_regions: protected
+                .then_some(ProtectedRegion {
+                    min: [0, 0, 0],
+                    max: [0, 0, 0],
+                })
+                .into_iter()
+                .collect(),
+            symmetry_partner: None,
+        }
+    }
+
+    #[test]
+    fn overlap_rank_prefers_protection_then_surface_then_parent() {
+        let protected = overlap_part(true);
+        let ordinary = overlap_part(false);
+        let center_index = ordinary
+            .cells
+            .iter()
+            .position(|cell| cell.coordinate == [0, 0, 0])
+            .unwrap() as u32;
+        let corner_index = ordinary
+            .cells
+            .iter()
+            .position(|cell| cell.coordinate == [-1, -1, -1])
+            .unwrap() as u32;
+        assert!(
+            overlap_rank(&protected, center_index, 1, 1)
+                < overlap_rank(&ordinary, corner_index, 0, 0),
+            "protected voxel wins before every lower-priority property"
+        );
+        assert!(
+            overlap_rank(&ordinary, corner_index, 1, 1)
+                < overlap_rank(&ordinary, center_index, 0, 0),
+            "outer surface wins before hierarchy depth"
+        );
+        assert!(
+            overlap_rank(&ordinary, center_index, 1, 0)
+                < overlap_rank(&ordinary, center_index, 0, 2),
+            "parent depth wins the remaining tie"
+        );
     }
 
     #[test]

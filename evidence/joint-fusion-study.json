@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "clip": "run",
+  "selectedFrames": 20,
+  "straightPipelineBaseline": {
+    "artifact": "evidence/churn-study-high-fidelity.json",
+    "storedFrames": 4,
+    "averageSpatialChurnFraction": 0.6897
+  },
+  "canonicalPartsFirstPass": {
+    "averageSpatialChurnFraction": 0.268907,
+    "improvementFraction": 0.610111,
+    "generatedVoxelMinimum": 10,
+    "generatedVoxelMaximum": 35,
+    "generatedVoxelAverage": 24.4,
+    "allGeneratedVoxelsWithinFourCellsOfMarkedSeam": true
+  },
+  "interpretationLimits": [
+    "The straight and canonical-parts schedules retain different frame counts; average occupied-coordinate symmetric difference remains useful directional evidence, not a controlled visual-quality score.",
+    "Spatial churn includes intentional rigid motion as well as aliasing. Joint locality is separately proven from generated-operation provenance and M2 seam markers.",
+    "This is deterministic authoring evidence for the checked rifleman/run corpus, not a runtime performance measurement."
+  ]
+}
