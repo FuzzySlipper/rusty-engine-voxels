@@ -8,11 +8,11 @@
     "averageSpatialChurnFraction": 0.6897
   },
   "canonicalPartsFirstPass": {
-    "averageSpatialChurnFraction": 0.268907,
-    "improvementFraction": 0.610111,
-    "generatedVoxelMinimum": 10,
-    "generatedVoxelMaximum": 35,
-    "generatedVoxelAverage": 24.4,
+    "averageSpatialChurnFraction": 0.270568,
+    "improvementFraction": 0.607702,
+    "generatedVoxelMinimum": 18,
+    "generatedVoxelMaximum": 38,
+    "generatedVoxelAverage": 28.25,
     "allGeneratedVoxelsWithinFourCellsOfMarkedSeam": true
   },
   "interpretationLimits": [

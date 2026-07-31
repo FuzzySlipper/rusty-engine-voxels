@@ -4,18 +4,18 @@
     "differenceOverlays": 2,
     "idPasses": 3,
     "multiviewPasses": 3,
-    "structuralWarnings": 11,
+    "structuralWarnings": 12,
     "styleRules": 2,
     "temporalFrames": 3
   },
-  "baseFrameSha256": "sha256:5a6a0afbff88c656e7b73e547f12fd3636fa21c2b062838ba2c861a04b36abd6",
+  "baseFrameSha256": "sha256:5c7bb53e3945807fbb668fa9953bb80c2ca8b60ca10d8ceccf69d8107210eede",
   "character": "rifleman",
   "clip": "run",
   "dslOperationKinds": 17,
   "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
   "forearmRepair": {
-    "afterVoxels": 1359,
-    "beforeVoxels": 1358,
+    "afterVoxels": 1391,
+    "beforeVoxels": 1390,
     "coordinate": [
       -7,
       20,
@@ -23,12 +23,12 @@
     ],
     "decision": "accept",
     "deterministicReplay": true,
-    "diffSha256": "sha256:1d493de4ab8415322c1a6806b6cea674fa2731bf84906405a5dbe70b53aa3dab"
+    "diffSha256": "sha256:0519cddc45d250d9c9ae75f856f89b5b96f7142c0af1bc7db9fef1e87d5358be"
   },
   "frameTimeMicroseconds": 0,
   "handEdit": {
-    "afterVoxels": 1358,
-    "beforeVoxels": 1359,
+    "afterVoxels": 1390,
+    "beforeVoxels": 1391,
     "operation": "remove_voxel",
     "part": "rifle"
   },

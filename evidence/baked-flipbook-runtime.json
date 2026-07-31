@@ -1,9 +1,9 @@
 {
   "anchorsPerClipFrame": 8,
-  "artifactBytes": 1496484,
+  "artifactBytes": 1593147,
   "assetId": "voxel-object/rifleman-baked",
   "clip": "run",
-  "contentHash": "sha256:867540c36e9379721835f3a702f50a2a58aede1d58afa9a5362cf503d73d2a4c",
+  "contentHash": "sha256:7ea427728ec6ce1de5751587cac805f082d4cd3d91fb7d8dcd12b6bd25c1fb06",
   "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
   "hitRegionsPerClipFrame": 2,
   "nonclaims": [
@@ -21,6 +21,6 @@
   "runtimeFramesIncludingDefault": 21,
   "schemaVersion": 1,
   "storedFrames": 20,
-  "uniqueMeshPayloadBytes": 3358680,
+  "uniqueMeshPayloadBytes": 3827616,
   "uniqueMeshes": 20
 }

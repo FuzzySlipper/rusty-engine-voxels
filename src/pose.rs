@@ -794,11 +794,13 @@ pub fn rasterize_part(
     cells.sort_by_key(|cell| cell.coordinate);
     sub_threshold.sort_by_key(|cell| cell.coordinate);
 
-    // Injective per-voxel placement (R6336-12): every source voxel owns one
-    // distinct output cell, so a rigid part's full source volume is preserved
-    // by construction at every admitted setting — no fractional floor, and no
-    // dependence on supersample density. Each voxel claims the target cell its
-    // transformed center bins to, in deterministic source-coordinate order.
+    // Injective per-voxel identity placement (R6336-12/R6447): every source
+    // voxel is represented by at least one distinct output cell, so a rigid
+    // part's full source identity inventory is preserved by construction at
+    // every admitted setting — no fractional floor, and no dependence on
+    // supersample density. High-confidence coverage may already represent an
+    // identity; otherwise that voxel claims the target cell its transformed
+    // center bins to, in deterministic source-coordinate order.
     // When two distinct voxels bin to the same target cell (e.g. a thin bar
     // rotated onto a cell diagonal so both centers quantize together), the
     // later voxel is displaced to the nearest unclaimed cell; the shell search
@@ -807,11 +809,15 @@ pub fn rasterize_part(
     // ceil(source_volume/2) floor, which still accepted losing half a part —
     // and accepted a two-voxel bar collapsing to one cell outright.
     let mut occupied: BTreeSet<[i64; 3]> = cells.iter().map(|cell| cell.coordinate).collect();
-    let mut owned: BTreeSet<[i64; 3]> = BTreeSet::new();
+    let mut represented: BTreeSet<u32> = cells.iter().map(|cell| cell.source_voxel_index).collect();
     let mut voxel_order: Vec<usize> = (0..part.cells.len()).collect();
     voxel_order.sort_by_key(|&index| part.cells[index].coordinate);
     let mut placed: Vec<RasterCell> = Vec::new();
     for index in voxel_order {
+        let source_voxel_index = u32::try_from(index).expect("validated part voxel count fits u32");
+        if represented.contains(&source_voxel_index) {
+            continue;
+        }
         let voxel = &part.cells[index];
         let center = [
             voxel.coordinate[0] as f64 + 0.5,
@@ -824,19 +830,19 @@ pub fn rasterize_part(
             round_half_away_from_zero(world[1] - 0.5),
             round_half_away_from_zero(world[2] - 0.5),
         ];
-        let target = if !owned.contains(&primary) {
+        let target = if !occupied.contains(&primary) {
             primary
         } else {
             nearest_free_cell(primary, &occupied)
         };
-        owned.insert(target);
-        if occupied.insert(target) {
-            placed.push(RasterCell {
-                coordinate: target,
-                material_slot: voxel.material_slot,
-                source_voxel_index: index as u32,
-            });
-        }
+        let inserted = occupied.insert(target);
+        debug_assert!(inserted, "nearest-free placement must be unoccupied");
+        represented.insert(source_voxel_index);
+        placed.push(RasterCell {
+            coordinate: target,
+            material_slot: voxel.material_slot,
+            source_voxel_index,
+        });
     }
     if !placed.is_empty() {
         cells.extend(placed);
@@ -1376,6 +1382,15 @@ mod tests {
                         set.len(),
                         out.len(),
                         "{name} cells distinct at {settings:?}"
+                    );
+                    let represented = out
+                        .iter()
+                        .map(|cell| cell.source_voxel_index)
+                        .collect::<BTreeSet<_>>();
+                    assert_eq!(
+                        represented.len(),
+                        part.cells.len(),
+                        "{name} must retain every source identity at {settings:?} and {transform:?}"
                     );
                     assert_eq!(
                         connected_components(&set),

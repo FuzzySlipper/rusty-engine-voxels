@@ -38,7 +38,7 @@ content-addressed publication, playback, and renderer-neutral projection. The
 checked result has:
 
 - 20 stored clip frames and 21 runtime frames including the default;
-- 20 unique meshes with 3,358,680 bytes of deterministic Rust mesh arrays;
+- 20 unique meshes with 3,827,616 bytes of deterministic Rust mesh arrays;
 - eight moving anchors and two hit regions on every clip frame;
 - one shared renderer definition for two instances; and
 - one 89-byte steady-state frame operation with no mesh resource payload.
@@ -49,4 +49,3 @@ overhead and are structural evidence, not timing or performance thresholds.
 The coarse collision metadata is intentionally not installed into a world
 collision service by this experiment; downstream games remain responsible for
 selecting and applying those facts.
-

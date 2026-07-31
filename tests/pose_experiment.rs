@@ -233,6 +233,14 @@ fn every_rifleman_part_stays_connected_across_run_poses() {
             let cells =
                 rasterize_part(part, binding.placement(bone), &settings).expect("rasterize");
             let set: std::collections::BTreeSet<_> = cells.iter().map(|c| c.coordinate).collect();
+            let represented: std::collections::BTreeSet<_> =
+                cells.iter().map(|c| c.source_voxel_index).collect();
+            assert_eq!(
+                represented.len(),
+                part.cells.len(),
+                "{} must retain every canonical source identity at {time}us",
+                binding.part_id
+            );
             let components = connected_components(&set);
             assert_eq!(
                 components, 1,

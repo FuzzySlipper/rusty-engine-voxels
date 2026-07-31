@@ -82,7 +82,7 @@ quota rejection, and compares the measurement with
 
 The checked result in `evidence/joint-fusion-study.json` reduces average
 occupied-coordinate run churn from `0.6897` in the straight pipeline to
-`0.268907` in the canonical-parts first pass. All generated cells remain within
+`0.270568` in the canonical-parts first pass. All generated cells remain within
 four cells of an M2 seam marker.
 
 That comparison is directional rather than a controlled visual-quality score:
