@@ -17,5 +17,6 @@ pub mod quality;
 pub mod runtime;
 mod studio_playback;
 pub mod temporal;
+pub mod video_motion;
 
 pub const DEFAULT_PROJECT_FILE: &str = "content/projects/voxel-lab.project.json";

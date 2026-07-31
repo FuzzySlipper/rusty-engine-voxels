@@ -2,4 +2,6 @@
 /tools/engine-revision/target/
 /.studio-cache/
 /.runtime/
+/.video-motion-cache/
+__pycache__/
 *.pending

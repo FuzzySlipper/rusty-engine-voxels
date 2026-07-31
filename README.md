@@ -56,6 +56,12 @@ same facts reviewable by a human. See
 [`docs/temporal-consistency.md`](docs/temporal-consistency.md) and
 `evidence/temporal-consistency.json`.
 
+The optional final input experiment fits a synchronized four-view video into
+that same rigid proxy rather than deriving voxel geometry from pixels. Its
+bounded Rust triangulation, fixed bone lengths, contact correction,
+Rust-retargeted `motion.glb`, and direct M2–M6 proof are documented in
+[`docs/video-motion-fitting.md`](docs/video-motion-fitting.md).
+
 ## High-fidelity experiment
 
 The second experiment re-runs the same retro-character conversion on a much finer grid. The project

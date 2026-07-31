@@ -120,6 +120,13 @@ uses the same headline measure as `src/churn.rs`; canonical source identities
 and M3's validated discarded-overlap ledger distinguish visibility and rigid
 motion from identity instability.
 
+The optional video-motion stage remains downstream authoring too. Video and
+pose-estimator output are bounded evidence; Rust-owned cross-view fitting,
+fixed lengths, smoothing, contact correction, and proxy retargeting produce an
+ordinary animated GLB that enters the existing M2 boundary. It neither changes
+the canonical kit nor introduces video-derived geometry or runtime capture
+authority. See [`video-motion-fitting.md`](video-motion-fitting.md).
+
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked

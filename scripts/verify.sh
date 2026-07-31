@@ -17,6 +17,7 @@ cargo clippy --locked --all-targets \
   --manifest-path "$VOXEL_ROOT/Cargo.toml" \
   -- -D warnings -A clippy::pedantic
 cargo test --locked --all-targets --manifest-path "$VOXEL_ROOT/Cargo.toml"
+"$VOXEL_ROOT/scripts/check-video-motion-evidence.sh"
 cargo run --quiet --locked \
   --manifest-path "$VOXEL_ROOT/Cargo.toml" \
   --bin voxel-lab -- load --root "$VOXEL_ROOT" >/dev/null
