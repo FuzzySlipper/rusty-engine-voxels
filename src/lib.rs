@@ -3,6 +3,7 @@ pub mod assemble;
 mod base64;
 pub mod churn;
 pub mod conversion;
+pub mod flipbook;
 pub mod format_study;
 pub mod fusion;
 pub mod kit;

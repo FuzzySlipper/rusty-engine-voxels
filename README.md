@@ -36,6 +36,13 @@ rasterization, and first-pass joint fusion. See
 [`docs/joint-fusion.md`](docs/joint-fusion.md) and the checked comparison in
 `evidence/joint-fusion-study.json`.
 
+That fused schedule now compiles into the canonical Engine voxel-object format
+with exact frame timing, pose-following anchors, coarse collision facts,
+content-addressed publication, explicit-time playback, and shared-resource
+renderer projection. See
+[`docs/baked-flipbook-runtime.md`](docs/baked-flipbook-runtime.md) and
+`evidence/baked-flipbook-runtime.json`.
+
 ## High-fidelity experiment
 
 The second experiment re-runs the same retro-character conversion on a much finer grid. The project

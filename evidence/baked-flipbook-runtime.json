@@ -1,0 +1,26 @@
+{
+  "anchorsPerClipFrame": 8,
+  "artifactBytes": 1496484,
+  "assetId": "voxel-object/rifleman-baked",
+  "clip": "run",
+  "contentHash": "sha256:867540c36e9379721835f3a702f50a2a58aede1d58afa9a5362cf503d73d2a4c",
+  "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
+  "hitRegionsPerClipFrame": 2,
+  "nonclaims": [
+    "Payload bytes count deterministic Rust mesh arrays and exclude allocator overhead.",
+    "Projection operation and byte counts are structural evidence, not a wall-clock performance claim.",
+    "Coarse collision facts are authored local metadata; this experiment does not install them into a world collision service."
+  ],
+  "projection": {
+    "initialDefinitions": 1,
+    "sharedInstances": 2,
+    "steadyStateBytes": 89,
+    "steadyStateMeshResources": 0,
+    "steadyStateOperations": 1
+  },
+  "runtimeFramesIncludingDefault": 21,
+  "schemaVersion": 1,
+  "storedFrames": 20,
+  "uniqueMeshPayloadBytes": 3358680,
+  "uniqueMeshes": 20
+}

@@ -97,6 +97,13 @@ documented in [`joint-fusion.md`](joint-fusion.md). It remains authoring-side
 evidence; no runtime rig, scheduler, or second Engine voxel authority is
 introduced.
 
+The finished fused schedule crosses into the existing canonical Engine
+voxel-object/runtime/projection path through the bounded compiler documented in
+[`baked-flipbook-runtime.md`](baked-flipbook-runtime.md). Named anchors and
+coarse collision remain immutable per-frame facts; games own their meaning and
+whether to apply collision. The experiment does not retain the authoring rig at
+runtime.
+
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked
