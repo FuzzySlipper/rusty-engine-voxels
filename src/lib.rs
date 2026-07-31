@@ -2,6 +2,7 @@ pub mod adapter;
 pub mod assemble;
 mod base64;
 pub mod churn;
+pub mod cleanup;
 pub mod conversion;
 pub mod flipbook;
 pub mod format_study;

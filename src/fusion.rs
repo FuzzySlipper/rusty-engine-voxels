@@ -124,6 +124,9 @@ pub enum FusedVoxelOrigin {
     Generated {
         operation: GeneratedOperation,
     },
+    AuthoredEdit {
+        operation_index: u32,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,0 +1,41 @@
+{
+  "agentBundle": {
+    "canonicalPartSummaries": 13,
+    "differenceOverlays": 2,
+    "idPasses": 3,
+    "multiviewPasses": 3,
+    "structuralWarnings": 11,
+    "styleRules": 2,
+    "temporalFrames": 3
+  },
+  "baseFrameSha256": "sha256:5a6a0afbff88c656e7b73e547f12fd3636fa21c2b062838ba2c861a04b36abd6",
+  "character": "rifleman",
+  "clip": "run",
+  "dslOperationKinds": 17,
+  "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
+  "forearmRepair": {
+    "afterVoxels": 1359,
+    "beforeVoxels": 1358,
+    "coordinate": [
+      -7,
+      20,
+      9
+    ],
+    "decision": "accept",
+    "deterministicReplay": true,
+    "diffSha256": "sha256:1d493de4ab8415322c1a6806b6cea674fa2731bf84906405a5dbe70b53aa3dab"
+  },
+  "frameTimeMicroseconds": 0,
+  "handEdit": {
+    "afterVoxels": 1358,
+    "beforeVoxels": 1359,
+    "operation": "remove_voxel",
+    "part": "rifle"
+  },
+  "nonclaims": [
+    "Diagnostic multiview and ID passes are deterministic agent-facing projections, not final art renders.",
+    "The checked repair proves the bounded authoring loop, not autonomous model quality.",
+    "Human passes remain explicit recorded diffs and are not invoked implicitly."
+  ],
+  "schemaVersion": 1
+}

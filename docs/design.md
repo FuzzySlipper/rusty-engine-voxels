@@ -104,6 +104,13 @@ coarse collision remain immutable per-frame facts; games own their meaning and
 whether to apply collision. The experiment does not retain the authoring rig at
 runtime.
 
+Art cleanup remains downstream authoring intent. The closed operations and
+base-hash-bound diff replay in [`cleanup-loop.md`](cleanup-loop.md) may change
+only declared regions and must pass the kit-derived protection, palette,
+anchor, quota, dimension, and selected connectivity gates. Agent views and
+metrics are observations; only an explicitly accepted ordered diff changes the
+frame later compiled into Engine bytes.
+
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked

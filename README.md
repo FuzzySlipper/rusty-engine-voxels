@@ -43,6 +43,12 @@ renderer projection. See
 [`docs/baked-flipbook-runtime.md`](docs/baked-flipbook-runtime.md) and
 `evidence/baked-flipbook-runtime.json`.
 
+Finished frames can also pass through the bounded replayable cleanup DSL before
+publication. Its agent bundle, fail-atomic safety policy, accept/revise loop,
+and checked rifleman forearm repair are documented in
+[`docs/cleanup-loop.md`](docs/cleanup-loop.md), with exact evidence in
+`evidence/cleanup-loop.json`.
+
 ## High-fidelity experiment
 
 The second experiment re-runs the same retro-character conversion on a much finer grid. The project
