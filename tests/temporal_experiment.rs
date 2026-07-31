@@ -438,6 +438,44 @@ fn protected_identity_inventory_is_exact_and_admitted() {
     .expect("multiple spatial footprints for one admitted identity remain valid");
 }
 
+#[test]
+fn discarded_overlap_winner_identity_must_be_admitted() {
+    let CheckedRun {
+        kit,
+        fused,
+        anchors,
+    } = checked_run();
+    let discarded_index = fused[1]
+        .discarded_origins
+        .iter()
+        .position(|discarded| {
+            discarded.winner_part_id != discarded.part_id
+                || discarded.winner_source_voxel_index != discarded.source_voxel_index
+        })
+        .expect("checked fused frame has a real overlap winner");
+
+    let mut invalid_winner_part = fused[..2].to_vec();
+    invalid_winner_part[1].discarded_origins[discarded_index].winner_part_id = u32::MAX;
+    assert_temporal_error(
+        &kit,
+        &invalid_winner_part,
+        &anchors,
+        &TemporalSettings::default(),
+        "temporal.invalidCanonicalIdentity",
+    );
+
+    let mut invalid_winner_source = fused[..2].to_vec();
+    invalid_winner_source[1].discarded_origins[discarded_index].winner_source_voxel_index =
+        u32::MAX;
+    assert_temporal_error(
+        &kit,
+        &invalid_winner_source,
+        &anchors,
+        &TemporalSettings::default(),
+        "temporal.invalidCanonicalIdentity",
+    );
+}
+
 fn remove_identity(frame: &mut FusedFrame, identity: (u32, u32)) {
     frame.voxels.retain(|cell| {
         !matches!(

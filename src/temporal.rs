@@ -424,29 +424,22 @@ fn validate_hard_identity(
         }
         let identities = canonical_map(frame);
         for &(part_id, source_voxel_index) in identities.keys() {
-            let Some(part) = usize::try_from(part_id)
-                .ok()
-                .and_then(|index| kit.parts.get(index))
-            else {
-                return Err(TemporalError::new(
-                    "temporal.invalidCanonicalIdentity",
-                    format!("frames[{frame_index}]"),
-                    format!("canonical part index {part_id} is not present in the kit"),
-                ));
-            };
-            if usize::try_from(source_voxel_index)
-                .ok()
-                .is_none_or(|index| index >= part.cells.len())
-            {
-                return Err(TemporalError::new(
-                    "temporal.invalidCanonicalIdentity",
-                    format!("frames[{frame_index}]"),
-                    format!(
-                        "canonical source index {source_voxel_index} is not present in part {}",
-                        part.id
-                    ),
-                ));
-            }
+            validate_canonical_identity(
+                kit,
+                frame_index,
+                "visible/discarded identity",
+                part_id,
+                source_voxel_index,
+            )?;
+        }
+        for discarded in &frame.discarded_origins {
+            validate_canonical_identity(
+                kit,
+                frame_index,
+                "discarded-overlap winner",
+                discarded.winner_part_id,
+                discarded.winner_source_voxel_index,
+            )?;
         }
         for &part_id in &settings.protected_parts {
             let part = &kit.parts[usize::try_from(part_id).expect("protected part validated")];
@@ -477,6 +470,39 @@ fn validate_hard_identity(
                 ));
             }
         }
+    }
+    Ok(())
+}
+
+fn validate_canonical_identity(
+    kit: &VoxelKit,
+    frame_index: usize,
+    role: &str,
+    part_id: u32,
+    source_voxel_index: u32,
+) -> Result<(), TemporalError> {
+    let Some(part) = usize::try_from(part_id)
+        .ok()
+        .and_then(|index| kit.parts.get(index))
+    else {
+        return Err(TemporalError::new(
+            "temporal.invalidCanonicalIdentity",
+            format!("frames[{frame_index}]"),
+            format!("{role} part index {part_id} is not present in the kit"),
+        ));
+    };
+    if usize::try_from(source_voxel_index)
+        .ok()
+        .is_none_or(|index| index >= part.cells.len())
+    {
+        return Err(TemporalError::new(
+            "temporal.invalidCanonicalIdentity",
+            format!("frames[{frame_index}]"),
+            format!(
+                "{role} source index {source_voxel_index} is not present in part {}",
+                part.id
+            ),
+        ));
     }
     Ok(())
 }
