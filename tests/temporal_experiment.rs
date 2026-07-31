@@ -303,6 +303,210 @@ fn boiling_anchor_and_hard_identity_defects_are_classified() {
         && warning.view.as_deref() == Some("palette_flicker")));
 }
 
+#[test]
+fn protected_identity_inventory_is_exact_and_admitted() {
+    let CheckedRun {
+        kit,
+        fused,
+        anchors,
+    } = checked_run();
+    let head_index = kit.parts.iter().position(|part| part.id == "head").unwrap() as u32;
+    let torso_index = kit
+        .parts
+        .iter()
+        .position(|part| part.id == "torso")
+        .unwrap() as u32;
+    let source_voxel_index = fused[1]
+        .voxels
+        .iter()
+        .find_map(|cell| match cell.origin {
+            FusedVoxelOrigin::Canonical {
+                part_id,
+                source_voxel_index,
+            } if part_id == head_index => Some(source_voxel_index),
+            _ => None,
+        })
+        .unwrap();
+    let settings = TemporalSettings {
+        protected_parts: BTreeSet::from([head_index]),
+        ..TemporalSettings::default()
+    };
+
+    let mut missing = fused[..2].to_vec();
+    remove_identity(&mut missing[1], (head_index, source_voxel_index));
+    assert_temporal_error(
+        &kit,
+        &missing,
+        &anchors,
+        &settings,
+        "temporal.protectedIdentityChanged",
+    );
+
+    let mut equal_count_substitution = fused[..2].to_vec();
+    replace_identity(
+        &mut equal_count_substitution[1],
+        (head_index, source_voxel_index),
+        (head_index, u32::MAX),
+    );
+    assert_temporal_error(
+        &kit,
+        &equal_count_substitution,
+        &anchors,
+        &settings,
+        "temporal.invalidCanonicalIdentity",
+    );
+
+    let mut cross_part_substitution = fused[..2].to_vec();
+    replace_identity(
+        &mut cross_part_substitution[1],
+        (head_index, source_voxel_index),
+        (torso_index, 0),
+    );
+    assert_temporal_error(
+        &kit,
+        &cross_part_substitution,
+        &anchors,
+        &settings,
+        "temporal.protectedIdentityChanged",
+    );
+
+    let mut invalid_part = fused[..2].to_vec();
+    replace_identity(
+        &mut invalid_part[1],
+        (head_index, source_voxel_index),
+        (u32::MAX, source_voxel_index),
+    );
+    assert_temporal_error(
+        &kit,
+        &invalid_part,
+        &anchors,
+        &settings,
+        "temporal.invalidCanonicalIdentity",
+    );
+
+    let mut extra = fused[..2].to_vec();
+    let mut extra_cell = extra[1]
+        .voxels
+        .iter()
+        .find(|cell| {
+            matches!(
+                cell.origin,
+                FusedVoxelOrigin::Canonical { part_id, .. } if part_id == head_index
+            )
+        })
+        .unwrap()
+        .clone();
+    extra_cell.coordinate = free_neighbor(&extra[1], extra_cell.coordinate);
+    extra_cell.origin = FusedVoxelOrigin::Canonical {
+        part_id: head_index,
+        source_voxel_index: u32::MAX,
+    };
+    extra[1].voxels.push(extra_cell);
+    assert_temporal_error(
+        &kit,
+        &extra,
+        &anchors,
+        &settings,
+        "temporal.invalidCanonicalIdentity",
+    );
+
+    let mut multiple_footprints = fused[..2].to_vec();
+    let mut repeated_cell = multiple_footprints[1]
+        .voxels
+        .iter()
+        .find(|cell| {
+            matches!(
+                cell.origin,
+                FusedVoxelOrigin::Canonical {
+                    part_id,
+                    source_voxel_index: source
+                } if part_id == head_index && source == source_voxel_index
+            )
+        })
+        .unwrap()
+        .clone();
+    repeated_cell.coordinate = free_neighbor(&multiple_footprints[1], repeated_cell.coordinate);
+    multiple_footprints[1].voxels.push(repeated_cell);
+    analyze_temporal_clip(
+        &kit,
+        &multiple_footprints,
+        &anchors[..2],
+        &anchors[..2],
+        &BTreeSet::new(),
+        &settings,
+    )
+    .expect("multiple spatial footprints for one admitted identity remain valid");
+}
+
+fn remove_identity(frame: &mut FusedFrame, identity: (u32, u32)) {
+    frame.voxels.retain(|cell| {
+        !matches!(
+            cell.origin,
+            FusedVoxelOrigin::Canonical {
+                part_id,
+                source_voxel_index
+            } if (part_id, source_voxel_index) == identity
+        )
+    });
+    frame
+        .discarded_origins
+        .retain(|discarded| (discarded.part_id, discarded.source_voxel_index) != identity);
+}
+
+fn replace_identity(frame: &mut FusedFrame, from: (u32, u32), to: (u32, u32)) {
+    for cell in &mut frame.voxels {
+        if matches!(
+            cell.origin,
+            FusedVoxelOrigin::Canonical {
+                part_id,
+                source_voxel_index
+            } if (part_id, source_voxel_index) == from
+        ) {
+            cell.origin = FusedVoxelOrigin::Canonical {
+                part_id: to.0,
+                source_voxel_index: to.1,
+            };
+        }
+    }
+    for discarded in &mut frame.discarded_origins {
+        if (discarded.part_id, discarded.source_voxel_index) == from {
+            discarded.part_id = to.0;
+            discarded.source_voxel_index = to.1;
+        }
+    }
+}
+
+fn free_neighbor(frame: &FusedFrame, coordinate: [i64; 3]) -> [i64; 3] {
+    let occupied = frame
+        .voxels
+        .iter()
+        .map(|cell| cell.coordinate)
+        .collect::<BTreeSet<_>>();
+    (1..)
+        .map(|offset| [coordinate[0] + offset, coordinate[1], coordinate[2]])
+        .find(|candidate| !occupied.contains(candidate))
+        .unwrap()
+}
+
+fn assert_temporal_error(
+    kit: &VoxelKit,
+    frames: &[FusedFrame],
+    anchors: &AnchorFrames,
+    settings: &TemporalSettings,
+    expected_code: &str,
+) {
+    let error = analyze_temporal_clip(
+        kit,
+        frames,
+        &anchors[..frames.len()],
+        &anchors[..frames.len()],
+        &BTreeSet::new(),
+        settings,
+    )
+    .unwrap_err();
+    assert_eq!(error.code(), expected_code);
+}
+
 fn checked_run() -> CheckedRun {
     let kit = load_kit(&root(), RIFLEMAN_KIT).unwrap();
     let bytes = std::fs::read(root().join(RETRO_GLB)).unwrap();

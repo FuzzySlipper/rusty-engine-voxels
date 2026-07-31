@@ -204,7 +204,7 @@ pub fn analyze_temporal_clip(
             "observed/proxy anchor lists must match the frame count",
         ));
     }
-    validate_hard_identity(frames, settings)?;
+    validate_hard_identity(kit, frames, settings)?;
     let mut evidence_frames = Vec::with_capacity(frames.len());
     let mut warnings = Vec::new();
     for (frame_index, frame) in frames.iter().enumerate() {
@@ -394,10 +394,23 @@ pub fn generate_flicker_review(
 }
 
 fn validate_hard_identity(
+    kit: &VoxelKit,
     frames: &[FusedFrame],
     settings: &TemporalSettings,
 ) -> Result<(), TemporalError> {
-    let reference = canonical_map(&frames[0]);
+    for part_id in &settings.protected_parts {
+        if usize::try_from(*part_id)
+            .ok()
+            .and_then(|index| kit.parts.get(index))
+            .is_none()
+        {
+            return Err(TemporalError::new(
+                "temporal.invalidProtectedPart",
+                "settings.protectedParts",
+                format!("protected part index {part_id} is not present in the kit"),
+            ));
+        }
+    }
     for (frame_index, frame) in frames.iter().enumerate() {
         let mut coordinates = BTreeSet::new();
         for cell in &frame.voxels {
@@ -410,15 +423,56 @@ fn validate_hard_identity(
             }
         }
         let identities = canonical_map(frame);
-        for part in &settings.protected_parts {
-            let reference_count = reference.keys().filter(|(id, _)| id == part).count();
-            let actual_count = identities.keys().filter(|(id, _)| id == part).count();
-            if reference_count != actual_count {
+        for &(part_id, source_voxel_index) in identities.keys() {
+            let Some(part) = usize::try_from(part_id)
+                .ok()
+                .and_then(|index| kit.parts.get(index))
+            else {
+                return Err(TemporalError::new(
+                    "temporal.invalidCanonicalIdentity",
+                    format!("frames[{frame_index}]"),
+                    format!("canonical part index {part_id} is not present in the kit"),
+                ));
+            };
+            if usize::try_from(source_voxel_index)
+                .ok()
+                .is_none_or(|index| index >= part.cells.len())
+            {
+                return Err(TemporalError::new(
+                    "temporal.invalidCanonicalIdentity",
+                    format!("frames[{frame_index}]"),
+                    format!(
+                        "canonical source index {source_voxel_index} is not present in part {}",
+                        part.id
+                    ),
+                ));
+            }
+        }
+        for &part_id in &settings.protected_parts {
+            let part = &kit.parts[usize::try_from(part_id).expect("protected part validated")];
+            let expected = (0..part.cells.len())
+                .map(|source_voxel_index| {
+                    (
+                        part_id,
+                        u32::try_from(source_voxel_index)
+                            .expect("validated kit cell count fits canonical identity"),
+                    )
+                })
+                .collect::<BTreeSet<_>>();
+            let actual = identities
+                .keys()
+                .filter(|(identity_part_id, _)| *identity_part_id == part_id)
+                .copied()
+                .collect::<BTreeSet<_>>();
+            if expected != actual {
+                let missing = expected.difference(&actual).next().copied();
+                let extra = actual.difference(&expected).next().copied();
                 return Err(TemporalError::new(
                     "temporal.protectedIdentityChanged",
                     format!("frames[{frame_index}]"),
                     format!(
-                        "protected part {part} has {actual_count} canonical identities; expected {reference_count}"
+                        "protected part {} identity inventory differs: missing {missing:?}, extra {extra:?}",
+                        part.id
                     ),
                 ));
             }
