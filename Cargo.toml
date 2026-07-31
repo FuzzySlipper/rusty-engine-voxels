@@ -20,6 +20,7 @@ name = "rusty-engine-voxels-studio-adapter"
 path = "src/bin/studio-adapter.rs"
 
 [dependencies]
+gif = "0.13"
 render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "07a648a545b13bf3f3bb82c7a77c92958c1b0feb" }
 render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "07a648a545b13bf3f3bb82c7a77c92958c1b0feb" }
 rusty-engine-voxels-revision = { path = "tools/engine-revision" }

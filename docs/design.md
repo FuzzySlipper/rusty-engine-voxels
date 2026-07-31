@@ -111,6 +111,15 @@ anchor, quota, dimension, and selected connectivity gates. Agent views and
 metrics are observations; only an explicitly accepted ordered diff changes the
 frame later compiled into Engine bytes.
 
+Finished-frame temporal admission remains downstream as well. The metrics,
+identity inventory, anchor trajectories, typed drift warnings, and deterministic
+flicker-review projections in
+[`temporal-consistency.md`](temporal-consistency.md) observe the fused schedule
+without introducing runtime animation authority. Occupied-coordinate churn
+uses the same headline measure as `src/churn.rs`; canonical source identities
+and M3's validated discarded-overlap ledger distinguish visibility and rigid
+motion from identity instability.
+
 ## Voxel mesh data plane
 
 The `format-study` harness (`src/format_study.rs`, `voxel-lab format-study`) measures the checked

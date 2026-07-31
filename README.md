@@ -49,6 +49,13 @@ and checked rifleman forearm repair are documented in
 [`docs/cleanup-loop.md`](docs/cleanup-loop.md), with exact evidence in
 `evidence/cleanup-loop.json`.
 
+The finished schedule is then checked across time for per-part shape and
+palette drift, canonical identity stability, anchor trajectories, and
+joint-localized churn. Deterministic GIF/onion-skin/difference views make the
+same facts reviewable by a human. See
+[`docs/temporal-consistency.md`](docs/temporal-consistency.md) and
+`evidence/temporal-consistency.json`.
+
 ## High-fidelity experiment
 
 The second experiment re-runs the same retro-character conversion on a much finer grid. The project

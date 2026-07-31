@@ -27,6 +27,24 @@ use crate::runtime::load_runtime_project;
 /// are labelled `region/0` (lowest, feet) through `region/N` (highest, head).
 const CHURN_REGIONS: usize = 4;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct OccupiedCoordinateChurn {
+    pub added: usize,
+    pub removed: usize,
+    pub union: usize,
+}
+
+pub(crate) fn occupied_coordinate_churn(
+    from: &BTreeSet<[i64; 3]>,
+    to: &BTreeSet<[i64; 3]>,
+) -> OccupiedCoordinateChurn {
+    OccupiedCoordinateChurn {
+        added: to.difference(from).count(),
+        removed: from.difference(to).count(),
+        union: from.union(to).count(),
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FrameTransitionChurn {
@@ -170,9 +188,10 @@ fn measure_transition(
     let to: BTreeSet<[i64; 3]> = to_cells.iter().map(|cell| cell.coordinate).collect();
 
     let shared = from.intersection(&to).count();
-    let added = to.difference(&from).count();
-    let removed = from.difference(&to).count();
-    let union = from.union(&to).count();
+    let coordinate_churn = occupied_coordinate_churn(&from, &to);
+    let added = coordinate_churn.added;
+    let removed = coordinate_churn.removed;
+    let union = coordinate_churn.union;
     let churned = added + removed;
     let churn_fraction = if union == 0 {
         0.0

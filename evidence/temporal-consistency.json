@@ -1,0 +1,72 @@
+{
+  "anchorCount": 8,
+  "canonicalIdentityChurnByPartMillionths": {
+    "backpack": 0,
+    "head": 0,
+    "left_lower_arm": 0,
+    "left_lower_leg": 0,
+    "left_upper_arm": 0,
+    "left_upper_leg": 0,
+    "pelvis": 0,
+    "rifle": 0,
+    "right_lower_arm": 0,
+    "right_lower_leg": 0,
+    "right_upper_arm": 0,
+    "right_upper_leg": 0,
+    "torso": 0
+  },
+  "canonicalIdentityChurnMillionths": 0,
+  "character": "rifleman",
+  "churnByHeightBand": [
+    3761,
+    1624,
+    1737,
+    1083
+  ],
+  "clip": "run",
+  "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
+  "finishedSpatialChurnMillionths": 270567,
+  "frameCount": 20,
+  "generatedVoxelMaximum": 38,
+  "generatedVoxelMinimum": 18,
+  "hardIdentityFailures": 0,
+  "improvementMillionths": 607704,
+  "interpretationLimits": [
+    "Spatial churn includes intentional rigid motion; canonical-identity churn separates identity stability from coordinate motion.",
+    "Height bands are geometric proxies; per-part metrics and ID passes provide semantic attribution.",
+    "GIF and SVG artifacts are deterministic human-review aids, not renderer or runtime authority."
+  ],
+  "reviewArtifacts": {
+    "alternatingGif": {
+      "bytes": 7654,
+      "path": "evidence/temporal-review/alternating.gif",
+      "sha256": "sha256:85938e019522cf4cce1cdb3415385ad8f4465990cdb44f7f930da4fd13ba71bc"
+    },
+    "differenceHeatMap": {
+      "bytes": 35632,
+      "path": "evidence/temporal-review/difference-heat-map.svg",
+      "sha256": "sha256:8e5907312c78ddff0ec75c76a30da5c9a7d5c709951591091a363649f6adbd0f"
+    },
+    "onionSkin": {
+      "bytes": 304831,
+      "path": "evidence/temporal-review/onion-skin.svg",
+      "sha256": "sha256:9ee0c2fec8ddfea085a9d17f7d4ba0589068efc8145ff62bb72f83af702284ca"
+    },
+    "paletteFlicker": {
+      "bytes": 13381,
+      "path": "evidence/temporal-review/palette-flicker.svg",
+      "sha256": "sha256:a1c1aeeb3c25094444e96be6a42dba61b88f15f2d62cc2183302dd9e20ed1a98"
+    },
+    "silhouetteEdgeMotion": {
+      "bytes": 31667,
+      "path": "evidence/temporal-review/silhouette-edge-motion.svg",
+      "sha256": "sha256:6f76d84ea0f8b4ef577607efe91b09ac3cd73f32275147b1e2d2286a1e5c46fd"
+    }
+  },
+  "schemaVersion": 1,
+  "softWarningCount": 101,
+  "softWarningsByCode": {
+    "temporal.component_count_changed": 101
+  },
+  "straightPipelineBaselineSpatialChurnMillionths": 689700
+}
