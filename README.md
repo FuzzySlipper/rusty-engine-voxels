@@ -143,9 +143,12 @@ Protocol-14 adapter tests use the same checked asset for repeat and two-region
 atlas publication, replacement, animated-frame continuity, and fresh-adapter
 reopen. They also reject malformed, missing, oversized, stale, overlapping,
 out-of-bounds, insufficiently padded, and failed-reimport inputs before project
-publication. Exact pixels and renderer resource disposal remain owned by the
-real Studio integration against this public consumer; this repository does not
-duplicate the Engine texture renderer or atlas parser.
+publication. This repository's dispatch-only `studio-browser` job accepts one
+exact reverse-provider revision that pins this consumer and runs its real
+Chromium integration. That consumer-owned path records deterministic visible
+repeat/atlas/reopen pixels, retained resource counts, replacement lifecycle,
+and final cleanup through the Engine renderer without duplicating the renderer
+or atlas parser here.
 
 ## Commands
 
@@ -170,6 +173,10 @@ cargo run --locked --bin voxel-lab -- load
 
 # Validate this adapter against the pinned Studio protocol decoder.
 ./scripts/verify-studio.sh
+
+# After an Engine reverse-pin descendant exists, run the consumer-owned real
+# Chromium certification against that exact provider revision.
+./scripts/verify-studio-browser.sh <40-character-reverse-provider-commit>
 
 # Launch the pinned Rusty Engine Studio with this project's adapter.
 ./scripts/studio.sh

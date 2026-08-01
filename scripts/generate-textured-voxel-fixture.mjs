@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { deflateSync } from "node:zlib";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +27,33 @@ function chunk(kind, payload) {
   const checksum = Buffer.alloc(4);
   checksum.writeUInt32BE(crc32(Buffer.concat([name, payload])));
   return Buffer.concat([length, name, payload, checksum]);
+}
+
+function adler32(bytes) {
+  let a = 1;
+  let b = 0;
+  for (const byte of bytes) {
+    a = (a + byte) % 65521;
+    b = (b + a) % 65521;
+  }
+  return ((b << 16) | a) >>> 0;
+}
+
+function deterministicZlibStore(bytes) {
+  const parts = [Buffer.from([0x78, 0x01])];
+  for (let offset = 0; offset < bytes.length; offset += 65_535) {
+    const end = Math.min(offset + 65_535, bytes.length);
+    const length = end - offset;
+    const header = Buffer.alloc(5);
+    header[0] = end === bytes.length ? 1 : 0;
+    header.writeUInt16LE(length, 1);
+    header.writeUInt16LE((~length) & 0xffff, 3);
+    parts.push(header, bytes.subarray(offset, end));
+  }
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(adler32(bytes));
+  parts.push(checksum);
+  return Buffer.concat(parts);
 }
 
 function directionalPixel(region, x, y) {
@@ -60,7 +86,7 @@ header.set([8, 6, 0, 0, 0], 8);
 const png = Buffer.concat([
   Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
   chunk("IHDR", header),
-  chunk("IDAT", deflateSync(raw, { level: 9 })),
+  chunk("IDAT", deterministicZlibStore(raw)),
   chunk("IEND", Buffer.alloc(0)),
 ]);
 

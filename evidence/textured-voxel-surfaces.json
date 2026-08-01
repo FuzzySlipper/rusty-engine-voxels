@@ -116,12 +116,12 @@
     "tileCoordinatesUseProductionMesher": true
   },
   "fixture": {
-    "contentHash": "sha256:e2ec555c148765098fd52e610bfaa7cde5e4bad4c14dd682590211dfc38e052c",
+    "contentHash": "sha256:ac1a8a3685fe0b5b42c585f4f5cf8e246721a09497644eacddf36372a377fd99",
     "dimensions": [
       16,
       8
     ],
-    "encodedByteLength": 151,
+    "encodedByteLength": 588,
     "path": "content/textures/directional-atlas.png",
     "regions": [
       {

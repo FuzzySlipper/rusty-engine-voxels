@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      reverse_provider_commit:
+        description: Exact Rusty Engine revision that reverse-pins this consumer
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -31,3 +37,17 @@ jobs:
         with:
           node-version: 24
       - run: ./scripts/verify-studio.sh
+
+  studio-browser:
+    if: github.event_name == 'workflow_dispatch' && inputs.reverse_provider_commit != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.89
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: ./scripts/verify-studio-browser.sh "${{ inputs.reverse_provider_commit }}"
