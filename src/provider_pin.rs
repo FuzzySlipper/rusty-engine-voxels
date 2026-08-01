@@ -20,8 +20,8 @@ mod tests {
     fn checked_pin_is_closed_exact_and_manifest_derived() {
         let readout = checked_provider_pin().expect("checked provider pin should be coherent");
         assert_eq!(engine_revision().expect("runtime revision"), readout.commit);
-        assert_eq!(readout.manifest_dependency_count, 6);
-        assert!(readout.locked_provider_package_count >= 6);
+        assert_eq!(readout.manifest_dependency_count, 8);
+        assert!(readout.locked_provider_package_count >= 8);
         for source in [
             include_str!("conversion.rs"),
             include_str!("churn.rs"),

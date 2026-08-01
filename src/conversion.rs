@@ -269,12 +269,7 @@ fn conversion_materials(
                     source_material_name: material.source_material_name.clone(),
                     voxel_material_slot: material_slot,
                 },
-                ProjectMaterial {
-                    asset_id,
-                    display_name,
-                    color: experiment_color(index),
-                    roughness: 0.82,
-                },
+                ProjectMaterial::flat(asset_id, display_name, experiment_color(index), 0.82),
             ))
         })
         .collect::<Result<Vec<_>, String>>()

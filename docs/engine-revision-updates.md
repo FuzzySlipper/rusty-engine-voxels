@@ -2,7 +2,7 @@
 
 The voxel lab has one consumer-owned Engine identity: [`../engine-source.json`](../engine-source.json).
 Its closed schema names the canonical public repository, one lowercase 40-character commit, and
-the voxel lab's `studio` provider directory. The commit is projected into exactly six direct Rust
+the voxel lab's `studio` provider directory. The commit is projected into exactly eight direct Rust
 dependencies and their Cargo lock entries. Runtime and experiment evidence read the embedded
 manifest through the same validator; there is no second authored revision constant.
 
@@ -19,7 +19,7 @@ Run these commands from the repository root:
 `check` is deterministic, read-only, and does not intentionally use the network. It rejects
 malformed or extended source manifests; sibling, path, branch, tag, floating, aliased, mixed, or
 non-canonical Cargo sources; missing or duplicate package blocks; and any disagreement between the
-manifest, six direct dependencies, and every locked Engine package.
+manifest, eight direct dependencies, and every locked Engine package.
 
 `update` first requires the current pin to pass `check` and only refuses dirty active carriers. It
 therefore preserves unrelated work while preventing an update from overwriting edits to:

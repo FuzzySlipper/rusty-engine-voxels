@@ -110,7 +110,7 @@ numbers.
 The resulting implementation keeps canonical voxel-object JSON unchanged and moves derived mesh
 streams into deterministic `packedStreamsLeV1` resources. This adapter atomically publishes those
 resources into the ignored `.studio-cache` and sends compact content-addressed manifests through
-Studio protocol 13. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
+Studio protocol 14. The checked high-fidelity open fell from 54,564,714 bytes of projection JSON to
 a roughly 24.7 KiB control response plus 11,712,856 raw resource bytes with the current greedy
 mesher. The original before/after and Node/Chromium parse observations remain in
 `evidence/mesh-data-plane.json` with their exact historical Engine revision.
@@ -156,7 +156,7 @@ den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels
 ```
 
 `engine-source.json` is the only authored Engine identity. The update command projects it into the
-six direct Rust dependencies and the generated Cargo lockfile without rewriting historical
+eight direct Rust dependencies and the generated Cargo lockfile without rewriting historical
 evidence, protocol compatibility, or prose. See
 [`docs/engine-revision-updates.md`](docs/engine-revision-updates.md) for the failure, dry-run, and
 rollback contract.
@@ -169,8 +169,9 @@ without an operational sibling checkout or a copy of Studio source.
 The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,
 reading, inspecting sources, preparing/previewing/applying/discarding voxel-object conversions,
-attaching transformed voxel-object instances, and transiently playing reopened applied instances.
-Other protocol-13 operations fail with a typed
+attaching transformed voxel-object instances, authoring repeat or atlas-backed PNG voxel surfaces,
+and transiently playing reopened applied instances. Runtime textures are deliberately separate from
+the mesh image used by conversion sampling. Other protocol-14 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
 Applied playback retains the admitted object and renderer projector for the open project. After the

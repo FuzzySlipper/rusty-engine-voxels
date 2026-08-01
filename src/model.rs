@@ -4,7 +4,7 @@ use std::path::{Component, Path};
 use serde::{Deserialize, Serialize};
 use voxel_convert::{AnimationAnchorPolicy, AnimationEndPolicy};
 
-pub const PROJECT_SCHEMA_VERSION: u32 = 2;
+pub const PROJECT_SCHEMA_VERSION: u32 = 3;
 pub const MAX_JSON_SAFE_ENTITY_ID: u64 = (1_u64 << 53) - 1;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -16,6 +16,8 @@ pub struct VoxelLabProject {
     pub entry_scene: String,
     pub revision: u64,
     pub conversion: ConversionExperiment,
+    pub textures: Vec<ProjectTexture>,
+    pub atlases: Vec<ProjectAtlas>,
     pub materials: Vec<ProjectMaterial>,
     pub voxel_objects: Vec<ProjectVoxelObject>,
     pub instances: Vec<ProjectVoxelObjectInstance>,
@@ -59,6 +61,140 @@ pub struct ProjectMaterial {
     pub display_name: String,
     pub color: [f32; 4],
     pub roughness: f32,
+    #[serde(default = "white_rgba")]
+    pub texture_tint: [f32; 4],
+    #[serde(default = "black_rgba")]
+    pub emission_color: [f32; 4],
+    #[serde(default)]
+    pub emissive: f32,
+    #[serde(default = "default_asset_version")]
+    pub version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voxel_surface: Option<ProjectVoxelSurface>,
+}
+
+impl ProjectMaterial {
+    pub fn flat(asset_id: String, display_name: String, color: [f32; 4], roughness: f32) -> Self {
+        Self {
+            asset_id,
+            display_name,
+            color,
+            roughness,
+            texture_tint: white_rgba(),
+            emission_color: black_rgba(),
+            emissive: 0.0,
+            version: 1,
+            content_hash: None,
+            voxel_surface: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProjectTextureFilter {
+    Nearest,
+    Linear,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProjectTextureWrap {
+    Repeat,
+    Clamp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectTexture {
+    pub asset_id: String,
+    pub version: u32,
+    pub content_hash: String,
+    pub source_path: String,
+    pub width: u32,
+    pub height: u32,
+    pub encoded_byte_length: u32,
+    pub filter: ProjectTextureFilter,
+    pub wrap: ProjectTextureWrap,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectAtlasRegion {
+    pub id: String,
+    pub content_min: [u32; 2],
+    pub content_extent: [u32; 2],
+    pub padding: ProjectAtlasPadding,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectAtlasPadding {
+    pub left: u16,
+    pub right: u16,
+    pub bottom: u16,
+    pub top: u16,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectAtlas {
+    pub asset_id: String,
+    pub version: u32,
+    pub content_hash: String,
+    pub texture_asset_id: String,
+    pub texture_version: u32,
+    pub texture_content_hash: String,
+    pub regions: Vec<ProjectAtlasRegion>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum ProjectVoxelAlphaMode {
+    Opaque,
+    Mask { cutoff: f32 },
+    Blend,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+pub enum ProjectVoxelSurfaceMapping {
+    Repeat {
+        tile_scale_cells: [f32; 2],
+        tile_origin_cells: [f32; 2],
+    },
+    Atlas {
+        atlas_asset_id: String,
+        atlas_version: u32,
+        atlas_content_hash: String,
+        region_id: String,
+        tile_scale_cells: [f32; 2],
+        tile_origin_cells: [f32; 2],
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectVoxelSurface {
+    pub texture_asset_id: String,
+    pub texture_version: u32,
+    pub texture_content_hash: String,
+    pub alpha_mode: ProjectVoxelAlphaMode,
+    pub mapping: ProjectVoxelSurfaceMapping,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectMaterialOverride {
+    pub material_slot: u16,
+    pub material_asset_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +216,8 @@ pub struct ProjectVoxelObjectInstance {
     pub rotation: [f32; 4],
     pub scale: [f32; 3],
     pub collision_policy: ProjectCollisionPolicy,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub material_overrides: Vec<ProjectMaterialOverride>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,6 +299,74 @@ impl VoxelLabProject {
             return Err("conversion.defaultClip must name a configured output clip".to_owned());
         }
         unique(
+            self.textures.iter().map(|value| value.asset_id.as_str()),
+            "texture",
+        )?;
+        let mut aggregate_texture_bytes = 0_u64;
+        for texture in &self.textures {
+            if !texture.asset_id.starts_with("texture/")
+                || texture.version == 0
+                || !valid_sha256(&texture.content_hash)
+                || texture.width == 0
+                || texture.height == 0
+                || texture.width > 4_096
+                || texture.height > 4_096
+                || texture.encoded_byte_length == 0
+                || texture.encoded_byte_length > 16 * 1024 * 1024
+            {
+                return Err(format!("invalid texture {}", texture.asset_id));
+            }
+            require_relative_path(&texture.source_path, "textures.sourcePath")?;
+            aggregate_texture_bytes = aggregate_texture_bytes
+                .checked_add(u64::from(texture.encoded_byte_length))
+                .ok_or_else(|| "texture byte accounting overflowed".to_owned())?;
+        }
+        if self.textures.len() > 256 || aggregate_texture_bytes > 128 * 1024 * 1024 {
+            return Err("project texture resource quota is exceeded".to_owned());
+        }
+        unique(
+            self.atlases.iter().map(|value| value.asset_id.as_str()),
+            "atlas",
+        )?;
+        let textures = self
+            .textures
+            .iter()
+            .map(|texture| (texture.asset_id.as_str(), texture))
+            .collect::<std::collections::BTreeMap<_, _>>();
+        for atlas in &self.atlases {
+            if !atlas.asset_id.starts_with("sprite-sheet/")
+                || atlas.version == 0
+                || !valid_sha256(&atlas.content_hash)
+                || !valid_sha256(&atlas.texture_content_hash)
+                || atlas.texture_version == 0
+                || atlas.regions.is_empty()
+                || atlas.regions.len() > 1_024
+            {
+                return Err(format!("invalid atlas {}", atlas.asset_id));
+            }
+            let texture = textures
+                .get(atlas.texture_asset_id.as_str())
+                .ok_or_else(|| format!("atlas {} references an unknown texture", atlas.asset_id))?;
+            if texture.version != atlas.texture_version
+                || texture.content_hash != atlas.texture_content_hash
+            {
+                return Err(format!(
+                    "atlas {} has a stale texture reference",
+                    atlas.asset_id
+                ));
+            }
+            unique(
+                atlas.regions.iter().map(|region| region.id.as_str()),
+                "atlas region",
+            )?;
+            for region in &atlas.regions {
+                require_identity(&region.id, "atlases.regions.id")?;
+                if region.content_extent.contains(&0) {
+                    return Err(format!("atlas {} has a zero-size region", atlas.asset_id));
+                }
+            }
+        }
+        unique(
             self.materials.iter().map(|value| value.asset_id.as_str()),
             "material",
         )?;
@@ -172,8 +378,99 @@ impl VoxelLabProject {
                     .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
                 || !material.roughness.is_finite()
                 || !(0.0..=1.0).contains(&material.roughness)
+                || !material
+                    .texture_tint
+                    .iter()
+                    .chain(material.emission_color.iter())
+                    .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
+                || !material.emissive.is_finite()
+                || material.emissive < 0.0
+                || material.version == 0
+                || material
+                    .content_hash
+                    .as_ref()
+                    .is_some_and(|hash| !valid_sha256(hash))
             {
                 return Err(format!("invalid material {}", material.asset_id));
+            }
+            if let Some(surface) = &material.voxel_surface {
+                if material.content_hash.is_none()
+                    || !valid_sha256(&surface.texture_content_hash)
+                    || surface.texture_version == 0
+                    || !surface
+                        .tile_scale_cells()
+                        .iter()
+                        .all(|value| value.is_finite() && *value > 0.0)
+                    || !surface
+                        .tile_origin_cells()
+                        .iter()
+                        .all(|value| value.is_finite())
+                {
+                    return Err(format!("invalid voxel surface {}", material.asset_id));
+                }
+                let texture = textures
+                    .get(surface.texture_asset_id.as_str())
+                    .ok_or_else(|| {
+                        format!(
+                            "material {} references an unknown texture",
+                            material.asset_id
+                        )
+                    })?;
+                if texture.version != surface.texture_version
+                    || texture.content_hash != surface.texture_content_hash
+                {
+                    return Err(format!(
+                        "material {} has a stale texture reference",
+                        material.asset_id
+                    ));
+                }
+                if let ProjectVoxelAlphaMode::Mask { cutoff } = surface.alpha_mode {
+                    if !cutoff.is_finite() || !(0.0..=1.0).contains(&cutoff) {
+                        return Err(format!(
+                            "material {} has an invalid alpha cutoff",
+                            material.asset_id
+                        ));
+                    }
+                }
+                match &surface.mapping {
+                    ProjectVoxelSurfaceMapping::Repeat { .. } => {
+                        if texture.wrap != ProjectTextureWrap::Repeat {
+                            return Err(format!(
+                                "material {} requires repeat texture wrap",
+                                material.asset_id
+                            ));
+                        }
+                    }
+                    ProjectVoxelSurfaceMapping::Atlas {
+                        atlas_asset_id,
+                        atlas_version,
+                        atlas_content_hash,
+                        region_id,
+                        ..
+                    } => {
+                        let atlas = self
+                            .atlases
+                            .iter()
+                            .find(|atlas| atlas.asset_id == *atlas_asset_id)
+                            .ok_or_else(|| {
+                                format!(
+                                    "material {} references an unknown atlas",
+                                    material.asset_id
+                                )
+                            })?;
+                        if atlas.version != *atlas_version
+                            || atlas.content_hash != *atlas_content_hash
+                            || atlas.texture_asset_id != surface.texture_asset_id
+                            || !atlas.regions.iter().any(|region| region.id == *region_id)
+                            || texture.wrap != ProjectTextureWrap::Clamp
+                        {
+                            return Err(format!(
+                                "material {} has a stale atlas mapping",
+                                material.asset_id
+                            ));
+                        }
+                    }
+                }
             }
         }
         unique(
@@ -202,6 +499,11 @@ impl VoxelLabProject {
             "instance",
         )?;
         let mut entity_ids = BTreeSet::new();
+        let material_ids = self
+            .materials
+            .iter()
+            .map(|material| material.asset_id.as_str())
+            .collect::<BTreeSet<_>>();
         for instance in &self.instances {
             if instance.entity_id == 0
                 || instance.entity_id > MAX_JSON_SAFE_ENTITY_ID
@@ -228,9 +530,56 @@ impl VoxelLabProject {
             {
                 return Err(format!("invalid transform for {}", instance.instance_id));
             }
+            let mut slots = BTreeSet::new();
+            for binding in &instance.material_overrides {
+                if !slots.insert(binding.material_slot)
+                    || !material_ids.contains(binding.material_asset_id.as_str())
+                {
+                    return Err(format!(
+                        "invalid material override for {}",
+                        instance.instance_id
+                    ));
+                }
+            }
         }
         Ok(())
     }
+}
+
+impl ProjectVoxelSurface {
+    fn tile_scale_cells(&self) -> &[f32; 2] {
+        match &self.mapping {
+            ProjectVoxelSurfaceMapping::Repeat {
+                tile_scale_cells, ..
+            }
+            | ProjectVoxelSurfaceMapping::Atlas {
+                tile_scale_cells, ..
+            } => tile_scale_cells,
+        }
+    }
+
+    fn tile_origin_cells(&self) -> &[f32; 2] {
+        match &self.mapping {
+            ProjectVoxelSurfaceMapping::Repeat {
+                tile_origin_cells, ..
+            }
+            | ProjectVoxelSurfaceMapping::Atlas {
+                tile_origin_cells, ..
+            } => tile_origin_cells,
+        }
+    }
+}
+
+const fn default_asset_version() -> u32 {
+    1
+}
+
+const fn white_rgba() -> [f32; 4] {
+    [1.0; 4]
+}
+
+const fn black_rgba() -> [f32; 4] {
+    [0.0, 0.0, 0.0, 1.0]
 }
 
 fn unique<'a>(values: impl Iterator<Item = &'a str>, kind: &str) -> Result<(), String> {

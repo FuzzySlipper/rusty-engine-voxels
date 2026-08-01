@@ -4,7 +4,9 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 pub const ENGINE_REPOSITORY: &str = "https://github.com/FuzzySlipper/rusty-engine";
-pub const ENGINE_CRATES: [&str; 6] = [
+pub const ENGINE_CRATES: [&str; 8] = [
+    "asset-catalog",
+    "core-assets",
     "render-model",
     "render-projection",
     "svc-mesh",
@@ -280,8 +282,8 @@ mod tests {
         let readout = validate_provider_pin(&source(OLD), &manifest(OLD), &lockfile(OLD))
             .expect("coherent pin should pass");
         assert_eq!(readout.commit, OLD);
-        assert_eq!(readout.manifest_dependency_count, 6);
-        assert_eq!(readout.locked_provider_package_count, 6);
+        assert_eq!(readout.manifest_dependency_count, 8);
+        assert!(readout.locked_provider_package_count >= 8);
     }
 
     #[test]

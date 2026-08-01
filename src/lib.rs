@@ -16,6 +16,7 @@ pub mod provider_pin;
 pub mod quality;
 pub mod runtime;
 mod studio_playback;
+pub mod surface;
 pub mod temporal;
 pub mod video_motion;
 

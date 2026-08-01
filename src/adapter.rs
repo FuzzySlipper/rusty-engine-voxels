@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
+use render_model::{TextureDescriptor, TextureFilter, TextureWrap};
 use render_projection::VoxelObjectRenderProjector;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -21,8 +22,11 @@ use crate::mesh_resource_cache::{
     merge_mesh_resource_readouts, publish_mesh_resources, MeshResourceReadout,
 };
 use crate::model::{
-    experiment_color, ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial,
-    ProjectVoxelObjectInstance, MAX_JSON_SAFE_ENTITY_ID,
+    experiment_color, ProjectAtlas, ProjectAtlasPadding, ProjectAtlasRegion,
+    ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial, ProjectMaterialOverride,
+    ProjectTexture, ProjectTextureFilter, ProjectTextureWrap, ProjectVoxelAlphaMode,
+    ProjectVoxelObjectInstance, ProjectVoxelSurface, ProjectVoxelSurfaceMapping,
+    MAX_JSON_SAFE_ENTITY_ID,
 };
 use crate::project::{
     atomic_write, load_project, read_bounded, safe_join, save_project, stage_project,
@@ -30,11 +34,16 @@ use crate::project::{
 };
 use crate::runtime::{
     complete_packed_projection, load_runtime_project, load_runtime_project_from_loaded,
-    project_runtime_with_instance_frame, projection_for_object, resolve_frame, RuntimeProject,
+    load_runtime_project_from_loaded_with_surface, project_runtime_with_instance_frame,
+    projection_for_object, resolve_frame, RuntimeProject,
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
+use crate::surface::{
+    atlas_content_hash, canonical_texture_path, load_surface_assets_with_pending_texture,
+    material_content_hash,
+};
 
-const PROTOCOL_VERSION: u64 = 13;
+const PROTOCOL_VERSION: u64 = 14;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VOXEL_OBJECT_INSTANCE_BATCH: usize = 32;
@@ -62,6 +71,8 @@ const OPERATIONS: &[&str] = &[
     "setEntityKinematic",
     "setEntityTranslation",
     "upsertMaterial",
+    "upsertVoxelSurfaceMaterial",
+    "removeVoxelSurfaceMaterial",
     "prepareAssetImport",
     "prepareAssetReimport",
     "applyAssetImport",
@@ -181,6 +192,12 @@ impl StudioAdapter {
             "describe" => Ok(self.describe(&request_id)),
             "openProject" => self.open_project(&request_id, &request),
             "readProject" => self.read_project(&request_id),
+            "upsertVoxelSurfaceMaterial" => {
+                self.upsert_voxel_surface_material(&request_id, request)
+            }
+            "removeVoxelSurfaceMaterial" => {
+                self.remove_voxel_surface_material(&request_id, request)
+            }
             "inspectVoxelObjectSource" => self.inspect_source(&request_id, request),
             "prepareVoxelObjectConversion" => self.prepare_conversion(&request_id, request),
             "previewVoxelObjectConversion" => self.preview_conversion(&request_id, request),
@@ -252,6 +269,477 @@ impl StudioAdapter {
             request_id,
             json!({ "project": readout }),
         ))
+    }
+
+    fn upsert_voxel_surface_material(
+        &mut self,
+        request_id: &str,
+        request: Value,
+    ) -> Result<Value, AdapterError> {
+        let input: UpsertVoxelSurfaceMaterialRequest = decode_request(request)?;
+        self.ensure_project_hash(&input.expected_project_hash)?;
+        validate_surface_material_intent(&input.material)?;
+        if input.assignment.scene_id != self.require_open()?.project.entry_scene {
+            return Err(AdapterError::at(
+                "project.unknownScene",
+                "assignment.sceneId",
+                "surface assignment must name the entry scene",
+            ));
+        }
+
+        let open = self.require_open()?.clone();
+        let mut project = open.project.clone();
+        let existing_texture = project
+            .textures
+            .iter()
+            .find(|texture| texture.asset_id == input.texture_asset_id)
+            .cloned();
+        require_expected_hash(
+            "texture",
+            &input.texture_asset_id,
+            input.expected_texture_content_hash.as_deref(),
+            existing_texture
+                .as_ref()
+                .map(|texture| texture.content_hash.as_str()),
+        )?;
+
+        let (_, texture_bytes) = self.read_selection(&input.texture_source)?;
+        let texture_wrap = match input.material.mapping {
+            VoxelSurfaceMappingDraft::Repeat { .. } => ProjectTextureWrap::Repeat,
+            VoxelSurfaceMappingDraft::Atlas { .. } => ProjectTextureWrap::Clamp,
+        };
+        let provisional_version = existing_texture.as_ref().map_or(1, |texture| {
+            if texture.filter == input.filter && texture.wrap == texture_wrap {
+                texture.version
+            } else {
+                texture.version.saturating_add(1)
+            }
+        });
+        let descriptor = TextureDescriptor::admit_png_rgba8_resource(
+            input.texture_asset_id.clone(),
+            &texture_bytes,
+            render_texture_filter(input.filter),
+            render_texture_wrap(texture_wrap),
+            provisional_version,
+        )
+        .map_err(|error| {
+            AdapterError::at(
+                "surface.textureRejected",
+                "textureSource",
+                format!("PNG texture admission failed: {error:?}"),
+            )
+        })?;
+        let texture_content_hash = descriptor.content_hash.clone().ok_or_else(|| {
+            AdapterError::at(
+                "surface.textureRejected",
+                "textureSource",
+                "PNG texture admission did not produce a content hash",
+            )
+        })?;
+        let texture_version = existing_texture.as_ref().map_or(1, |texture| {
+            if texture.content_hash == texture_content_hash
+                && texture.filter == input.filter
+                && texture.wrap == texture_wrap
+            {
+                texture.version
+            } else {
+                texture.version.saturating_add(1)
+            }
+        });
+        let texture_source_path =
+            canonical_texture_path(&texture_content_hash).map_err(AdapterError::project)?;
+        let encoded_byte_length = u32::try_from(texture_bytes.len()).map_err(|_| {
+            AdapterError::at(
+                "surface.textureRejected",
+                "textureSource",
+                "PNG byte length does not fit the project format",
+            )
+        })?;
+        let texture = ProjectTexture {
+            asset_id: input.texture_asset_id.clone(),
+            version: texture_version,
+            content_hash: texture_content_hash.clone(),
+            source_path: texture_source_path.clone(),
+            width: descriptor.width,
+            height: descriptor.height,
+            encoded_byte_length,
+            filter: input.filter,
+            wrap: texture_wrap,
+        };
+        project
+            .textures
+            .retain(|entry| entry.asset_id != texture.asset_id);
+        project.textures.push(texture.clone());
+        project
+            .textures
+            .sort_by(|left, right| left.asset_id.cmp(&right.asset_id));
+
+        let (surface_mapping, atlas_receipt) = match input.material.mapping {
+            VoxelSurfaceMappingDraft::Repeat {
+                tile_scale_cells,
+                tile_origin_cells,
+            } => (
+                ProjectVoxelSurfaceMapping::Repeat {
+                    tile_scale_cells,
+                    tile_origin_cells,
+                },
+                None,
+            ),
+            VoxelSurfaceMappingDraft::Atlas {
+                atlas_asset_id,
+                expected_atlas_content_hash,
+                regions,
+                region_id,
+                tile_scale_cells,
+                tile_origin_cells,
+            } => {
+                let existing_atlas = project
+                    .atlases
+                    .iter()
+                    .find(|atlas| atlas.asset_id == atlas_asset_id)
+                    .cloned();
+                require_expected_hash(
+                    "atlas",
+                    &atlas_asset_id,
+                    expected_atlas_content_hash.as_deref(),
+                    existing_atlas
+                        .as_ref()
+                        .map(|atlas| atlas.content_hash.as_str()),
+                )?;
+                let regions = regions
+                    .into_iter()
+                    .map(|region| {
+                        if region.inset != "halfTexel" {
+                            return Err(AdapterError::at(
+                                "surface.atlasRejected",
+                                "material.mapping.regions.inset",
+                                "atlas regions require halfTexel inset",
+                            ));
+                        }
+                        Ok(ProjectAtlasRegion {
+                            id: region.id,
+                            content_min: region.content_min,
+                            content_extent: region.content_extent,
+                            padding: region.padding,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let mut atlas = ProjectAtlas {
+                    asset_id: atlas_asset_id.clone(),
+                    version: existing_atlas
+                        .as_ref()
+                        .map_or(1, |atlas| atlas.version.saturating_add(1)),
+                    content_hash: String::new(),
+                    texture_asset_id: texture.asset_id.clone(),
+                    texture_version: texture.version,
+                    texture_content_hash: texture.content_hash.clone(),
+                    regions,
+                };
+                if let Some(existing) = &existing_atlas {
+                    atlas.version = existing.version;
+                    atlas.content_hash =
+                        atlas_content_hash(&atlas).map_err(AdapterError::project)?;
+                    if atlas.content_hash != existing.content_hash {
+                        atlas.version = existing.version.saturating_add(1);
+                    }
+                }
+                atlas.content_hash = atlas_content_hash(&atlas).map_err(AdapterError::project)?;
+                let atlas_hash = atlas.content_hash.clone();
+                let atlas_version = atlas.version;
+                project
+                    .atlases
+                    .retain(|entry| entry.asset_id != atlas.asset_id);
+                project.atlases.push(atlas);
+                project
+                    .atlases
+                    .sort_by(|left, right| left.asset_id.cmp(&right.asset_id));
+                (
+                    ProjectVoxelSurfaceMapping::Atlas {
+                        atlas_asset_id: atlas_asset_id.clone(),
+                        atlas_version,
+                        atlas_content_hash: atlas_hash.clone(),
+                        region_id,
+                        tile_scale_cells,
+                        tile_origin_cells,
+                    },
+                    Some((atlas_asset_id, atlas_hash)),
+                )
+            }
+        };
+
+        let existing_material = project
+            .materials
+            .iter()
+            .find(|material| material.asset_id == input.material.material_asset_id)
+            .cloned();
+        require_expected_hash(
+            "material",
+            &input.material.material_asset_id,
+            input.material.expected_material_content_hash.as_deref(),
+            existing_material
+                .as_ref()
+                .and_then(|material| material.content_hash.as_deref()),
+        )?;
+        let material_version = existing_material
+            .as_ref()
+            .map_or(1, |material| material.version);
+        let mut material = ProjectMaterial {
+            asset_id: input.material.material_asset_id.clone(),
+            display_name: input.material.material_asset_id.clone(),
+            color: input.material.definition.style.color,
+            roughness: input.material.definition.style.roughness,
+            texture_tint: input.material.definition.style.texture_tint,
+            emission_color: input.material.definition.style.emission_color,
+            emissive: input.material.definition.style.emissive,
+            version: material_version,
+            content_hash: None,
+            voxel_surface: Some(ProjectVoxelSurface {
+                texture_asset_id: texture.asset_id.clone(),
+                texture_version: texture.version,
+                texture_content_hash: texture.content_hash.clone(),
+                alpha_mode: input.material.alpha_mode,
+                mapping: surface_mapping,
+            }),
+        };
+        material.content_hash =
+            Some(material_content_hash(&material).map_err(AdapterError::project)?);
+        if let Some(existing) = &existing_material {
+            if existing.content_hash != material.content_hash {
+                material.version = existing.version.saturating_add(1);
+                material.content_hash =
+                    Some(material_content_hash(&material).map_err(AdapterError::project)?);
+            }
+        }
+        let material_hash = material.content_hash.clone().expect("surface hash exists");
+        project
+            .materials
+            .retain(|entry| entry.asset_id != material.asset_id);
+        project.materials.push(material.clone());
+        project
+            .materials
+            .sort_by(|left, right| left.asset_id.cmp(&right.asset_id));
+
+        let instance = project
+            .instances
+            .iter_mut()
+            .find(|instance| instance.instance_id == input.assignment.instance_id)
+            .ok_or_else(|| {
+                AdapterError::at(
+                    "project.unknownInstance",
+                    "assignment.instanceId",
+                    "surface assignment names an unknown voxel-object instance",
+                )
+            })?;
+        instance
+            .material_overrides
+            .retain(|binding| binding.material_slot != input.assignment.material_slot);
+        instance.material_overrides.push(ProjectMaterialOverride {
+            material_slot: input.assignment.material_slot,
+            material_asset_id: material.asset_id.clone(),
+        });
+        instance
+            .material_overrides
+            .sort_by_key(|binding| binding.material_slot);
+        project.revision = project
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| AdapterError::project("project revision is exhausted"))?;
+
+        let staged_loaded = stage_project(&open, &project).map_err(AdapterError::project)?;
+        let staged_surface = load_surface_assets_with_pending_texture(
+            &staged_loaded.root,
+            &staged_loaded.project,
+            Some((&texture_source_path, &texture_bytes)),
+        )
+        .map_err(AdapterError::project)?;
+        let staged_runtime =
+            load_runtime_project_from_loaded_with_surface(staged_loaded.clone(), staged_surface)
+                .map_err(AdapterError::project)?;
+        let mut staged_projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, staged_mesh_resources) =
+            project_readout_from_runtime(&staged_runtime, &mut staged_projector)
+                .map_err(AdapterError::project)?;
+        let result = response(
+            "projectMutationApplied",
+            request_id,
+            json!({
+                "receipt": {
+                    "kind": "voxelSurfaceMaterialUpserted",
+                    "textureAssetId": texture.asset_id,
+                    "textureContentHash": texture.content_hash,
+                    "materialAssetId": material.asset_id,
+                    "materialContentHash": material_hash,
+                    "atlas": atlas_receipt.map(|(asset_id, content_hash)| json!({
+                        "atlasAssetId": asset_id,
+                        "atlasContentHash": content_hash,
+                    })),
+                    "sceneId": input.assignment.scene_id,
+                    "instanceId": input.assignment.instance_id,
+                    "materialSlot": input.assignment.material_slot,
+                },
+                "project": readout,
+            }),
+        );
+        preflight_response_size(&result)?;
+        self.ensure_disk_project_hash(&open, &input.expected_project_hash)?;
+        let texture_path =
+            safe_join(&open.root, &texture_source_path).map_err(AdapterError::project)?;
+        if texture_path.exists() {
+            let existing = read_bounded(&texture_path, 16 * 1024 * 1024, "PNG texture")
+                .map_err(AdapterError::project)?;
+            if existing != texture_bytes {
+                return Err(AdapterError::at(
+                    "surface.textureIdentityCollision",
+                    "textureSource",
+                    "content-addressed texture path contains different bytes",
+                ));
+            }
+        } else {
+            atomic_write(&texture_path, &texture_bytes).map_err(AdapterError::project)?;
+        }
+        atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
+            .map_err(AdapterError::project)?;
+        self.open = Some(staged_loaded);
+        self.runtime = Some(staged_runtime);
+        self.projector = staged_projector;
+        self.mesh_resources = staged_mesh_resources;
+        self.playback.clear();
+        Ok(result)
+    }
+
+    fn remove_voxel_surface_material(
+        &mut self,
+        request_id: &str,
+        request: Value,
+    ) -> Result<Value, AdapterError> {
+        let input: RemoveVoxelSurfaceMaterialRequest = decode_request(request)?;
+        self.ensure_project_hash(&input.expected_project_hash)?;
+        let open = self.require_open()?.clone();
+        let mut project = open.project.clone();
+        let material = project
+            .materials
+            .iter()
+            .find(|material| material.asset_id == input.material_asset_id)
+            .cloned()
+            .ok_or_else(|| {
+                AdapterError::at(
+                    "surface.unknownMaterial",
+                    "materialAssetId",
+                    "surface material is not present",
+                )
+            })?;
+        require_exact_present_hash(
+            "material",
+            &input.material_asset_id,
+            &input.expected_material_content_hash,
+            material.content_hash.as_deref(),
+        )?;
+        let surface = material.voxel_surface.as_ref().ok_or_else(|| {
+            AdapterError::at(
+                "surface.notTextured",
+                "materialAssetId",
+                "material does not own a voxel surface",
+            )
+        })?;
+        if surface.texture_asset_id != input.texture_asset_id
+            || surface.texture_content_hash != input.expected_texture_content_hash
+        {
+            return Err(AdapterError::at(
+                "surface.staleTexture",
+                "expectedTextureContentHash",
+                "removal does not match the material texture closure",
+            ));
+        }
+        let expected_atlas = match &surface.mapping {
+            ProjectVoxelSurfaceMapping::Repeat { .. } => None,
+            ProjectVoxelSurfaceMapping::Atlas {
+                atlas_asset_id,
+                atlas_content_hash,
+                ..
+            } => Some((atlas_asset_id.as_str(), atlas_content_hash.as_str())),
+        };
+        if expected_atlas
+            != input
+                .atlas_asset_id
+                .as_deref()
+                .zip(input.expected_atlas_content_hash.as_deref())
+        {
+            return Err(AdapterError::at(
+                "surface.staleAtlas",
+                "expectedAtlasContentHash",
+                "removal does not match the material atlas closure",
+            ));
+        }
+        if project.instances.iter().any(|instance| {
+            instance
+                .material_overrides
+                .iter()
+                .any(|binding| binding.material_asset_id == input.material_asset_id)
+        }) {
+            return Err(AdapterError::at(
+                "surface.materialInUse",
+                "materialAssetId",
+                "reassign every voxel-object slot before removing this surface material",
+            ));
+        }
+        project
+            .materials
+            .retain(|entry| entry.asset_id != input.material_asset_id);
+        if let Some(atlas_id) = input.atlas_asset_id.as_deref() {
+            let atlas_is_referenced = project.materials.iter().any(|material| {
+                matches!(
+                    material.voxel_surface.as_ref().map(|surface| &surface.mapping),
+                    Some(ProjectVoxelSurfaceMapping::Atlas { atlas_asset_id, .. }) if atlas_asset_id == atlas_id
+                )
+            });
+            if !atlas_is_referenced {
+                project.atlases.retain(|atlas| atlas.asset_id != atlas_id);
+            }
+        }
+        let texture_is_referenced = project.materials.iter().any(|material| {
+            material
+                .voxel_surface
+                .as_ref()
+                .is_some_and(|surface| surface.texture_asset_id == input.texture_asset_id)
+        });
+        if !texture_is_referenced {
+            project
+                .textures
+                .retain(|texture| texture.asset_id != input.texture_asset_id);
+        }
+        project.revision = project
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| AdapterError::project("project revision is exhausted"))?;
+        let staged_loaded = stage_project(&open, &project).map_err(AdapterError::project)?;
+        let staged_runtime = load_runtime_project_from_loaded(staged_loaded.clone())
+            .map_err(AdapterError::project)?;
+        let mut staged_projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, staged_mesh_resources) =
+            project_readout_from_runtime(&staged_runtime, &mut staged_projector)
+                .map_err(AdapterError::project)?;
+        let result = response(
+            "projectMutationApplied",
+            request_id,
+            json!({
+                "receipt": {
+                    "kind": "voxelSurfaceMaterialRemoved",
+                    "materialAssetId": input.material_asset_id,
+                    "textureAssetId": input.texture_asset_id,
+                },
+                "project": readout,
+            }),
+        );
+        preflight_response_size(&result)?;
+        self.ensure_disk_project_hash(&open, &input.expected_project_hash)?;
+        atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
+            .map_err(AdapterError::project)?;
+        self.open = Some(staged_loaded);
+        self.runtime = Some(staged_runtime);
+        self.projector = staged_projector;
+        self.mesh_resources = staged_mesh_resources;
+        self.playback.clear();
+        Ok(result)
     }
 
     fn inspect_source(&mut self, request_id: &str, request: Value) -> Result<Value, AdapterError> {
@@ -599,6 +1087,7 @@ impl StudioAdapter {
             rotation: input.instance.rotation,
             scale: input.instance.scale,
             collision_policy: ProjectCollisionPolicy::None,
+            material_overrides: Vec::new(),
         });
         project
             .instances
@@ -758,6 +1247,7 @@ impl StudioAdapter {
                 rotation: placement.instance.rotation,
                 scale: placement.instance.scale,
                 collision_policy: ProjectCollisionPolicy::None,
+                material_overrides: Vec::new(),
             });
         }
         project
@@ -889,6 +1379,26 @@ impl StudioAdapter {
         } else {
             Ok(())
         }
+    }
+
+    fn ensure_disk_project_hash(
+        &self,
+        open: &LoadedProject,
+        expected: &str,
+    ) -> Result<(), AdapterError> {
+        let current =
+            load_project(&open.root, &open.relative_path).map_err(AdapterError::project)?;
+        if current.project_hash != expected {
+            return Err(AdapterError::at(
+                "project.staleHash",
+                "expectedProjectHash",
+                format!(
+                    "expected {expected}, current project is {}",
+                    current.project_hash
+                ),
+            ));
+        }
+        Ok(())
     }
 
     fn require_open(&self) -> Result<&LoadedProject, AdapterError> {
@@ -1052,6 +1562,116 @@ fn decode_request<T: for<'de> Deserialize<'de>>(value: Value) -> Result<T, Adapt
         .map_err(|error| AdapterError::new("adapter.requestDecode", error.to_string()))
 }
 
+fn validate_surface_material_intent(
+    material: &VoxelSurfaceMaterialDraft,
+) -> Result<(), AdapterError> {
+    let authority = &material.definition.authority;
+    if authority.solid
+        || authority.collidable
+        || authority.occludes
+        || authority.structural_class != "decorative"
+    {
+        return Err(AdapterError::at(
+            "surface.materialAuthorityRejected",
+            "material.definition.authority",
+            "voxel surface authoring does not acquire structural or collision authority",
+        ));
+    }
+    let style = &material.definition.style;
+    if style.texture.is_some() {
+        return Err(AdapterError::at(
+            "surface.duplicateTextureAuthority",
+            "material.definition.style.texture",
+            "the adapter derives the exact texture reference from textureSource",
+        ));
+    }
+    let expected_uv = match material.mapping {
+        VoxelSurfaceMappingDraft::Repeat { .. } => "planar",
+        VoxelSurfaceMappingDraft::Atlas { .. } => "atlas",
+    };
+    if style.uv_strategy != expected_uv {
+        return Err(AdapterError::at(
+            "surface.uvStrategyMismatch",
+            "material.definition.style.uvStrategy",
+            format!("{expected_uv} is required for the selected surface mapping"),
+        ));
+    }
+    Ok(())
+}
+
+fn require_expected_hash(
+    kind: &str,
+    asset_id: &str,
+    expected: Option<&str>,
+    current: Option<&str>,
+) -> Result<(), AdapterError> {
+    match (expected, current) {
+        (None, None) => Ok(()),
+        (Some(expected), Some(current)) if expected == current => Ok(()),
+        (None, Some(_)) => Err(AdapterError::at(
+            format!("surface.{kind}AlreadyExists"),
+            format!("expected{}ContentHash", title_case(kind)),
+            format!("{asset_id} already exists; supply its exact content hash"),
+        )),
+        (Some(_), None) => Err(AdapterError::at(
+            format!("surface.unknown{0}", title_case(kind)),
+            format!("expected{}ContentHash", title_case(kind)),
+            format!("{asset_id} does not exist"),
+        )),
+        (Some(_), Some(_)) => Err(AdapterError::at(
+            format!("surface.stale{}", title_case(kind)),
+            format!("expected{}ContentHash", title_case(kind)),
+            format!("{asset_id} changed since it was read"),
+        )),
+    }
+}
+
+fn require_exact_present_hash(
+    kind: &str,
+    asset_id: &str,
+    expected: &str,
+    current: Option<&str>,
+) -> Result<(), AdapterError> {
+    require_expected_hash(kind, asset_id, Some(expected), current)
+}
+
+fn title_case(value: &str) -> String {
+    let mut characters = value.chars();
+    match characters.next() {
+        Some(first) => first.to_uppercase().chain(characters).collect(),
+        None => String::new(),
+    }
+}
+
+fn preflight_response_size(value: &Value) -> Result<(), AdapterError> {
+    let response_bytes = serde_json::to_vec(value)
+        .map_err(|error| AdapterError::new("adapter.responseEncode", error.to_string()))?;
+    if response_bytes.len() > MAX_RESPONSE_BYTES {
+        return Err(AdapterError::new(
+            "adapter.responseTooLarge",
+            format!(
+                "mutation response is {} bytes, exceeding the {MAX_RESPONSE_BYTES}-byte bound",
+                response_bytes.len()
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn render_texture_filter(value: ProjectTextureFilter) -> TextureFilter {
+    match value {
+        ProjectTextureFilter::Nearest => TextureFilter::Nearest,
+        ProjectTextureFilter::Linear => TextureFilter::Linear,
+    }
+}
+
+fn render_texture_wrap(value: ProjectTextureWrap) -> TextureWrap {
+    match value {
+        ProjectTextureWrap::Repeat => TextureWrap::Repeat,
+        ProjectTextureWrap::Clamp => TextureWrap::Clamp,
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 enum SourceKind {
@@ -1071,6 +1691,120 @@ enum FileScope {
 struct FileSelection {
     scope: FileScope,
     path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct UpsertVoxelSurfaceMaterialRequest {
+    #[serde(rename = "type")]
+    _type: String,
+    #[serde(rename = "protocolVersion")]
+    _protocol_version: u64,
+    #[serde(rename = "requestId")]
+    _request_id: String,
+    expected_project_hash: String,
+    texture_asset_id: String,
+    expected_texture_content_hash: Option<String>,
+    texture_source: FileSelection,
+    filter: ProjectTextureFilter,
+    material: VoxelSurfaceMaterialDraft,
+    assignment: VoxelSurfaceAssignmentDraft,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RemoveVoxelSurfaceMaterialRequest {
+    #[serde(rename = "type")]
+    _type: String,
+    #[serde(rename = "protocolVersion")]
+    _protocol_version: u64,
+    #[serde(rename = "requestId")]
+    _request_id: String,
+    expected_project_hash: String,
+    material_asset_id: String,
+    expected_material_content_hash: String,
+    texture_asset_id: String,
+    expected_texture_content_hash: String,
+    atlas_asset_id: Option<String>,
+    expected_atlas_content_hash: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct VoxelSurfaceMaterialDraft {
+    material_asset_id: String,
+    expected_material_content_hash: Option<String>,
+    definition: StoredMaterialDefinition,
+    alpha_mode: ProjectVoxelAlphaMode,
+    mapping: VoxelSurfaceMappingDraft,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct VoxelSurfaceAssignmentDraft {
+    scene_id: String,
+    instance_id: String,
+    material_slot: u16,
+}
+
+#[derive(Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+enum VoxelSurfaceMappingDraft {
+    Repeat {
+        tile_scale_cells: [f32; 2],
+        tile_origin_cells: [f32; 2],
+    },
+    Atlas {
+        atlas_asset_id: String,
+        expected_atlas_content_hash: Option<String>,
+        regions: Vec<VoxelAtlasRegionDraft>,
+        region_id: String,
+        tile_scale_cells: [f32; 2],
+        tile_origin_cells: [f32; 2],
+    },
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct VoxelAtlasRegionDraft {
+    id: String,
+    content_min: [u32; 2],
+    content_extent: [u32; 2],
+    padding: ProjectAtlasPadding,
+    inset: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredMaterialDefinition {
+    authority: StoredMaterialAuthority,
+    style: StoredMaterialStyle,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredMaterialAuthority {
+    solid: bool,
+    collidable: bool,
+    occludes: bool,
+    structural_class: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredMaterialStyle {
+    color: [f32; 4],
+    texture: Option<Value>,
+    texture_tint: [f32; 4],
+    emission_color: [f32; 4],
+    roughness: f32,
+    emissive: f32,
+    uv_strategy: String,
 }
 
 #[derive(Deserialize)]
@@ -1264,14 +1998,16 @@ fn candidate_materials(
             existing
                 .get(binding.material_asset_id.as_str())
                 .map(|material| (*material).clone())
-                .unwrap_or_else(|| ProjectMaterial {
-                    asset_id: binding.material_asset_id.clone(),
-                    display_name: binding
-                        .display_name
-                        .clone()
-                        .unwrap_or_else(|| binding.material_asset_id.clone()),
-                    color: experiment_color(index),
-                    roughness: 0.82,
+                .unwrap_or_else(|| {
+                    ProjectMaterial::flat(
+                        binding.material_asset_id.clone(),
+                        binding
+                            .display_name
+                            .clone()
+                            .unwrap_or_else(|| binding.material_asset_id.clone()),
+                        experiment_color(index),
+                        0.82,
+                    )
                 })
         })
         .collect()
@@ -1392,14 +2128,48 @@ fn project_readout_from_runtime(
         "importedMesh": true,
         "import": null,
     })];
+    assets.extend(loaded.project.textures.iter().map(|texture| json!({
+        "assetId": texture.asset_id,
+        "kind": "texture",
+        "version": texture.version,
+        "hash": texture.content_hash,
+        "sourcePath": texture.source_path,
+        "label": texture.asset_id,
+        "dependencies": [],
+        "dependents": loaded.project.atlases.iter().filter(|atlas| atlas.texture_asset_id == texture.asset_id).map(|atlas| atlas.asset_id.clone()).chain(
+            loaded.project.materials.iter().filter(|material| material.voxel_surface.as_ref().is_some_and(|surface| surface.texture_asset_id == texture.asset_id)).map(|material| material.asset_id.clone())
+        ).collect::<Vec<_>>(),
+        "material": false,
+        "importedMesh": false,
+        "import": null,
+    })));
+    assets.extend(loaded.project.atlases.iter().map(|atlas| json!({
+        "assetId": atlas.asset_id,
+        "kind": "sprite-sheet",
+        "version": atlas.version,
+        "hash": atlas.content_hash,
+        "sourcePath": null,
+        "label": atlas.asset_id,
+        "dependencies": [atlas.texture_asset_id],
+        "dependents": loaded.project.materials.iter().filter(|material| matches!(
+            material.voxel_surface.as_ref().map(|surface| &surface.mapping),
+            Some(ProjectVoxelSurfaceMapping::Atlas { atlas_asset_id, .. }) if atlas_asset_id == &atlas.asset_id
+        )).map(|material| material.asset_id.clone()).collect::<Vec<_>>(),
+        "material": false,
+        "importedMesh": false,
+        "import": null,
+    })));
     assets.extend(loaded.project.materials.iter().map(|material| json!({
         "assetId": material.asset_id,
         "kind": "material",
-        "version": 1,
-        "hash": null,
+        "version": material.version,
+        "hash": material.content_hash,
         "sourcePath": null,
         "label": material.display_name,
-        "dependencies": [],
+        "dependencies": material.voxel_surface.as_ref().map(|surface| match &surface.mapping {
+            ProjectVoxelSurfaceMapping::Repeat { .. } => vec![surface.texture_asset_id.clone()],
+            ProjectVoxelSurfaceMapping::Atlas { atlas_asset_id, .. } => vec![atlas_asset_id.clone()],
+        }).unwrap_or_default(),
         "dependents": loaded.project.voxel_objects.iter().map(|object| object.asset_id.clone()).collect::<Vec<_>>(),
         "material": true,
         "importedMesh": false,
@@ -1438,6 +2208,7 @@ fn project_readout_from_runtime(
         .iter()
         .map(material_authoring_readout)
         .collect::<Vec<_>>();
+    let surface_authoring = voxel_surface_authoring_readout(loaded);
     let object_bytes = loaded
         .project
         .voxel_objects
@@ -1445,6 +2216,12 @@ fn project_readout_from_runtime(
         .filter_map(|entry| safe_join(&loaded.root, &entry.path).ok())
         .filter_map(|path| std::fs::metadata(path).ok())
         .map(|metadata| metadata.len())
+        .sum::<u64>();
+    let texture_bytes = loaded
+        .project
+        .textures
+        .iter()
+        .map(|texture| u64::from(texture.encoded_byte_length))
         .sum::<u64>();
     let readout = json!({
         "identity": {
@@ -1467,10 +2244,12 @@ fn project_readout_from_runtime(
         "inspections": {
             "catalog": {
                 "entryCount": assets.len(),
-                "dependencyCount": loaded.project.materials.len(),
+                "dependencyCount": loaded.project.materials.len() + loaded.project.atlases.len(),
                 "kinds": [
                     { "name": "mesh-animation", "count": 1 },
                     { "name": "material", "count": loaded.project.materials.len() },
+                    { "name": "sprite-sheet", "count": loaded.project.atlases.len() },
+                    { "name": "texture", "count": loaded.project.textures.len() },
                     { "name": "voxel-object", "count": loaded.project.voxel_objects.len() },
                 ],
                 "diagnostics": { "diagnostics": [] },
@@ -1499,10 +2278,10 @@ fn project_readout_from_runtime(
             },
             "persistence": {
                 "schemaVersion": 1,
-                "artifactCount": 1 + loaded.project.voxel_objects.len(),
-                "requiredArtifactCount": 1 + loaded.project.voxel_objects.len(),
-                "declaredByteCount": loaded.canonical_json.len() as u64 + object_bytes,
-                "classes": [{ "name": "durable", "count": 1 + loaded.project.voxel_objects.len() }],
+                "artifactCount": 1 + loaded.project.voxel_objects.len() + loaded.project.textures.len(),
+                "requiredArtifactCount": 1 + loaded.project.voxel_objects.len() + loaded.project.textures.len(),
+                "declaredByteCount": loaded.canonical_json.len() as u64 + object_bytes + texture_bytes,
+                "classes": [{ "name": "durable", "count": 1 + loaded.project.voxel_objects.len() + loaded.project.textures.len() }],
                 "roles": [{ "name": "resource:voxel-lab-project", "count": 1 }],
                 "loadSteps": [{ "stage": "project", "path": loaded.relative_path }],
                 "diagnostics": { "diagnostics": [] },
@@ -1512,6 +2291,7 @@ fn project_readout_from_runtime(
         "assetBrowser": { "assets": assets, "lockEntries": lock_entries },
         "voxelAuthoring": { "assets": [], "instances": [], "materials": material_readouts },
         "voxelObjectAuthoring": { "assets": object_assets, "instances": object_instances },
+        "voxelSurfaceAuthoring": surface_authoring,
         "animatedMeshResources": [{
             "asset": loaded.project.conversion.source_asset_id,
             "contentHash": loaded.project.conversion.expected_source_sha256,
@@ -1520,6 +2300,7 @@ fn project_readout_from_runtime(
         }],
         "entityComponents": entity_components,
         "meshResources": &projection.mesh_resources,
+        "textureResources": &runtime.surface.texture_resources,
         "projection": projection.frame,
         "projectionReadout": projection_readout(loaded.project.revision, loaded.project.instances.len()),
     });
@@ -1588,30 +2369,164 @@ fn studio_instance(instance: &ProjectVoxelObjectInstance) -> Value {
         "translation": instance.translation,
         "rotation": instance.rotation,
         "scale": instance.scale,
-        "materialOverrides": [],
+        "materialOverrides": instance.material_overrides,
     })
 }
 
 fn material_authoring_readout(material: &ProjectMaterial) -> Value {
     json!({
         "assetId": material.asset_id,
-        "definition": {
-            "authority": {
-                "solid": false,
-                "collidable": false,
-                "occludes": false,
-                "structuralClass": "decorative",
-            },
-            "style": {
-                "color": material.color,
-                "texture": null,
-                "textureTint": [1.0, 1.0, 1.0, 1.0],
-                "emissionColor": [0.0, 0.0, 0.0, 1.0],
-                "roughness": material.roughness,
-                "emissive": 0.0,
-                "uvStrategy": "flat",
-            },
+        "definition": material_definition_readout(material),
+    })
+}
+
+fn material_definition_readout(material: &ProjectMaterial) -> Value {
+    let (texture, uv_strategy) =
+        material
+            .voxel_surface
+            .as_ref()
+            .map_or((Value::Null, "flat"), |surface| {
+                let uv = match surface.mapping {
+                    ProjectVoxelSurfaceMapping::Repeat { .. } => "planar",
+                    ProjectVoxelSurfaceMapping::Atlas { .. } => "atlas",
+                };
+                (
+                    json!({
+                        "id": surface.texture_asset_id,
+                        "version": { "exact": surface.texture_version },
+                        "hash": surface.texture_content_hash,
+                    }),
+                    uv,
+                )
+            });
+    json!({
+        "authority": {
+            "solid": false,
+            "collidable": false,
+            "occludes": false,
+            "structuralClass": "decorative",
         },
+        "style": {
+            "color": material.color,
+            "texture": texture,
+            "textureTint": material.texture_tint,
+            "emissionColor": material.emission_color,
+            "roughness": material.roughness,
+            "emissive": material.emissive,
+            "uvStrategy": uv_strategy,
+        },
+    })
+}
+
+fn voxel_surface_authoring_readout(loaded: &LoadedProject) -> Value {
+    let textures = loaded
+        .project
+        .textures
+        .iter()
+        .map(|texture| {
+            json!({
+                "textureAssetId": texture.asset_id,
+                "version": texture.version,
+                "contentHash": texture.content_hash,
+                "sourcePath": texture.source_path,
+                "width": texture.width,
+                "height": texture.height,
+                "encodedByteLength": texture.encoded_byte_length,
+                "filter": texture.filter,
+                "wrap": texture.wrap,
+            })
+        })
+        .collect::<Vec<_>>();
+    let atlases = loaded
+        .project
+        .atlases
+        .iter()
+        .map(|atlas| {
+            json!({
+                "atlasAssetId": atlas.asset_id,
+                "version": atlas.version,
+                "contentHash": atlas.content_hash,
+                "textureAssetId": atlas.texture_asset_id,
+                "textureVersion": atlas.texture_version,
+                "textureContentHash": atlas.texture_content_hash,
+                "regions": atlas.regions.iter().map(|region| json!({
+                    "id": region.id,
+                    "contentMin": region.content_min,
+                    "contentExtent": region.content_extent,
+                    "padding": region.padding,
+                    "inset": "halfTexel",
+                })).collect::<Vec<_>>(),
+            })
+        })
+        .collect::<Vec<_>>();
+    let materials = loaded
+        .project
+        .materials
+        .iter()
+        .filter_map(|material| {
+            let surface = material.voxel_surface.as_ref()?;
+            let mapping = match &surface.mapping {
+                ProjectVoxelSurfaceMapping::Repeat {
+                    tile_scale_cells,
+                    tile_origin_cells,
+                } => json!({
+                    "kind": "repeat",
+                    "tileScaleCells": tile_scale_cells,
+                    "tileOriginCells": tile_origin_cells,
+                }),
+                ProjectVoxelSurfaceMapping::Atlas {
+                    atlas_asset_id,
+                    atlas_version,
+                    atlas_content_hash,
+                    region_id,
+                    tile_scale_cells,
+                    tile_origin_cells,
+                } => json!({
+                    "kind": "atlas",
+                    "atlasAssetId": atlas_asset_id,
+                    "atlasVersion": atlas_version,
+                    "atlasContentHash": atlas_content_hash,
+                    "regionId": region_id,
+                    "tileScaleCells": tile_scale_cells,
+                    "tileOriginCells": tile_origin_cells,
+                }),
+            };
+            let assignments = loaded
+                .project
+                .instances
+                .iter()
+                .flat_map(|instance| {
+                    instance
+                        .material_overrides
+                        .iter()
+                        .filter(|binding| binding.material_asset_id == material.asset_id)
+                        .map(|binding| {
+                            json!({
+                                "sceneId": loaded.project.entry_scene,
+                                "instanceId": instance.instance_id,
+                                "materialSlot": binding.material_slot,
+                            })
+                        })
+                })
+                .collect::<Vec<_>>();
+            Some(json!({
+                "materialAssetId": material.asset_id,
+                "version": material.version,
+                "contentHash": material.content_hash,
+                "definition": material_definition_readout(material),
+                "textureAssetId": surface.texture_asset_id,
+                "textureVersion": surface.texture_version,
+                "textureContentHash": surface.texture_content_hash,
+                "alphaMode": surface.alpha_mode,
+                "mapping": mapping,
+                "assignments": assignments,
+            }))
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "textures": textures,
+        "atlases": atlases,
+        "materials": materials,
     })
 }
 

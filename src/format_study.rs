@@ -397,6 +397,7 @@ mod tests {
         MeshPayload {
             positions,
             normals,
+            tile_coordinates: Vec::new(),
             indices,
             groups: Vec::new(),
             bounds: svc_mesh::MeshBounds {

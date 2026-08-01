@@ -5,7 +5,8 @@ use std::path::Path;
 use std::time::Instant;
 
 use render_model::{
-    MaterialUvStrategy, RenderDiff, RenderMaterialDescriptor, RenderMetadata, Transform,
+    MaterialUvStrategy, MeshMaterialSlot, RenderDiff, RenderFrameDiff, RenderMaterialDescriptor,
+    RenderMetadata, Transform,
 };
 use render_projection::{
     VoxelObjectProjectionInstance, VoxelObjectProjectionResult, VoxelObjectRenderProjector,
@@ -20,6 +21,7 @@ use voxel_object_runtime::{
 use crate::model::{ProjectFrameSelection, ProjectMaterial, ProjectVoxelObjectInstance};
 use crate::project::{load_project, read_bounded_text, safe_join, LoadedProject, MAX_OBJECT_BYTES};
 use crate::provider_pin::engine_revision;
+use crate::surface::{load_surface_assets, SurfaceAssets};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -102,6 +104,7 @@ pub struct RuntimeBehaviorEvidence {
 pub struct RuntimeProject {
     pub loaded: LoadedProject,
     pub objects: BTreeMap<String, AdmittedVoxelObject>,
+    pub surface: SurfaceAssets,
     pub resources: RuntimeResourceEvidence,
 }
 
@@ -112,6 +115,14 @@ pub fn load_runtime_project(root: &Path, relative_project: &str) -> Result<Runti
 
 pub(crate) fn load_runtime_project_from_loaded(
     loaded: LoadedProject,
+) -> Result<RuntimeProject, String> {
+    let surface = load_surface_assets(&loaded)?;
+    load_runtime_project_from_loaded_with_surface(loaded, surface)
+}
+
+pub(crate) fn load_runtime_project_from_loaded_with_surface(
+    loaded: LoadedProject,
+    surface: SurfaceAssets,
 ) -> Result<RuntimeProject, String> {
     let mut objects = BTreeMap::new();
     let mut canonical_object_bytes = 0usize;
@@ -162,6 +173,7 @@ pub(crate) fn load_runtime_project_from_loaded(
     Ok(RuntimeProject {
         loaded,
         objects,
+        surface,
         resources,
     })
 }
@@ -572,12 +584,11 @@ pub(crate) fn project_runtime_with_instance_frame(
             projection_instance(runtime, instance, frame)
         })
         .collect::<Result<Vec<_>, String>>()?;
-    projector
-        .project(
-            &instances,
-            &render_materials(&runtime.loaded.project.materials),
-        )
-        .map_err(|error| format!("voxel-object projection rejected: {error:?}"))
+    let mut projection = projector
+        .project(&instances, &runtime.surface.render_materials)
+        .map_err(|error| format!("voxel-object projection rejected: {error:?}"))?;
+    projection.frame = frame_with_textures(&runtime.surface.texture_descriptors, projection.frame)?;
+    Ok(projection)
 }
 
 pub fn projection_for_object(
@@ -606,6 +617,25 @@ pub fn projection_for_object(
         .map_err(|error| format!("candidate projection rejected: {error:?}"))
 }
 
+fn frame_with_textures(
+    textures: &[render_model::TextureDescriptor],
+    frame: RenderFrameDiff,
+) -> Result<RenderFrameDiff, String> {
+    if textures.is_empty() {
+        return Ok(frame);
+    }
+    let mut operations = Vec::with_capacity(textures.len() + frame.ops.len());
+    operations.extend(
+        textures
+            .iter()
+            .cloned()
+            .map(|texture| RenderDiff::DefineTexture { texture }),
+    );
+    operations.extend(frame.ops);
+    RenderFrameDiff::try_from_ops(operations)
+        .map_err(|error| format!("textured voxel projection rejected: {error:?}"))
+}
+
 pub fn render_materials(
     materials: &[ProjectMaterial],
 ) -> BTreeMap<String, RenderMaterialDescriptor> {
@@ -624,6 +654,7 @@ pub fn render_materials(
                     emission_color: [0.0; 3],
                     emission_intensity: 0.0,
                     uv_strategy: MaterialUvStrategy::Flat,
+                    voxel_surface: None,
                 },
             )
         })
@@ -666,7 +697,14 @@ fn projection_instance<'a>(
             scale: instance.scale,
         },
         visible: true,
-        material_overrides: Vec::new(),
+        material_overrides: instance
+            .material_overrides
+            .iter()
+            .map(|binding| MeshMaterialSlot {
+                slot: binding.material_slot,
+                material: binding.material_asset_id.clone(),
+            })
+            .collect(),
         metadata: RenderMetadata {
             source_entity: Some(instance.entity_id),
             source_scene_node: Some(instance.entity_id),

@@ -20,17 +20,19 @@ name = "rusty-engine-voxels-studio-adapter"
 path = "src/bin/studio-adapter.rs"
 
 [dependencies]
+asset-catalog = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
+core-assets = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
 gif = "0.13"
-render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
-render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
+render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
+render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
 rusty-engine-voxels-revision = { path = "tools/engine-revision" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
-svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
-voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
-voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
-voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "1a50ccae4cc17e079b5ca568d4793f77ea28ca22" }
+svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
+voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
+voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
+voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "4c9909ddb2a985f1b2e18c3ff14cf16f86d7fbbb" }
 
 [lints.rust]
 unsafe_code = "forbid"

@@ -15,7 +15,8 @@ mechanisms remain owned by Rusty Engine.
 4. Rusty Engine's voxel-object runtime independently admits the serialized object and resolves a
    selected default or clip frame.
 5. Rusty Engine's renderer-neutral projection defines the material and voxel object and creates the
-   selected instance. Large mesh streams are packed into deterministic content-addressed resources;
+   selected instance. Large mesh streams and admitted PNG textures are packed or copied into
+   deterministic content-addressed resources;
    this adapter publishes them atomically under the ignored `.studio-cache/render-resources`
    directory and returns only their bounded manifest beside the control frame. Studio supplies the
    Three renderer and authoring UI.
@@ -43,10 +44,10 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 13 only as an
-explicit host boundary; protocol 13 is neither the voxel project schema nor an industry voxel
+cadence, and visual presentation. The project adapter implements Studio protocol 14 only as an
+explicit host boundary; protocol 14 is neither the voxel project schema nor an industry voxel
 standard. The retained single-placement operation remains an explicit one-instance upsert.
-Protocol 13 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
+Protocol 14 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
 duplicate or existing identities, stale project hashes, invalid later entries, exhausted JSON-safe
 owner IDs, oversized project/readout encodings, and unsupported material overrides before replacing
 the project document once. Owner IDs and the receipt preserve request order even though canonical
@@ -59,14 +60,19 @@ Studio advances that player one virtual frame only after the shared renderer acc
 pose and its authored duration elapses. `once` settles paused on the terminal pose and Play restarts
 from frame zero; repeat and ping-pong continue through the same acknowledgement-paced path.
 
-Project schema 2 assigns every voxel-object instance a stable entity ID. The selected entity owns
+Project schema 3 assigns every voxel-object instance a stable entity ID and persists strict texture,
+atlas, surface-material, and per-slot override facts. The adapter admits the exact PNG and complete
+Engine asset-catalog closure, stages runtime projection before publication, and rejects stale hashes,
+invalid atlas bounds, resource drift, and removal of an assigned material without changing project
+authority. Content-addressed PNG resources are immutable; Studio owns only form intent and preview.
+The selected entity owns
 the typed Voxel Object capability and its durable initial pose; Studio's entity-inspector controls
 only the disposable player posture. This project-specific entity record proves the explicit owner
 link without requiring a generic downstream component schema.
 
 ## Provider pin
 
-`engine-source.json` is the sole authored Rusty Engine identity. The six direct Rust dependencies,
+`engine-source.json` is the sole authored Rusty Engine identity. The eight direct Rust dependencies,
 their generated Cargo lock entries, runtime evidence readout, and managed Studio checkout all
 derive from that exact public commit. `scripts/engine-revision check` is the common strict validator;
 `scripts/engine-revision update <sha>` prepares a bounded projection change through a disposable

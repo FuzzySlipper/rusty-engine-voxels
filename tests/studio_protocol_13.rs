@@ -8,7 +8,7 @@ use rusty_engine_voxels::project::{load_project, save_project};
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
 use serde_json::{json, Value};
 
-const STUDIO_PROTOCOL_VERSION: u64 = 13;
+const STUDIO_PROTOCOL_VERSION: u64 = 14;
 const ENTRY_SCENE: &str = "scene/voxel-lab";
 const ASSET_ID: &str = "voxel-object/retro-character";
 static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(1);
@@ -20,7 +20,7 @@ struct TempProject {
 impl TempProject {
     fn new() -> Self {
         let root = std::env::temp_dir().join(format!(
-            "rusty-engine-voxels-protocol-13-{}-{}",
+            "rusty-engine-voxels-protocol-14-{}-{}",
             std::process::id(),
             NEXT_TEMP_ROOT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -42,7 +42,7 @@ impl Drop for TempProject {
 }
 
 #[test]
-fn protocol_13_batch_attachment_is_ordered_atomic_and_restart_stable() {
+fn protocol_14_batch_attachment_is_ordered_atomic_and_restart_stable() {
     let project = TempProject::new();
     let mut adapter = StudioAdapter::default();
     let opened = open_project(&mut adapter, &project, "batch-open");
@@ -57,8 +57,8 @@ fn protocol_13_batch_attachment_is_ordered_atomic_and_restart_stable() {
             "protocolVersion": STUDIO_PROTOCOL_VERSION,
             "requestId": "batch-describe",
         }))
-        .expect("protocol 13 describe should succeed");
-    assert_eq!(described["adapter"]["protocolVersion"], 13);
+        .expect("protocol 14 describe should succeed");
+    assert_eq!(described["adapter"]["protocolVersion"], 14);
     assert!(described["adapter"]["operations"]
         .as_array()
         .expect("operations should be an array")
@@ -73,7 +73,7 @@ fn protocol_13_batch_attachment_is_ordered_atomic_and_restart_stable() {
                 placement("alpha-request-second", ASSET_ID),
             ],
         ))
-        .expect("valid protocol 13 batch should attach atomically");
+        .expect("valid protocol 14 batch should attach atomically");
     assert_eq!(attached["type"], "projectMutationApplied");
     assert_eq!(attached["receipt"]["kind"], "voxelObjectInstancesAttached");
     assert_eq!(
