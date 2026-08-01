@@ -52,4 +52,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Install the reverse provider's exact Chromium dependency
+        run: pnpm dlx playwright@1.61.1 install --with-deps chromium
       - run: ./scripts/verify-studio-browser.sh "${{ inputs.reverse_provider_commit }}"
