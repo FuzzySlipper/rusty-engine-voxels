@@ -43,10 +43,10 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 12 only as an
-explicit host boundary; protocol 12 is neither the voxel project schema nor an industry voxel
+cadence, and visual presentation. The project adapter implements Studio protocol 13 only as an
+explicit host boundary; protocol 13 is neither the voxel project schema nor an industry voxel
 standard. The retained single-placement operation remains an explicit one-instance upsert.
-Protocol 12 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
+Protocol 13 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
 duplicate or existing identities, stale project hashes, invalid later entries, exhausted JSON-safe
 owner IDs, oversized project/readout encodings, and unsupported material overrides before replacing
 the project document once. Owner IDs and the receipt preserve request order even though canonical

@@ -34,7 +34,7 @@ use crate::runtime::{
 };
 use crate::studio_playback::{PlaybackCommand, StudioPlaybackError, StudioVoxelObjectPlayback};
 
-const PROTOCOL_VERSION: u64 = 12;
+const PROTOCOL_VERSION: u64 = 13;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VOXEL_OBJECT_INSTANCE_BATCH: usize = 32;
@@ -56,6 +56,7 @@ const OPERATIONS: &[&str] = &[
     "renameSceneObject",
     "reparentSceneObject",
     "setSceneObjectTransform",
+    "setSceneObjectRenderableTransform",
     "setSceneObjectAppearance",
     "setEntityCollision",
     "setEntityKinematic",
@@ -1562,6 +1563,11 @@ fn hierarchy_readout(loaded: &LoadedProject) -> Value {
                 "entityId": instance.entity_id,
                 "localTransform": transform,
                 "worldTransform": transform,
+                "renderableTransform": {
+                    "translation": [0.0, 0.0, 0.0],
+                    "rotation": [0.0, 0.0, 0.0, 1.0],
+                    "scale": [1.0, 1.0, 1.0],
+                },
             })
         })
         .collect::<Vec<_>>();

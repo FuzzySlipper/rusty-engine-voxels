@@ -12,7 +12,7 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
-const PROTOCOL_VERSION = 12;
+const PROTOCOL_VERSION = 13;
 const initialRequests = [
   { type: 'describe', protocolVersion: PROTOCOL_VERSION, requestId: 'describe-smoke' },
   {
@@ -51,7 +51,7 @@ if (opened.project.projection.ops.length !== 3
 }
 const baselineResources = validateMeshResources(root, opened.project.meshResources);
 if (!described.adapter.operations.includes('attachVoxelObjectInstances')) {
-  throw new Error('protocol 12 describe omitted attachVoxelObjectInstances');
+  throw new Error('protocol 13 describe omitted attachVoxelObjectInstances');
 }
 
 const batchRoot = mkdtempSync(join(tmpdir(), 'rusty-engine-voxels-batch-'));
@@ -88,7 +88,7 @@ try {
     || batchApplied.receipt.placements[1]?.instanceId !== 'smoke-request-second'
     || batchApplied.receipt.placements[1]?.ownerEntityId !== 3
     || batchApplied.project.voxelObjectAuthoring.instances.length !== 3) {
-    throw new Error('managed protocol 12 decoder did not accept the ordered batch receipt');
+    throw new Error('managed protocol 13 decoder did not accept the ordered batch receipt');
   }
   batchReceipt = batchApplied.receipt;
   batchProjectHash = batchApplied.project.identity.projectHash;
@@ -104,7 +104,7 @@ try {
   if (reopenedBatch.type !== 'projectOpened'
     || reopenedBatch.project.identity.projectHash !== batchProjectHash
     || reopenedBatch.project.voxelObjectAuthoring.instances.length !== 3) {
-    throw new Error('protocol 12 batch did not survive a fresh adapter process');
+    throw new Error('protocol 13 batch did not survive a fresh adapter process');
   }
 
   const beforeRejectedBatch = readFileSync(batchProjectPath);

@@ -13,7 +13,7 @@ use serde_json::json;
 
 const HIGH_FIDELITY_PROJECT_FILE: &str =
     "content/projects/retro-character-high-fidelity.project.json";
-const STUDIO_PROTOCOL_VERSION: u64 = 12;
+const STUDIO_PROTOCOL_VERSION: u64 = 13;
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
@@ -136,6 +136,14 @@ fn studio_adapter_opens_the_project_and_rejects_unowned_mutation() {
         }))
         .expect("open should return a Studio readout");
     assert_eq!(opened["type"], "projectOpened");
+    assert_eq!(
+        opened["project"]["sceneHierarchy"]["nodes"][0]["renderableTransform"],
+        json!({
+            "translation": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.0, 1.0, 1.0],
+        })
+    );
     assert_eq!(
         opened["project"]["voxelObjectAuthoring"]["assets"]
             .as_array()

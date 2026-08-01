@@ -8,7 +8,7 @@ use rusty_engine_voxels::project::{load_project, save_project};
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
 use serde_json::{json, Value};
 
-const STUDIO_PROTOCOL_VERSION: u64 = 12;
+const STUDIO_PROTOCOL_VERSION: u64 = 13;
 const ENTRY_SCENE: &str = "scene/voxel-lab";
 const ASSET_ID: &str = "voxel-object/retro-character";
 static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(1);
@@ -20,7 +20,7 @@ struct TempProject {
 impl TempProject {
     fn new() -> Self {
         let root = std::env::temp_dir().join(format!(
-            "rusty-engine-voxels-protocol-12-{}-{}",
+            "rusty-engine-voxels-protocol-13-{}-{}",
             std::process::id(),
             NEXT_TEMP_ROOT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -42,7 +42,7 @@ impl Drop for TempProject {
 }
 
 #[test]
-fn protocol_12_batch_attachment_is_ordered_atomic_and_restart_stable() {
+fn protocol_13_batch_attachment_is_ordered_atomic_and_restart_stable() {
     let project = TempProject::new();
     let mut adapter = StudioAdapter::default();
     let opened = open_project(&mut adapter, &project, "batch-open");
@@ -57,8 +57,8 @@ fn protocol_12_batch_attachment_is_ordered_atomic_and_restart_stable() {
             "protocolVersion": STUDIO_PROTOCOL_VERSION,
             "requestId": "batch-describe",
         }))
-        .expect("protocol 12 describe should succeed");
-    assert_eq!(described["adapter"]["protocolVersion"], 12);
+        .expect("protocol 13 describe should succeed");
+    assert_eq!(described["adapter"]["protocolVersion"], 13);
     assert!(described["adapter"]["operations"]
         .as_array()
         .expect("operations should be an array")
@@ -73,7 +73,7 @@ fn protocol_12_batch_attachment_is_ordered_atomic_and_restart_stable() {
                 placement("alpha-request-second", ASSET_ID),
             ],
         ))
-        .expect("valid protocol 12 batch should attach atomically");
+        .expect("valid protocol 13 batch should attach atomically");
     assert_eq!(attached["type"], "projectMutationApplied");
     assert_eq!(attached["receipt"]["kind"], "voxelObjectInstancesAttached");
     assert_eq!(
@@ -131,7 +131,7 @@ fn protocol_12_batch_attachment_is_ordered_atomic_and_restart_stable() {
 }
 
 #[test]
-fn protocol_12_batch_rejections_leave_canonical_bytes_unchanged() {
+fn protocol_13_batch_rejections_leave_canonical_bytes_unchanged() {
     let project = TempProject::new();
     let mut adapter = StudioAdapter::default();
     let opened = open_project(&mut adapter, &project, "rejection-open");
@@ -253,7 +253,7 @@ fn protocol_12_batch_rejections_leave_canonical_bytes_unchanged() {
 }
 
 #[test]
-fn protocol_12_batch_rejects_exhausted_json_safe_owner_identity() {
+fn protocol_13_batch_rejects_exhausted_json_safe_owner_identity() {
     let project = TempProject::new();
     let loaded =
         load_project(&project.root, DEFAULT_PROJECT_FILE).expect("temporary project should load");
