@@ -500,6 +500,8 @@ version = "0.1.0"
 dependencies = [
  "asset-catalog",
  "core-assets",
+ "core-space",
+ "core-voxel",
  "gif",
  "render-model",
  "render-projection",
@@ -508,6 +510,8 @@ dependencies = [
  "serde_json",
  "sha2",
  "svc-mesh",
+ "svc-spatial",
+ "svc-volume",
  "voxel-asset",
  "voxel-convert",
  "voxel-object-runtime",

@@ -121,6 +121,32 @@ cargo run --locked --bin voxel-lab -- format-study \
   --report evidence/format-study-high-fidelity.json
 ```
 
+## Textured voxel evidence
+
+The checked `content/textures/directional-atlas.png` fixture has two asymmetric
+6 x 6 regions with replicated one-texel padding. Its unequal corners, diagonal
+and horizontal marks, and edge colors make rotation, mirroring, repetition,
+and atlas bleed visible. The public Engine mesher produces
+`evidence/textured-voxel-surfaces.json` from that exact PNG. The report records
+stream hashes and byte counts for a 48 x 32 wall, a 48 x 1 x 32 floor, all six
+faces of a negative-coordinate cell, mixed material groups, and two resident
+adjacent chunks meshed independently across a continuous absolute tile seam.
+Both large surfaces retain the untextured baseline's six quads, 24 vertices,
+and 36 indices.
+
+```bash
+node scripts/generate-textured-voxel-fixture.mjs --check
+cargo run --locked --bin textured-voxel-evidence -- --check
+```
+
+Protocol-14 adapter tests use the same checked asset for repeat and two-region
+atlas publication, replacement, animated-frame continuity, and fresh-adapter
+reopen. They also reject malformed, missing, oversized, stale, overlapping,
+out-of-bounds, insufficiently padded, and failed-reimport inputs before project
+publication. Exact pixels and renderer resource disposal remain owned by the
+real Studio integration against this public consumer; this repository does not
+duplicate the Engine texture renderer or atlas parser.
+
 ## Commands
 
 ```bash
@@ -156,7 +182,7 @@ den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels
 ```
 
 `engine-source.json` is the only authored Engine identity. The update command projects it into the
-eight direct Rust dependencies and the generated Cargo lockfile without rewriting historical
+twelve direct Rust dependencies and the generated Cargo lockfile without rewriting historical
 evidence, protocol compatibility, or prose. See
 [`docs/engine-revision-updates.md`](docs/engine-revision-updates.md) for the failure, dry-run, and
 rollback contract.

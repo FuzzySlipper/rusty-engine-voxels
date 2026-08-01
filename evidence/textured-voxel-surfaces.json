@@ -1,0 +1,468 @@
+{
+  "adjacentChunks": {
+    "continuous": true,
+    "leftChunk": {
+      "coordinate": [
+        -1,
+        0,
+        0
+      ],
+      "mesh": {
+        "bounds": {
+          "max": [
+            16.0,
+            16.0,
+            1.0
+          ],
+          "min": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "culledFaces": 976,
+        "groups": [
+          {
+            "count": 30,
+            "materialSlot": 1,
+            "start": 0
+          }
+        ],
+        "indexStreamHash": "sha256:836c1b8364e8f2c31f0020c63da385a7c3a02fbae6a3cc887f39669458848120",
+        "indices": 30,
+        "normalStreamHash": "sha256:570d83ce6d085b40bdb3fb81b4d6dba569cdbff9e3e332ae9426fc7b883d5a42",
+        "positionStreamHash": "sha256:e557c8827ec946bc6054de82a91ced3956bab100bc8a72dee51146b1f348de28",
+        "quads": 5,
+        "sourceFaces": 560,
+        "streamBytes": {
+          "indices": 120,
+          "normals": 240,
+          "positions": 240,
+          "tileCoordinates": 160
+        },
+        "tileCoordinateStreamHash": "sha256:408822b27be79c1d6cc46a5047d23d7b9885e7f9733e82870190b0a8cc2b3d23",
+        "vertices": 20
+      },
+      "positiveZTileExtent": [
+        [
+          -16.0,
+          0.0
+        ],
+        [
+          0.0,
+          16.0
+        ]
+      ]
+    },
+    "rightChunk": {
+      "coordinate": [
+        0,
+        0,
+        0
+      ],
+      "mesh": {
+        "bounds": {
+          "max": [
+            16.0,
+            16.0,
+            1.0
+          ],
+          "min": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "culledFaces": 976,
+        "groups": [
+          {
+            "count": 30,
+            "materialSlot": 1,
+            "start": 0
+          }
+        ],
+        "indexStreamHash": "sha256:836c1b8364e8f2c31f0020c63da385a7c3a02fbae6a3cc887f39669458848120",
+        "indices": 30,
+        "normalStreamHash": "sha256:529c251cb572082caeb13525fc80ff9a792be7dcf3dec3e6366315ab55b2ee56",
+        "positionStreamHash": "sha256:52b171686f32ba33db6cf7d6437ca4dc15b60e58afdbf89c33745e2a9ef81437",
+        "quads": 5,
+        "sourceFaces": 560,
+        "streamBytes": {
+          "indices": 120,
+          "normals": 240,
+          "positions": 240,
+          "tileCoordinates": 160
+        },
+        "tileCoordinateStreamHash": "sha256:659eeba719c3e3a90d5ceb6f019ee80b2a905ee2d67ffc9c5db98ddd8330ccf9",
+        "vertices": 20
+      },
+      "positiveZTileExtent": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          16.0,
+          16.0
+        ]
+      ]
+    },
+    "seamU": 0.0
+  },
+  "claims": {
+    "adjacentChunksWereMeshedIndependently": true,
+    "greedyGeometryPreserved": true,
+    "rendererPixelsAndLifecycleAreOwnedByTheExactStudioIntegration": true,
+    "tileCoordinatesUseProductionMesher": true
+  },
+  "fixture": {
+    "contentHash": "sha256:e2ec555c148765098fd52e610bfaa7cde5e4bad4c14dd682590211dfc38e052c",
+    "dimensions": [
+      16,
+      8
+    ],
+    "encodedByteLength": 151,
+    "path": "content/textures/directional-atlas.png",
+    "regions": [
+      {
+        "contentExtent": [
+          6,
+          6
+        ],
+        "contentMin": [
+          1,
+          1
+        ],
+        "id": "warm-arrow",
+        "padding": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "contentExtent": [
+          6,
+          6
+        ],
+        "contentMin": [
+          9,
+          1
+        ],
+        "id": "cool-arrow",
+        "padding": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  "largeGreedySurfaces": {
+    "floor48x1x32": {
+      "bounds": {
+        "max": [
+          12.0,
+          0.25,
+          8.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "culledFaces": 5984,
+      "groups": [
+        {
+          "count": 36,
+          "materialSlot": 2,
+          "start": 0
+        }
+      ],
+      "indexStreamHash": "sha256:15e4544087ac886e83ea2c6f84406b56b09370208d305b0ed3c2a2cae4bdf76b",
+      "indices": 36,
+      "normalStreamHash": "sha256:cf38d80691f04d52b9686807b830aec77584c7ecdc0ceed56144923548dd5593",
+      "positionStreamHash": "sha256:882beec5f1e7b0a9cbce30b864f3153e48cb4686507f6e0a5a92a36314c987c2",
+      "quads": 6,
+      "sourceFaces": 3232,
+      "streamBytes": {
+        "indices": 144,
+        "normals": 288,
+        "positions": 288,
+        "tileCoordinates": 192
+      },
+      "tileCoordinateStreamHash": "sha256:6a992608c949307d436e052533cae72e3f394adab3b2d6ffe8125e1fffb5a4df",
+      "vertices": 24
+    },
+    "untexturedBaselineContract": {
+      "indices": 36,
+      "quads": 6,
+      "vertices": 24
+    },
+    "wall48x32x1": {
+      "bounds": {
+        "max": [
+          12.0,
+          8.0,
+          0.25
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "culledFaces": 5984,
+      "groups": [
+        {
+          "count": 36,
+          "materialSlot": 1,
+          "start": 0
+        }
+      ],
+      "indexStreamHash": "sha256:15e4544087ac886e83ea2c6f84406b56b09370208d305b0ed3c2a2cae4bdf76b",
+      "indices": 36,
+      "normalStreamHash": "sha256:cf38d80691f04d52b9686807b830aec77584c7ecdc0ceed56144923548dd5593",
+      "positionStreamHash": "sha256:0131b4a6cf02ff57926ec9b57be448efa772d4931bfe0ae2913d003df29dc38d",
+      "quads": 6,
+      "sourceFaces": 3232,
+      "streamBytes": {
+        "indices": 144,
+        "normals": 288,
+        "positions": 288,
+        "tileCoordinates": 192
+      },
+      "tileCoordinateStreamHash": "sha256:58f6a735016ec4c89941590b0f460975fed4684700e7b8006ff9bf38cbd40ff2",
+      "vertices": 24
+    }
+  },
+  "mixedMaterials": {
+    "mesh": {
+      "bounds": {
+        "max": [
+          4.0,
+          1.0,
+          1.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "culledFaces": 6,
+      "groups": [
+        {
+          "count": 30,
+          "materialSlot": 1,
+          "start": 0
+        },
+        {
+          "count": 24,
+          "materialSlot": 2,
+          "start": 30
+        },
+        {
+          "count": 24,
+          "materialSlot": 3,
+          "start": 54
+        },
+        {
+          "count": 30,
+          "materialSlot": 4,
+          "start": 78
+        }
+      ],
+      "indexStreamHash": "sha256:04ca1270c3c51e2b8f4e5298ea4ce430e06a1e33b3ecf2ac03522e9b65ce0290",
+      "indices": 108,
+      "normalStreamHash": "sha256:d61cc9c3dd45990768860b6b2d2762f70d606a92c97fcfb926be89c98d34c686",
+      "positionStreamHash": "sha256:9fc9b0cea34d38d172c9854905475b9513a609e9a7336575ecad58ff2a579969",
+      "quads": 18,
+      "sourceFaces": 18,
+      "streamBytes": {
+        "indices": 432,
+        "normals": 864,
+        "positions": 864,
+        "tileCoordinates": 576
+      },
+      "tileCoordinateStreamHash": "sha256:3914d5469516d0bf98ceaac6489d6f0b0c58147555b633a04383608ae76f1b8a",
+      "vertices": 72
+    },
+    "slots": [
+      {
+        "role": "standalone-repeat",
+        "slot": 1
+      },
+      {
+        "role": "warm-atlas-region",
+        "slot": 2
+      },
+      {
+        "role": "cool-atlas-region-tinted-emissive",
+        "slot": 3
+      },
+      {
+        "role": "color-only-alpha-policy",
+        "slot": 4
+      }
+    ]
+  },
+  "negativeCellSixFaces": {
+    "cell": [
+      -7,
+      -5,
+      -3
+    ],
+    "directions": {
+      "+0,+0,+1": [
+        [
+          -7.0,
+          -5.0
+        ],
+        [
+          -6.0,
+          -5.0
+        ],
+        [
+          -6.0,
+          -4.0
+        ],
+        [
+          -7.0,
+          -4.0
+        ]
+      ],
+      "+0,+0,-1": [
+        [
+          -7.0,
+          5.0
+        ],
+        [
+          -7.0,
+          4.0
+        ],
+        [
+          -6.0,
+          4.0
+        ],
+        [
+          -6.0,
+          5.0
+        ]
+      ],
+      "+0,+1,+0": [
+        [
+          -3.0,
+          -7.0
+        ],
+        [
+          -2.0,
+          -7.0
+        ],
+        [
+          -2.0,
+          -6.0
+        ],
+        [
+          -3.0,
+          -6.0
+        ]
+      ],
+      "+0,-1,+0": [
+        [
+          -3.0,
+          7.0
+        ],
+        [
+          -3.0,
+          6.0
+        ],
+        [
+          -2.0,
+          6.0
+        ],
+        [
+          -2.0,
+          7.0
+        ]
+      ],
+      "+1,+0,+0": [
+        [
+          -5.0,
+          -3.0
+        ],
+        [
+          -4.0,
+          -3.0
+        ],
+        [
+          -4.0,
+          -2.0
+        ],
+        [
+          -5.0,
+          -2.0
+        ]
+      ],
+      "-1,+0,+0": [
+        [
+          -5.0,
+          3.0
+        ],
+        [
+          -5.0,
+          2.0
+        ],
+        [
+          -4.0,
+          2.0
+        ],
+        [
+          -4.0,
+          3.0
+        ]
+      ]
+    },
+    "mesh": {
+      "bounds": {
+        "max": [
+          -6.0,
+          -4.0,
+          -2.0
+        ],
+        "min": [
+          -7.0,
+          -5.0,
+          -3.0
+        ]
+      },
+      "culledFaces": 0,
+      "groups": [
+        {
+          "count": 36,
+          "materialSlot": 3,
+          "start": 0
+        }
+      ],
+      "indexStreamHash": "sha256:15e4544087ac886e83ea2c6f84406b56b09370208d305b0ed3c2a2cae4bdf76b",
+      "indices": 36,
+      "normalStreamHash": "sha256:cf38d80691f04d52b9686807b830aec77584c7ecdc0ceed56144923548dd5593",
+      "positionStreamHash": "sha256:8dfc117fd945cdb82597cb598d3b9d95fb9c2b8a2832564046fc09e8c2838b73",
+      "quads": 6,
+      "sourceFaces": 6,
+      "streamBytes": {
+        "indices": 144,
+        "normals": 288,
+        "positions": 288,
+        "tileCoordinates": 192
+      },
+      "tileCoordinateStreamHash": "sha256:2ac37f8387c254251758b380546a458f6473e24eebbc0bda4d37c356b8940f94",
+      "vertices": 24
+    }
+  },
+  "providerRevision": "93eac6a9895f12b0d6a71d9f78e39649919abe2c",
+  "schemaVersion": 1
+}

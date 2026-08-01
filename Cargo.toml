@@ -19,9 +19,15 @@ path = "src/bin/voxel-lab.rs"
 name = "rusty-engine-voxels-studio-adapter"
 path = "src/bin/studio-adapter.rs"
 
+[[bin]]
+name = "textured-voxel-evidence"
+path = "src/bin/textured-voxel-evidence.rs"
+
 [dependencies]
 asset-catalog = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 core-assets = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
+core-space = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
+core-voxel = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 gif = "0.13"
 render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
@@ -30,6 +36,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
 svc-mesh = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
+svc-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
+svc-volume = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 voxel-asset = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 voxel-convert = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
 voxel-object-runtime = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "93eac6a9895f12b0d6a71d9f78e39649919abe2c" }
