@@ -472,6 +472,19 @@ impl StudioAdapter {
             .iter()
             .find(|material| material.asset_id == input.material.material_asset_id)
             .cloned();
+        let previous_atlas_asset_id =
+            existing_material.as_ref().and_then(|material| {
+                match material
+                    .voxel_surface
+                    .as_ref()
+                    .map(|surface| &surface.mapping)
+                {
+                    Some(ProjectVoxelSurfaceMapping::Atlas { atlas_asset_id, .. }) => {
+                        Some(atlas_asset_id.clone())
+                    }
+                    _ => None,
+                }
+            });
         require_expected_hash(
             "material",
             &input.material.material_asset_id,
@@ -518,6 +531,20 @@ impl StudioAdapter {
         project
             .materials
             .sort_by(|left, right| left.asset_id.cmp(&right.asset_id));
+        if let Some(previous_atlas_asset_id) = previous_atlas_asset_id {
+            let atlas_is_still_referenced = project.materials.iter().any(|material| {
+                matches!(
+                    material.voxel_surface.as_ref().map(|surface| &surface.mapping),
+                    Some(ProjectVoxelSurfaceMapping::Atlas { atlas_asset_id, .. })
+                        if atlas_asset_id == &previous_atlas_asset_id
+                )
+            });
+            if !atlas_is_still_referenced {
+                project
+                    .atlases
+                    .retain(|atlas| atlas.asset_id != previous_atlas_asset_id);
+            }
+        }
 
         let instance = project
             .instances

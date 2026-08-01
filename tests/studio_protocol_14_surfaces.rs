@@ -155,18 +155,79 @@ fn protocol_14_surface_closure_is_strict_atomic_and_restart_stable() {
         reopened["voxelSurfaceAuthoring"]["materials"][0]["mapping"]["kind"],
         "atlas"
     );
+    let atlas_texture_hash = reopened["voxelSurfaceAuthoring"]["textures"][0]["contentHash"]
+        .as_str()
+        .expect("atlas texture hash")
+        .to_owned();
+    let atlas_material_hash = reopened["voxelSurfaceAuthoring"]["materials"][0]["contentHash"]
+        .as_str()
+        .expect("atlas material hash")
+        .to_owned();
+    let replaced = restarted
+        .dispatch(upsert_request(
+            "atlas-to-repeat",
+            &atlas_project_hash,
+            &project.root.join("checker.png"),
+            Some(&atlas_texture_hash),
+            Some(&atlas_material_hash),
+            repeat_mapping(),
+        ))
+        .expect("atlas surface should be replaceable by repeat");
+    let replaced_project = &replaced["project"];
+    let replaced_hash = project_hash(replaced_project);
+    assert_eq!(
+        replaced_project["voxelSurfaceAuthoring"]["materials"][0]["mapping"]["kind"],
+        "repeat"
+    );
+    assert_eq!(
+        replaced_project["voxelSurfaceAuthoring"]["textures"][0]["wrap"],
+        "repeat"
+    );
+    assert_eq!(
+        replaced_project["voxelSurfaceAuthoring"]["atlases"],
+        json!([])
+    );
+    assert_eq!(
+        replaced_project["voxelObjectAuthoring"]["instances"][0]["instance"]["materialOverrides"],
+        json!([{ "materialSlot": 1, "materialAssetId": "material/checker" }])
+    );
+    let source_path = replaced_project["voxelSurfaceAuthoring"]["textures"][0]["sourcePath"]
+        .as_str()
+        .expect("replacement texture path");
+    assert_eq!(
+        fs::read(project.root.join(source_path)).expect("published replacement texture"),
+        CHECKER_PNG
+    );
+
+    let mut replacement_reopen = StudioAdapter::default();
+    let replacement_readout = open(&mut replacement_reopen, &project, "replacement-reopen");
+    assert_eq!(project_hash(&replacement_readout), replaced_hash);
+    assert_eq!(
+        replacement_readout["voxelSurfaceAuthoring"]["atlases"],
+        json!([])
+    );
+    assert_eq!(
+        replacement_readout["voxelSurfaceAuthoring"]["materials"][0]["mapping"]["kind"],
+        "repeat"
+    );
+    assert_eq!(
+        replacement_readout["voxelObjectAuthoring"]["instances"][0]["instance"]
+            ["materialOverrides"],
+        json!([{ "materialSlot": 1, "materialAssetId": "material/checker" }])
+    );
+
     let before_remove = project.project_bytes();
-    let removal = restarted.dispatch(json!({
+    let removal = replacement_reopen.dispatch(json!({
         "type": "removeVoxelSurfaceMaterial",
         "protocolVersion": PROTOCOL_VERSION,
         "requestId": "remove-in-use",
-        "expectedProjectHash": atlas_project_hash,
+        "expectedProjectHash": replaced_hash,
         "materialAssetId": "material/checker",
-        "expectedMaterialContentHash": reopened["voxelSurfaceAuthoring"]["materials"][0]["contentHash"],
+        "expectedMaterialContentHash": replacement_readout["voxelSurfaceAuthoring"]["materials"][0]["contentHash"],
         "textureAssetId": "texture/checker",
-        "expectedTextureContentHash": reopened["voxelSurfaceAuthoring"]["textures"][0]["contentHash"],
-        "atlasAssetId": "sprite-sheet/checker",
-        "expectedAtlasContentHash": reopened["voxelSurfaceAuthoring"]["atlases"][0]["contentHash"],
+        "expectedTextureContentHash": replacement_readout["voxelSurfaceAuthoring"]["textures"][0]["contentHash"],
+        "atlasAssetId": null,
+        "expectedAtlasContentHash": null,
     }));
     assert!(
         format!("{:?}", removal.expect_err("in-use removal must reject"))
