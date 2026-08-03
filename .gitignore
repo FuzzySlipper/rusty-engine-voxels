@@ -5,3 +5,4 @@
 /.video-motion-cache/
 __pycache__/
 *.pending
+/.density-cache/

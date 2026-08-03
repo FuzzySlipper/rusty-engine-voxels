@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "engineRevision": "c02754812d53df5363c9e6475c685c54e532f5e5",
+  "experimentId": "bulky-knight-smoke",
+  "sourceAssetId": "mesh/bulky-knight",
+  "sourcePath": "content/sources/bulky-knight/bulky-knight.glb",
+  "sourceSha256": "sha256:ddeb217d09c1978643be84fd7f72f8cbd9b9c0a97f1d22e05cf3e71b9ba18836",
+  "bakes": [
+    {
+      "bakeId": "whole-64",
+      "targetAssetId": "voxel-object/bulky-knight-smoke-whole-64",
+      "resolution": [
+        44,
+        64,
+        32
+      ],
+      "cellSize": 0.001,
+      "chunkSize": 16,
+      "pivot": [
+        21.5,
+        0.0,
+        15.5
+      ],
+      "status": "published",
+      "sourceVertices": 61897,
+      "sourceTriangles": 30095,
+      "planHash": "sha256:bdd8dae85428d6fab1af9f4a4b1fc99108365597c1a367c00bb42ad87b958174",
+      "settingsSha256": "sha256:63f2a2939294b1e2374bc5aa21f88b48c2a79c230088d5f1c43061d2bdb0a29d",
+      "contentHash": "sha256:f6cf93280997b7223b4a0727a46d5f611ea246e5d069e4609b0ff1bfdc8464c6",
+      "objectPath": ".density-cache/objects/bulky-knight-smoke-whole-64-f6cf93280997b7223b4a0727a46d5f611ea246e5d069e4609b0ff1bfdc8464c6.voxel-object.json",
+      "artifactBytes": 170377,
+      "aggregateVoxels": 2417,
+      "voxelizationWork": 83985,
+      "maxOutputVoxels": 90112,
+      "importMicroseconds": 287626,
+      "conversionMicroseconds": 528812,
+      "admissionMicroseconds": 42788,
+      "resolvedVoxels": 2417,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 162876,
+      "meshVertices": 5428,
+      "meshIndices": 8142,
+      "meshFaces": 1357,
+      "projectionOperationCount": 5,
+      "projectionJsonBytes": 2453,
+      "silhouetteJaccard": 0.3757
+    },
+    {
+      "bakeId": "armor-lambert8-48",
+      "targetAssetId": "voxel-object/bulky-knight-smoke-armor-48",
+      "meshPrimitive": "node/4",
+      "resolution": [
+        32,
+        48,
+        32
+      ],
+      "cellSize": 0.001,
+      "chunkSize": 16,
+      "pivot": [
+        15.5,
+        0.0,
+        15.5
+      ],
+      "status": "published",
+      "sourceVertices": 27904,
+      "sourceTriangles": 13372,
+      "planHash": "sha256:cfe471c40170b122662e1d75f6558a7d0e26ab25b87d1a3d098e3a54edcaeaf6",
+      "settingsSha256": "sha256:cbbb87c1dd55464385ad29f4a01a1f668e8857b30f56bf56e19e73c46c3bdba7",
+      "contentHash": "sha256:43d478fb1b74546600f87a62f8a2c6fa72cdcd659777850a033a0a38d4161994",
+      "objectPath": ".density-cache/objects/bulky-knight-smoke-armor-48-43d478fb1b74546600f87a62f8a2c6fa72cdcd659777850a033a0a38d4161994.voxel-object.json",
+      "artifactBytes": 156263,
+      "aggregateVoxels": 3454,
+      "voxelizationWork": 56505,
+      "maxOutputVoxels": 49152,
+      "importMicroseconds": 283916,
+      "conversionMicroseconds": 366931,
+      "admissionMicroseconds": 49544,
+      "resolvedVoxels": 3454,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 262692,
+      "meshVertices": 8756,
+      "meshIndices": 13134,
+      "meshFaces": 2189,
+      "projectionOperationCount": 3,
+      "projectionJsonBytes": 1730,
+      "silhouetteJaccard": 0.4989
+    }
+  ]
+}

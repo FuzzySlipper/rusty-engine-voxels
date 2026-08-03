@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "bulky-knight-pieces",
+  "source": {
+    "assetId": "mesh/bulky-knight",
+    "path": "content/sources/bulky-knight/bulky-knight.glb",
+    "expectedSourceSha256": "sha256:ddeb217d09c1978643be84fd7f72f8cbd9b9c0a97f1d22e05cf3e71b9ba18836",
+    "licensePath": "content/sources/bulky-knight/LICENSE.txt"
+  },
+  "objectDirectory": ".density-cache/objects",
+  "bakes": [
+    {
+      "bakeId": "armor-lambert8-256",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-armor-lambert8-256",
+      "meshPrimitive": "node/4",
+      "resolution": [
+        128,
+        256,
+        128
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        63.5,
+        0.0,
+        63.5
+      ]
+    },
+    {
+      "bakeId": "armor-lambert8-128",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-armor-lambert8-128",
+      "meshPrimitive": "node/4",
+      "resolution": [
+        64,
+        128,
+        64
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        31.5,
+        0.0,
+        31.5
+      ]
+    },
+    {
+      "bakeId": "armor-lambert9-256",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-armor-lambert9-256",
+      "meshPrimitive": "node/5",
+      "resolution": [
+        128,
+        256,
+        128
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        63.5,
+        0.0,
+        63.5
+      ]
+    },
+    {
+      "bakeId": "armor-lambert9-128",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-armor-lambert9-128",
+      "meshPrimitive": "node/5",
+      "resolution": [
+        64,
+        128,
+        64
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        31.5,
+        0.0,
+        31.5
+      ]
+    },
+    {
+      "bakeId": "axe-256",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-axe-256",
+      "meshPrimitive": "node/7",
+      "resolution": [
+        128,
+        256,
+        128
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        63.5,
+        0.0,
+        63.5
+      ]
+    },
+    {
+      "bakeId": "axe-128",
+      "targetAssetId": "voxel-object/bulky-knight-pieces-axe-128",
+      "meshPrimitive": "node/7",
+      "resolution": [
+        64,
+        128,
+        64
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        31.5,
+        0.0,
+        31.5
+      ]
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "bulky-knight-ladder",
+  "source": {
+    "assetId": "mesh/bulky-knight",
+    "path": "content/sources/bulky-knight/bulky-knight.glb",
+    "expectedSourceSha256": "sha256:ddeb217d09c1978643be84fd7f72f8cbd9b9c0a97f1d22e05cf3e71b9ba18836",
+    "licensePath": "content/sources/bulky-knight/LICENSE.txt"
+  },
+  "objectDirectory": ".density-cache/objects",
+  "bakes": [
+    {
+      "bakeId": "whole-128",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-128",
+      "resolution": [
+        38,
+        128,
+        34
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        18.5,
+        0.0,
+        16.5
+      ]
+    },
+    {
+      "bakeId": "whole-256",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-256",
+      "resolution": [
+        76,
+        256,
+        67
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        37.5,
+        0.0,
+        33.0
+      ]
+    },
+    {
+      "bakeId": "whole-384",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-384",
+      "resolution": [
+        114,
+        384,
+        101
+      ],
+      "cellSize": 0.004438642,
+      "chunkSize": 16,
+      "pivot": [
+        56.5,
+        0.0,
+        50.0
+      ]
+    },
+    {
+      "bakeId": "whole-512",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-512",
+      "resolution": [
+        152,
+        512,
+        134
+      ],
+      "cellSize": 0.00332681,
+      "chunkSize": 16,
+      "pivot": [
+        75.5,
+        0.0,
+        66.5
+      ]
+    },
+    {
+      "bakeId": "whole-768",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-768",
+      "resolution": [
+        228,
+        768,
+        202
+      ],
+      "cellSize": 0.002216428,
+      "chunkSize": 16,
+      "pivot": [
+        113.5,
+        0.0,
+        100.5
+      ]
+    },
+    {
+      "bakeId": "whole-1024",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-1024",
+      "resolution": [
+        305,
+        1024,
+        269
+      ],
+      "cellSize": 0.001661779,
+      "chunkSize": 16,
+      "pivot": [
+        152.0,
+        0.0,
+        134.0
+      ]
+    }
+  ]
+}

@@ -99,6 +99,30 @@ and 34.5 MB unique mesh payload take about 2.6 seconds to admit and mesh in this
 run. See [`docs/quality-report.md`](docs/quality-report.md) for the measured tradeoff and explicit
 limits.
 
+## Density lab
+
+The `voxel-density-lab` harness bakes complicated static meshes — whole or as
+individually selected mesh pieces — through the Engine's static conversion
+path and records where density actually tops out. The checked corpus is two
+CC-BY Sketchfab knights (30k/38k triangles, 19–24× the retro character).
+
+Measured: tens of thousands of voxels per character is comfortable (55k/129k
+at 256 cells tall, 0.97 silhouette fidelity, seconds to convert and admit);
+hundreds of thousands is only reachable piece-wise (205k aggregate across the
+bulky knight's three armour/axe pieces), because the Engine caps conversion
+grids at 256 cells per axis. The knights' native static meshes carry no rigs
+or clips, so the animated experiments remain the retro character's domain.
+Findings (absolute-epsilon triangle rejection, the 256-axis grid cap, and the
+missing shared-scale multi-piece seam) feed upstream tasks. See
+[`docs/density-lab.md`](docs/density-lab.md) and `evidence/density/`.
+
+```bash
+cargo run --locked --bin voxel-density-lab -- run \
+  --spec content/density/dark-knight-ladder.spec.json \
+  --report evidence/density/dark-knight-ladder.json
+cargo test --locked --test density_experiment
+```
+
 ## Voxel mesh data plane
 
 `voxel-lab format-study` prices the checked corpus's unique flipbook meshes against candidate

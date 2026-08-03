@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "bulky-knight-smoke",
+  "source": {
+    "assetId": "mesh/bulky-knight",
+    "path": "content/sources/bulky-knight/bulky-knight.glb",
+    "expectedSourceSha256": "sha256:ddeb217d09c1978643be84fd7f72f8cbd9b9c0a97f1d22e05cf3e71b9ba18836",
+    "licensePath": "content/sources/bulky-knight/LICENSE.txt"
+  },
+  "objectDirectory": ".density-cache/objects",
+  "bakes": [
+    {
+      "bakeId": "whole-64",
+      "targetAssetId": "voxel-object/bulky-knight-smoke-whole-64",
+      "resolution": [44, 64, 32],
+      "cellSize": 0.001,
+      "chunkSize": 16,
+      "pivot": [21.5, 0.0, 15.5]
+    },
+    {
+      "bakeId": "armor-lambert8-48",
+      "targetAssetId": "voxel-object/bulky-knight-smoke-armor-48",
+      "meshPrimitive": "node/4",
+      "resolution": [32, 48, 32],
+      "cellSize": 0.001,
+      "chunkSize": 16,
+      "pivot": [15.5, 0.0, 15.5]
+    }
+  ]
+}

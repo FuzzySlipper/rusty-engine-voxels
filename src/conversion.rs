@@ -290,7 +290,11 @@ fn conversion_materials(
         })
 }
 
-fn object_path(directory: &str, asset_id: &str, content_hash: &str) -> Result<String, String> {
+pub(crate) fn object_path(
+    directory: &str,
+    asset_id: &str,
+    content_hash: &str,
+) -> Result<String, String> {
     let name = asset_id
         .strip_prefix("voxel-object/")
         .ok_or("voxel object identity has no voxel-object/ prefix")?
@@ -301,7 +305,7 @@ fn object_path(directory: &str, asset_id: &str, content_hash: &str) -> Result<St
     Ok(format!("{directory}/{name}-{hash}.voxel-object.json"))
 }
 
-fn publish_immutable(path: &Path, bytes: &[u8]) -> Result<(), String> {
+pub(crate) fn publish_immutable(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if path.exists() {
         let existing =
             std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;

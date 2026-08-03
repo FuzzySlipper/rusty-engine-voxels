@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "dark-knight-ladder",
+  "source": {
+    "assetId": "mesh/dark-knight",
+    "path": "content/sources/dark-knight/dark-knight.glb",
+    "expectedSourceSha256": "sha256:24488f55fcd0d88808117f9261d05576c0f6aaa833eb4839ce893a94862df9bb",
+    "licensePath": "content/sources/dark-knight/LICENSE.txt"
+  },
+  "objectDirectory": ".density-cache/objects",
+  "bakes": [
+    {
+      "bakeId": "whole-128",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-128",
+      "resolution": [
+        32,
+        128,
+        97
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        15.5,
+        0.0,
+        48.0
+      ]
+    },
+    {
+      "bakeId": "whole-256",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-256",
+      "resolution": [
+        64,
+        256,
+        193
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        31.5,
+        0.0,
+        96.0
+      ]
+    },
+    {
+      "bakeId": "whole-384",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-384",
+      "resolution": [
+        96,
+        384,
+        290
+      ],
+      "cellSize": 0.004438642,
+      "chunkSize": 16,
+      "pivot": [
+        47.5,
+        0.0,
+        144.5
+      ]
+    },
+    {
+      "bakeId": "whole-512",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-512",
+      "resolution": [
+        128,
+        512,
+        387
+      ],
+      "cellSize": 0.00332681,
+      "chunkSize": 16,
+      "pivot": [
+        63.5,
+        0.0,
+        193.0
+      ]
+    },
+    {
+      "bakeId": "whole-768",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-768",
+      "resolution": [
+        192,
+        768,
+        580
+      ],
+      "cellSize": 0.002216428,
+      "chunkSize": 16,
+      "pivot": [
+        95.5,
+        0.0,
+        289.5
+      ]
+    },
+    {
+      "bakeId": "whole-1024",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-1024",
+      "resolution": [
+        257,
+        1024,
+        774
+      ],
+      "cellSize": 0.001661779,
+      "chunkSize": 16,
+      "pivot": [
+        128.0,
+        0.0,
+        386.5
+      ]
+    }
+  ]
+}

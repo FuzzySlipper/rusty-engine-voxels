@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "engineRevision": "c02754812d53df5363c9e6475c685c54e532f5e5",
+  "experimentId": "bulky-knight-ladder",
+  "sourceAssetId": "mesh/bulky-knight",
+  "sourcePath": "content/sources/bulky-knight/bulky-knight.glb",
+  "sourceSha256": "sha256:ddeb217d09c1978643be84fd7f72f8cbd9b9c0a97f1d22e05cf3e71b9ba18836",
+  "bakes": [
+    {
+      "bakeId": "whole-128",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-128",
+      "resolution": [
+        38,
+        128,
+        34
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        18.5,
+        0.0,
+        16.5
+      ],
+      "status": "published",
+      "sourceVertices": 61897,
+      "sourceTriangles": 30095,
+      "planHash": "sha256:4bb0435a99f44d3807134f9b684598917dd8dc4c30496bbfc0df8379dba29414",
+      "settingsSha256": "sha256:d1c35709212f6317056a37af9bcfc245f347d8606cfe0e557f2368c772f92db0",
+      "contentHash": "sha256:aade3dde47ee23314931652a788903a28928c7df90b3cddc08138a9c326baa5e",
+      "objectPath": ".density-cache/objects/bulky-knight-ladder-whole-128-aade3dde47ee23314931652a788903a28928c7df90b3cddc08138a9c326baa5e.voxel-object.json",
+      "artifactBytes": 690367,
+      "aggregateVoxels": 11295,
+      "voxelizationWork": 191827,
+      "maxOutputVoxels": 165376,
+      "importMicroseconds": 268884,
+      "conversionMicroseconds": 1141731,
+      "admissionMicroseconds": 190372,
+      "resolvedVoxels": 11295,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 729636,
+      "meshVertices": 24320,
+      "meshIndices": 36480,
+      "meshFaces": 6080,
+      "projectionOperationCount": 5,
+      "projectionJsonBytes": 2492,
+      "silhouetteJaccard": 0.7531
+    },
+    {
+      "bakeId": "whole-256",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-256",
+      "resolution": [
+        76,
+        256,
+        67
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        37.5,
+        0.0,
+        33.0
+      ],
+      "status": "published",
+      "sourceVertices": 61897,
+      "sourceTriangles": 30095,
+      "planHash": "sha256:b8de28a628738ebf2b613c9a8118f720aa38d507c8a43023711af3ac77bd3b06",
+      "settingsSha256": "sha256:537a1797399d3e68d25c661c0f43bf28f124f246980a07fcc9f8cf6e71a6bf73",
+      "contentHash": "sha256:6ceaa2d0ff14e6d6aeffe20dc56d6923a0ccaf4a23d66f94e8cfef33918cc065",
+      "objectPath": ".density-cache/objects/bulky-knight-ladder-whole-256-6ceaa2d0ff14e6d6aeffe20dc56d6923a0ccaf4a23d66f94e8cfef33918cc065.voxel-object.json",
+      "artifactBytes": 3097351,
+      "aggregateVoxels": 55453,
+      "voxelizationWork": 676455,
+      "maxOutputVoxels": 1000000,
+      "importMicroseconds": 262813,
+      "conversionMicroseconds": 3949251,
+      "admissionMicroseconds": 987154,
+      "resolvedVoxels": 55453,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 3697836,
+      "meshVertices": 123260,
+      "meshIndices": 184890,
+      "meshFaces": 30815,
+      "projectionOperationCount": 5,
+      "projectionJsonBytes": 2500,
+      "silhouetteJaccard": 0.9672
+    },
+    {
+      "bakeId": "whole-384",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-384",
+      "resolution": [
+        114,
+        384,
+        101
+      ],
+      "cellSize": 0.004438642,
+      "chunkSize": 16,
+      "pivot": [
+        56.5,
+        0.0,
+        50.0
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-512",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-512",
+      "resolution": [
+        152,
+        512,
+        134
+      ],
+      "cellSize": 0.00332681,
+      "chunkSize": 16,
+      "pivot": [
+        75.5,
+        0.0,
+        66.5
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-768",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-768",
+      "resolution": [
+        228,
+        768,
+        202
+      ],
+      "cellSize": 0.002216428,
+      "chunkSize": 16,
+      "pivot": [
+        113.5,
+        0.0,
+        100.5
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-1024",
+      "targetAssetId": "voxel-object/bulky-knight-ladder-whole-1024",
+      "resolution": [
+        305,
+        1024,
+        269
+      ],
+      "cellSize": 0.001661779,
+      "chunkSize": 16,
+      "pivot": [
+        152.0,
+        0.0,
+        134.0
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "engineRevision": "c02754812d53df5363c9e6475c685c54e532f5e5",
+  "experimentId": "dark-knight-ladder",
+  "sourceAssetId": "mesh/dark-knight",
+  "sourcePath": "content/sources/dark-knight/dark-knight.glb",
+  "sourceSha256": "sha256:24488f55fcd0d88808117f9261d05576c0f6aaa833eb4839ce893a94862df9bb",
+  "bakes": [
+    {
+      "bakeId": "whole-128",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-128",
+      "resolution": [
+        32,
+        128,
+        97
+      ],
+      "cellSize": 0.013385827,
+      "chunkSize": 16,
+      "pivot": [
+        15.5,
+        0.0,
+        48.0
+      ],
+      "status": "published",
+      "sourceVertices": 113202,
+      "sourceTriangles": 37734,
+      "planHash": "sha256:44d2ce4f3674877ae3ec46b2ffa095d9aa8bb260d8b24c0b9112c684258eb486",
+      "settingsSha256": "sha256:1111b2431e994687175d31375439b4ac11f25a883d78a08e1d4aa7a2b867d177",
+      "contentHash": "sha256:b232e2844253e2a5175cf5e047150aa9d075b9720bea0fe70a909baecac4b2da",
+      "objectPath": ".density-cache/objects/dark-knight-ladder-whole-128-b232e2844253e2a5175cf5e047150aa9d075b9720bea0fe70a909baecac4b2da.voxel-object.json",
+      "artifactBytes": 1619520,
+      "aggregateVoxels": 29912,
+      "voxelizationWork": 273671,
+      "maxOutputVoxels": 397312,
+      "importMicroseconds": 464796,
+      "conversionMicroseconds": 2097474,
+      "admissionMicroseconds": 526695,
+      "resolvedVoxels": 29912,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 2693172,
+      "meshVertices": 89772,
+      "meshIndices": 134658,
+      "meshFaces": 22443,
+      "projectionOperationCount": 3,
+      "projectionJsonBytes": 1757,
+      "silhouetteJaccard": 0.6536
+    },
+    {
+      "bakeId": "whole-256",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-256",
+      "resolution": [
+        64,
+        256,
+        193
+      ],
+      "cellSize": 0.006666667,
+      "chunkSize": 16,
+      "pivot": [
+        31.5,
+        0.0,
+        96.0
+      ],
+      "status": "published",
+      "sourceVertices": 113202,
+      "sourceTriangles": 37734,
+      "planHash": "sha256:d9b15e18eae8f5d1fc5f891e6933983ed1f4e2c8566a7b74d980473711a9a5f4",
+      "settingsSha256": "sha256:2ec226384d431eb5c846f3880bcb9777e970314c7c2ee194c6198c047fb03a53",
+      "contentHash": "sha256:8c4778bd15b5add6def6e4df6d2ec9e5aee8c7d9269ef4194ee6854c8d13b1c2",
+      "objectPath": ".density-cache/objects/dark-knight-ladder-whole-256-8c4778bd15b5add6def6e4df6d2ec9e5aee8c7d9269ef4194ee6854c8d13b1c2.voxel-object.json",
+      "artifactBytes": 7390836,
+      "aggregateVoxels": 128982,
+      "voxelizationWork": 914938,
+      "maxOutputVoxels": 1000000,
+      "importMicroseconds": 459135,
+      "conversionMicroseconds": 7533133,
+      "admissionMicroseconds": 2622216,
+      "resolvedVoxels": 128982,
+      "frameCount": 1,
+      "uniqueMeshCount": 1,
+      "uniqueMeshPayloadBytes": 11984892,
+      "meshVertices": 399496,
+      "meshIndices": 599244,
+      "meshFaces": 99874,
+      "projectionOperationCount": 3,
+      "projectionJsonBytes": 1761,
+      "silhouetteJaccard": 0.971
+    },
+    {
+      "bakeId": "whole-384",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-384",
+      "resolution": [
+        96,
+        384,
+        290
+      ],
+      "cellSize": 0.004438642,
+      "chunkSize": 16,
+      "pivot": [
+        47.5,
+        0.0,
+        144.5
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-512",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-512",
+      "resolution": [
+        128,
+        512,
+        387
+      ],
+      "cellSize": 0.00332681,
+      "chunkSize": 16,
+      "pivot": [
+        63.5,
+        0.0,
+        193.0
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-768",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-768",
+      "resolution": [
+        192,
+        768,
+        580
+      ],
+      "cellSize": 0.002216428,
+      "chunkSize": 16,
+      "pivot": [
+        95.5,
+        0.0,
+        289.5
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    },
+    {
+      "bakeId": "whole-1024",
+      "targetAssetId": "voxel-object/dark-knight-ladder-whole-1024",
+      "resolution": [
+        257,
+        1024,
+        774
+      ],
+      "cellSize": 0.001661779,
+      "chunkSize": 16,
+      "pivot": [
+        128.0,
+        0.0,
+        386.5
+      ],
+      "status": "failed",
+      "stage": "plan",
+      "error": "conversion.resourceLimit at settings.resolution: each resolution axis must be 1..=256 and the grid may contain at most 16777216 cells"
+    }
+  ]
+}
