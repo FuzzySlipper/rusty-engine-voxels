@@ -247,9 +247,10 @@ evidence, protocol compatibility, or prose. See
 rollback contract.
 
 `studio.sh` checks out the exact provider revision from `engine-source.json` into the ignored
-`.studio-cache`, installs its locked Studio workspace, builds this repository's Rust adapter, and
-prints an auto-open URL for the checked voxel-lab project. The project can therefore use Studio
-without an operational sibling checkout or a copy of Studio source.
+`.studio-cache`, installs and builds its locked Studio workspace, builds this repository's Rust
+adapter, and launches Studio's explicit-adapter host with an auto-open URL for the checked voxel-lab
+project. The project can therefore use Studio without an operational sibling checkout or a copy of
+Studio source; the managed Loading Bay adapter is not involved.
 
 The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,

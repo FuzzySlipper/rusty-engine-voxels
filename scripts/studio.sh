@@ -39,6 +39,7 @@ VOXEL_PROVIDER_CHECKOUT="$(bash "$VOXEL_ROOT/scripts/studio-provider.sh")"
 cargo build --locked \
   --manifest-path "$VOXEL_ROOT/Cargo.toml" \
   --bin rusty-engine-voxels-studio-adapter
+pnpm --dir "$VOXEL_PROVIDER_CHECKOUT/studio" run build
 
 VOXEL_ADAPTER="$VOXEL_ROOT/target/debug/rusty-engine-voxels-studio-adapter"
 VOXEL_ENCODED_ROOT="$(
@@ -53,7 +54,7 @@ fi
 
 printf 'Voxel Lab Studio: http://%s:%s/?%s\n' \
   "$VOXEL_DISPLAY_HOST" "$VOXEL_BIND_PORT" "$VOXEL_QUERY"
-exec pnpm --dir "$VOXEL_PROVIDER_CHECKOUT/studio" run serve:den -- \
+exec pnpm --dir "$VOXEL_PROVIDER_CHECKOUT/studio" run host -- \
   --adapter-binary "$VOXEL_ADAPTER" \
   --host "$VOXEL_BIND_HOST" \
   --port "$VOXEL_BIND_PORT"
