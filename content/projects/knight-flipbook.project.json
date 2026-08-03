@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 3,
+  "projectId": "rusty-engine-voxels",
+  "name": "Rusty Engine Voxel Lab \u2014 Knight Posed Flipbook",
+  "entryScene": "scene/knight-flipbook",
+  "revision": 1,
+  "conversion": {
+    "sourceAssetId": "mesh-animation/knight",
+    "sourcePath": "content/sources/knight/knight.glb",
+    "expectedSourceSha256": "sha256:64be4d3c0bc9b60f59548ef9623a3634c8ae88155e3f40081933726e5482d924",
+    "licensePath": "content/sources/knight/LICENSE.txt",
+    "targetAssetId": "voxel-object/posed-knight-walk",
+    "objectDirectory": "content/voxel-objects",
+    "resolution": [
+      148,
+      146,
+      96
+    ],
+    "cellSize": 0.01256946348389191,
+    "chunkSize": 16,
+    "pivot": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "anchorPolicy": {
+      "kind": "preserveSourceSpace"
+    },
+    "clips": [],
+    "defaultClip": ""
+  },
+  "textures": [],
+  "atlases": [],
+  "materials": [
+    {
+      "assetId": "material/knight-1",
+      "displayName": "armor",
+      "color": [
+        0.48,
+        0.5,
+        0.55,
+        1.0
+      ],
+      "roughness": 0.8
+    },
+    {
+      "assetId": "material/knight-2",
+      "displayName": "helmet",
+      "color": [
+        0.62,
+        0.65,
+        0.7,
+        1.0
+      ],
+      "roughness": 0.8
+    },
+    {
+      "assetId": "material/knight-3",
+      "displayName": "blade",
+      "color": [
+        0.78,
+        0.8,
+        0.84,
+        1.0
+      ],
+      "roughness": 0.6
+    },
+    {
+      "assetId": "material/knight-4",
+      "displayName": "leather",
+      "color": [
+        0.42,
+        0.3,
+        0.2,
+        1.0
+      ],
+      "roughness": 0.9
+    },
+    {
+      "assetId": "material/knight-5",
+      "displayName": "wood",
+      "color": [
+        0.5,
+        0.36,
+        0.22,
+        1.0
+      ],
+      "roughness": 0.9
+    },
+    {
+      "assetId": "material/knight-6",
+      "displayName": "cloth",
+      "color": [
+        0.4,
+        0.22,
+        0.3,
+        1.0
+      ],
+      "roughness": 0.9
+    }
+  ],
+  "voxelObjects": [
+    {
+      "assetId": "voxel-object/posed-knight-walk",
+      "path": "content/voxel-objects/posed-knight-walk-55a5ddbd4da96a8a3cafce52c2adb71d7eaf44ee00b0c035b705c72075788aec.voxel-object.json",
+      "expectedContentHash": "sha256:55a5ddbd4da96a8a3cafce52c2adb71d7eaf44ee00b0c035b705c72075788aec"
+    }
+  ],
+  "instances": [
+    {
+      "entityId": 1,
+      "instanceId": "knight-posed-walk",
+      "voxelObjectAssetId": "voxel-object/posed-knight-walk",
+      "frame": {
+        "kind": "clip",
+        "clipId": "clip/walk",
+        "frameIndex": 0
+      },
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "collisionPolicy": {
+        "kind": "none"
+      }
+    }
+  ]
+}

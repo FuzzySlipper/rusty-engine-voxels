@@ -295,7 +295,15 @@ impl VoxelLabProject {
                 return Err(format!("invalid sample rate for {}", clip.output_clip_id));
             }
         }
-        if !clip_ids.contains(conversion.default_clip.as_str()) {
+        if conversion.clips.is_empty() {
+            // A static source has no animation clips to sample; the default
+            // clip must then be empty rather than name a missing entry.
+            if !conversion.default_clip.is_empty() {
+                return Err(
+                    "conversion.defaultClip must be empty when no clips are configured".to_owned(),
+                );
+            }
+        } else if !clip_ids.contains(conversion.default_clip.as_str()) {
             return Err("conversion.defaultClip must name a configured output clip".to_owned());
         }
         unique(

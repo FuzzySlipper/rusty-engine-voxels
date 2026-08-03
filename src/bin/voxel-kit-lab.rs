@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rusty_engine_voxels::kit_bake::{run_kit_bake, write_kit_bake_output};
+use rusty_engine_voxels::posed::{run_posed_flipbook, write_posed_flipbook_report};
 
 fn main() -> ExitCode {
     match run() {
@@ -45,9 +46,21 @@ fn run() -> Result<(), String> {
                 serde_json::to_string_pretty(&output.evidence).map_err(|error| error.to_string())?
             );
         }
+        "poses" => {
+            let spec = spec.ok_or("poses requires --spec PATH")?;
+            let out = out.unwrap_or_else(|| "content/voxel-objects".to_owned());
+            let output = run_posed_flipbook(&root, &spec, &out)?;
+            if let Some(report) = report {
+                write_posed_flipbook_report(&root, &report, &output)?;
+            }
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&output.evidence).map_err(|error| error.to_string())?
+            );
+        }
         _ => {
             return Err(
-                "usage: voxel-kit-lab bake --spec PATH [--out PATH --report PATH] [--root PATH]"
+                "usage: voxel-kit-lab <bake|poses> --spec PATH [--out PATH --report PATH] [--root PATH]"
                     .to_owned(),
             )
         }

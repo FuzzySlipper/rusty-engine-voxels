@@ -13,6 +13,7 @@ pub mod kit_bake;
 mod mesh_resource_cache;
 pub mod model;
 pub mod pose;
+pub mod posed;
 pub mod project;
 pub mod provider_pin;
 pub mod quality;

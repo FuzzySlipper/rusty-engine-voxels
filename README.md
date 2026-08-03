@@ -260,6 +260,12 @@ and transiently playing reopened applied instances. Runtime textures are deliber
 the mesh image used by conversion sampling. Other protocol-14 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
+A third checked project, `content/projects/knight-flipbook.project.json`, loads the posed
+flipbook: the knight kit compiled from an authored pose spec into a canonical voxel object (no
+mesh conversion, no rig). Open it by swapping the URL's `project` query parameter to
+`content%2Fprojects%2Fknight-flipbook.project.json`. See
+[`docs/posed-flipbook.md`](docs/posed-flipbook.md).
+
 Applied playback retains the admitted object and renderer projector for the open project. After the
 initial complete frame, ordinary animation samples carry one `setVoxelObjectFrame` operation; Studio
 waits for that pose to reach the shared renderer and then displays it for its authored duration before

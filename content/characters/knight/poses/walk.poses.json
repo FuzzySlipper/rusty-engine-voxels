@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "knight-walk",
+  "kit": "content/characters/knight/character.json",
+  "cellDownsample": 2,
+  "clipId": "clip/walk",
+  "clipName": "Walk (posed flipbook)",
+  "frames": [
+    {
+      "name": "walk_a",
+      "durationMicroseconds": 180000,
+      "deltas": [
+        { "part": "torso", "yDeg": 4.0 },
+        { "part": "helmet", "xDeg": -3.0 },
+        { "part": "left_leg", "xDeg": 18.0 },
+        { "part": "right_leg", "xDeg": -14.0 },
+        { "part": "left_arm", "xDeg": -10.0 },
+        { "part": "right_arm", "xDeg": 12.0 }
+      ],
+      "chains": [
+        { "child": "left_hand", "parent": "left_arm" },
+        { "child": "right_hand", "parent": "right_arm" },
+        { "child": "sword", "parent": "left_arm" },
+        { "child": "pillum", "parent": "right_arm" }
+      ]
+    },
+    {
+      "name": "pass_ab",
+      "durationMicroseconds": 140000,
+      "deltas": [
+        { "part": "torso", "yDeg": 1.0 },
+        { "part": "helmet", "xDeg": -2.0 },
+        { "part": "left_leg", "xDeg": 4.0 },
+        { "part": "right_leg", "xDeg": -2.0 },
+        { "part": "left_arm", "xDeg": -3.0 },
+        { "part": "right_arm", "xDeg": 3.0 }
+      ],
+      "chains": [
+        { "child": "left_hand", "parent": "left_arm" },
+        { "child": "right_hand", "parent": "right_arm" },
+        { "child": "sword", "parent": "left_arm" },
+        { "child": "pillum", "parent": "right_arm" }
+      ]
+    },
+    {
+      "name": "walk_b",
+      "durationMicroseconds": 180000,
+      "deltas": [
+        { "part": "torso", "yDeg": -4.0 },
+        { "part": "helmet", "xDeg": -3.0 },
+        { "part": "left_leg", "xDeg": -14.0 },
+        { "part": "right_leg", "xDeg": 18.0 },
+        { "part": "left_arm", "xDeg": 12.0 },
+        { "part": "right_arm", "xDeg": -10.0 }
+      ],
+      "chains": [
+        { "child": "left_hand", "parent": "left_arm" },
+        { "child": "right_hand", "parent": "right_arm" },
+        { "child": "sword", "parent": "left_arm" },
+        { "child": "pillum", "parent": "right_arm" }
+      ]
+    },
+    {
+      "name": "pass_ba",
+      "durationMicroseconds": 140000,
+      "deltas": [
+        { "part": "torso", "yDeg": -1.0 },
+        { "part": "helmet", "xDeg": -2.0 },
+        { "part": "left_leg", "xDeg": -2.0 },
+        { "part": "right_leg", "xDeg": 4.0 },
+        { "part": "left_arm", "xDeg": 3.0 },
+        { "part": "right_arm", "xDeg": -3.0 }
+      ],
+      "chains": [
+        { "child": "left_hand", "parent": "left_arm" },
+        { "child": "right_hand", "parent": "right_arm" },
+        { "child": "sword", "parent": "left_arm" },
+        { "child": "pillum", "parent": "right_arm" }
+      ]
+    }
+  ]
+}

@@ -18,7 +18,7 @@ use voxel_asset::{
     VoxelRepresentation, VoxelRepresentationKind, VoxelSparseRun, VOXEL_OBJECT_SCHEMA_VERSION,
 };
 
-use crate::assemble::{socket_constrained_part_placements, SelectedPose};
+use crate::assemble::{socket_constrained_part_placements, RoughFrame, SelectedPose};
 use crate::fusion::{FusedFrame, FusionContext};
 use crate::kit::VoxelKit;
 use crate::project::{atomic_write, safe_join, sha256};
@@ -197,6 +197,117 @@ pub fn compile_flipbook(
         });
     }
 
+    finalize_compiled_flipbook(
+        settings,
+        source_sha256,
+        settings_sha256,
+        source_bytes
+            .len()
+            .try_into()
+            .map_err(|_| "source byte count does not fit u64")?,
+        palette,
+        material_map,
+        animation_frames,
+        context.kit.convention.voxel_size_meters,
+        inferred_frame_rate(fused),
+    )
+}
+
+/// Compile rig-free authored pose frames into one canonical immutable object.
+///
+/// This is the rig-free sibling of [`compile_flipbook`] for manually authored
+/// pose specs (`crate::posed`): the frames are already complete rough
+/// assemblies, so no rig, fusion context, or frame-fact resolution is
+/// involved. Anchors, hit regions, and body collision are not resolvable
+/// without placements and must be empty in `settings`.
+///
+/// Frames are run-length encoded along +X (posed frames carry no fusion
+/// provenance worth preserving in the artifact), which keeps kit-scale
+/// characters well inside the Engine's 64 MiB artifact bound.
+///
+/// The compiled object's cell size is explicit (not taken from the kit) so
+/// pose specs can compile at a downsampled lattice rate.
+///
+/// # Errors
+///
+/// Returns an error when the frame list is empty, a frame has no duration or
+/// no voxels, the cell size is not finite and positive, frame facts were
+/// requested, or Engine admission rejects the candidate.
+pub fn compile_posed_flipbook(
+    kit: &VoxelKit,
+    frames: &[RoughFrame],
+    settings: &FlipbookCompileSettings,
+    source_bytes: &[u8],
+    cell_size_meters: f64,
+) -> Result<CompiledFlipbook, String> {
+    if frames.is_empty() {
+        return Err("posed flipbook must contain at least one frame".into());
+    }
+    if source_bytes.is_empty() {
+        return Err("flipbook source bytes must not be empty".into());
+    }
+    if !cell_size_meters.is_finite() || cell_size_meters <= 0.0 {
+        return Err("posed flipbook cell size must be finite and positive".into());
+    }
+    if !settings.anchors.is_empty()
+        || !settings.hit_regions.is_empty()
+        || settings.body_collision.is_some()
+    {
+        return Err(
+            "posed flipbook compilation does not resolve frame facts; anchors, hit regions, and body collision must be empty"
+                .into(),
+        );
+    }
+    let settings_json = serde_json::to_vec(settings).map_err(|error| error.to_string())?;
+    let source_sha256 = sha256(source_bytes);
+    let settings_sha256 = sha256(&settings_json);
+    let palette = material_palette(kit)?;
+    let palette_slots = palette.iter().map(|binding| binding.material_slot);
+    let material_map = material_map(kit);
+    let mut animation_frames = Vec::with_capacity(frames.len());
+    for frame in frames {
+        if frame.duration_microseconds == 0 {
+            return Err("posed flipbook frames must have non-zero durations".into());
+        }
+        animation_frames.push(VoxelObjectAnimationFrame {
+            duration_seconds: Some(frame.duration_microseconds as f64 / 1_000_000.0),
+            anchors: Vec::new(),
+            collision: None,
+            frame: voxel_frame_runs(frame, palette_slots.clone())?,
+        });
+    }
+    finalize_compiled_flipbook(
+        settings,
+        source_sha256,
+        settings_sha256,
+        source_bytes
+            .len()
+            .try_into()
+            .map_err(|_| "source byte count does not fit u64")?,
+        palette,
+        material_map,
+        animation_frames,
+        cell_size_meters,
+        inferred_frame_rate_from_durations(frames),
+    )
+}
+
+/// Shared object assembly for both flipbook compilers: union bounds, default
+/// frame from the first animation frame, one clip, and authored provenance.
+/// The pinned `flipbook_experiment` content hashes prove this produces
+/// byte-identical output for the rig-driven path.
+#[allow(clippy::too_many_arguments)]
+fn finalize_compiled_flipbook(
+    settings: &FlipbookCompileSettings,
+    source_sha256: String,
+    settings_sha256: String,
+    source_byte_count: u64,
+    palette: Vec<VoxelAssetMaterialBinding>,
+    material_map: Vec<VoxelAssetMaterialMapping>,
+    animation_frames: Vec<VoxelObjectAnimationFrame>,
+    cell_size_meters: f64,
+    frames_per_second: f64,
+) -> Result<CompiledFlipbook, String> {
     let bounds = animation_frames
         .iter()
         .map(|frame| frame.frame.bounds)
@@ -208,7 +319,7 @@ pub fn compile_flipbook(
         asset_id: settings.asset_id.clone(),
         grid: VoxelObjectGrid {
             coordinate_system: VoxelCoordinateSystem::RightHandedYUp,
-            cell_size: context.kit.convention.voxel_size_meters,
+            cell_size: cell_size_meters,
             chunk_size: settings.chunk_size,
             pivot: [0.0, 0.0, 0.0],
         },
@@ -217,7 +328,7 @@ pub fn compile_flipbook(
         clips: vec![VoxelObjectClip {
             id: settings.clip_id.clone(),
             name: Some(settings.clip_name.clone()),
-            frames_per_second: inferred_frame_rate(fused),
+            frames_per_second,
             frames: animation_frames,
         }],
         default_clip: Some(settings.clip_id.clone()),
@@ -227,10 +338,7 @@ pub fn compile_flipbook(
             kind: VoxelObjectProvenanceKind::Authored,
             source_path: settings.source_path.clone(),
             source_sha256: source_sha256.clone(),
-            source_byte_count: source_bytes
-                .len()
-                .try_into()
-                .map_err(|_| "source byte count does not fit u64")?,
+            source_byte_count,
             converter: COMPILER_ID.to_owned(),
             settings_sha256: settings_sha256.clone(),
             license_path: None,
@@ -293,6 +401,53 @@ fn voxel_frame(
             material_slot: cell.material_slot,
         })
         .collect();
+    with_computed_voxel_frame_hash(
+        VoxelFrame {
+            bounds: VoxelAssetBounds { min, max },
+            representation: VoxelRepresentation {
+                kind: VoxelRepresentationKind::SparseRuns,
+                sparse_runs,
+            },
+            voxel_data_hash: String::new(),
+        },
+        material_slots,
+    )
+    .map_err(|error| error.to_string())
+}
+
+/// Build a voxel frame from a posed rough frame, run-length encoding
+/// consecutive same-slot cells along +X (the Engine's sparse-run direction).
+/// Posed frames carry no fusion provenance worth preserving in the artifact —
+/// coordinate + material slot are the only geometry authority here.
+fn voxel_frame_runs(
+    frame: &RoughFrame,
+    material_slots: impl IntoIterator<Item = u16>,
+) -> Result<VoxelFrame, String> {
+    let (min, max) = frame.bounds().ok_or("posed flipbook frame contains no voxels")?;
+    let mut cells: Vec<([i64; 3], u16)> = frame
+        .voxels
+        .iter()
+        .map(|voxel| (voxel.coordinate, voxel.material_slot))
+        .collect();
+    cells.sort_by_key(|(coordinate, _)| (coordinate[1], coordinate[2], coordinate[0]));
+    let mut sparse_runs: Vec<VoxelSparseRun> = Vec::new();
+    for (coordinate, material_slot) in cells {
+        match sparse_runs.last_mut() {
+            Some(run)
+                if run.material_slot == material_slot
+                    && run.start[1] == coordinate[1]
+                    && run.start[2] == coordinate[2]
+                    && run.start[0] + i64::from(run.length) == coordinate[0] =>
+            {
+                run.length += 1;
+            }
+            _ => sparse_runs.push(VoxelSparseRun {
+                start: coordinate,
+                length: 1,
+                material_slot,
+            }),
+        }
+    }
     with_computed_voxel_frame_hash(
         VoxelFrame {
             bounds: VoxelAssetBounds { min, max },
@@ -386,6 +541,15 @@ fn resolve_fact_source(
 }
 
 fn inferred_frame_rate(frames: &[FusedFrame]) -> f64 {
+    let average = frames
+        .iter()
+        .map(|frame| frame.duration_microseconds as f64)
+        .sum::<f64>()
+        / frames.len() as f64;
+    (1_000_000.0 / average).clamp(f64::EPSILON, 240.0)
+}
+
+fn inferred_frame_rate_from_durations(frames: &[RoughFrame]) -> f64 {
     let average = frames
         .iter()
         .map(|frame| frame.duration_microseconds as f64)

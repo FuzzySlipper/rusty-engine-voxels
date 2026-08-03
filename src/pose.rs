@@ -95,6 +95,22 @@ fn quat_conjugate(q: [f64; 4]) -> [f64; 4] {
     [-q[0], -q[1], -q[2], q[3]]
 }
 
+/// Compose a quaternion from per-axis euler deltas in degrees, applied X
+/// first, then Y, then Z (Rz * Ry * Rx). This is the pose-spec authoring
+/// convention for manual pivot rotations (see `crate::posed`).
+pub fn euler_degrees_to_quaternion(x_deg: f64, y_deg: f64, z_deg: f64) -> [f64; 4] {
+    let qx = axis_angle([1.0, 0.0, 0.0], x_deg);
+    let qy = axis_angle([0.0, 1.0, 0.0], y_deg);
+    let qz = axis_angle([0.0, 0.0, 1.0], z_deg);
+    quat_mul(qz, quat_mul(qy, qx))
+}
+
+fn axis_angle(axis: [f64; 3], degrees: f64) -> [f64; 4] {
+    let half = degrees.to_radians() * 0.5;
+    let s = half.sin();
+    [axis[0] * s, axis[1] * s, axis[2] * s, half.cos()]
+}
+
 fn quat_normalize(q: [f64; 4]) -> [f64; 4] {
     let len = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]).sqrt();
     if len < 1e-12 {
