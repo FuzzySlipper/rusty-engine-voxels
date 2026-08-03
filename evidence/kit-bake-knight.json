@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "engineRevision": "c02754812d53df5363c9e6475c685c54e532f5e5",
+  "kitId": "knight",
+  "sourceAssetId": "mesh/knight",
+  "sourcePath": "content/sources/knight/knight.glb",
+  "sourceSha256": "sha256:64be4d3c0bc9b60f59548ef9623a3634c8ae88155e3f40081933726e5482d924",
+  "kitCellsPerUnit": 1.5114423614749366,
+  "bakes": [
+    {
+      "node": "Armor_Material.002_0",
+      "nodeIndex": 4,
+      "resolution": [
+        131,
+        256,
+        83
+      ],
+      "cellsPerUnit": 1.4925209311604721,
+      "sourceVertices": 12768,
+      "sourceTriangles": 4256,
+      "voxelizationWork": 972211,
+      "voxels": 96410,
+      "conversionMicroseconds": 5174415
+    },
+    {
+      "node": "Pants_Material.002_0",
+      "nodeIndex": 10,
+      "resolution": [
+        83,
+        79,
+        41
+      ],
+      "cellsPerUnit": 1.4921983831720833,
+      "sourceVertices": 296,
+      "sourceTriangles": 428,
+      "voxelizationWork": 175039,
+      "voxels": 20419,
+      "conversionMicroseconds": 1106595
+    },
+    {
+      "node": "Helmet_Material.003_0",
+      "nodeIndex": 6,
+      "resolution": [
+        34,
+        55,
+        41
+      ],
+      "cellsPerUnit": 1.5114423614749366,
+      "sourceVertices": 3648,
+      "sourceTriangles": 1216,
+      "voxelizationWork": 65031,
+      "voxels": 8891,
+      "conversionMicroseconds": 489975
+    },
+    {
+      "node": "Cloth_Material.002_0",
+      "nodeIndex": 12,
+      "resolution": [
+        86,
+        64,
+        57
+      ],
+      "cellsPerUnit": 1.4907811034106853,
+      "sourceVertices": 1128,
+      "sourceTriangles": 376,
+      "voxelizationWork": 195170,
+      "voxels": 21323,
+      "conversionMicroseconds": 1077089
+    },
+    {
+      "node": "L.hand_Material.004_0",
+      "nodeIndex": 14,
+      "resolution": [
+        16,
+        22,
+        26
+      ],
+      "cellsPerUnit": 1.511228887726651,
+      "sourceVertices": 1404,
+      "sourceTriangles": 468,
+      "voxelizationWork": 14786,
+      "voxels": 2137,
+      "conversionMicroseconds": 115617
+    },
+    {
+      "node": "R.hand_Material.005_0",
+      "nodeIndex": 18,
+      "resolution": [
+        22,
+        27,
+        19
+      ],
+      "cellsPerUnit": 1.4970288764742012,
+      "sourceVertices": 1404,
+      "sourceTriangles": 468,
+      "voxelizationWork": 18344,
+      "voxels": 2213,
+      "conversionMicroseconds": 102931
+    },
+    {
+      "node": "Sword_mat_2_0",
+      "nodeIndex": 8,
+      "resolution": [
+        17,
+        256,
+        55
+      ],
+      "cellsPerUnit": 1.3189604549000624,
+      "sourceVertices": 1718,
+      "sourceTriangles": 604,
+      "voxelizationWork": 132241,
+      "voxels": 17261,
+      "conversionMicroseconds": 1227248
+    },
+    {
+      "node": "Pillum_Material.001_0",
+      "nodeIndex": 16,
+      "resolution": [
+        128,
+        13,
+        82
+      ],
+      "cellsPerUnit": 1.4906495258545294,
+      "sourceVertices": 475,
+      "sourceTriangles": 276,
+      "voxelizationWork": 73435,
+      "voxels": 2167,
+      "conversionMicroseconds": 190282
+    }
+  ],
+  "parts": [
+    {
+      "partId": "torso",
+      "cells": 43731,
+      "pivotKit": [
+        0,
+        170,
+        6
+      ],
+      "boundsLocal": [
+        [
+          -55,
+          -86,
+          -38
+        ],
+        [
+          43,
+          86,
+          34
+        ]
+      ],
+      "discardedToEarlierParts": 5802
+    },
+    {
+      "partId": "left_arm",
+      "cells": 14827,
+      "pivotKit": [
+        30,
+        235,
+        -3
+      ],
+      "boundsLocal": [
+        [
+          0,
+          -68,
+          -40
+        ],
+        [
+          42,
+          23,
+          15
+        ]
+      ],
+      "discardedToEarlierParts": 0
+    },
+    {
+      "partId": "right_arm",
+      "cells": 13917,
+      "pivotKit": [
+        -30,
+        235,
+        -3
+      ],
+      "boundsLocal": [
+        [
+          -30,
+          -68,
+          -12
+        ],
+        [
+          -1,
+          17,
+          30
+        ]
+      ],
+      "discardedToEarlierParts": 0
+    },
+    {
+      "partId": "left_leg",
+      "cells": 22034,
+      "pivotKit": [
+        -12,
+        84,
+        3
+      ],
+      "boundsLocal": [
+        [
+          -47,
+          -83,
+          -16
+        ],
+        [
+          11,
+          83,
+          32
+        ]
+      ],
+      "discardedToEarlierParts": 74
+    },
+    {
+      "partId": "right_leg",
+      "cells": 22217,
+      "pivotKit": [
+        12,
+        84,
+        3
+      ],
+      "boundsLocal": [
+        [
+          -12,
+          -84,
+          -17
+        ],
+        [
+          43,
+          83,
+          26
+        ]
+      ],
+      "discardedToEarlierParts": 29
+    },
+    {
+      "partId": "helmet",
+      "cells": 8424,
+      "pivotKit": [
+        2,
+        237,
+        3
+      ],
+      "boundsLocal": [
+        [
+          -18,
+          0,
+          -20
+        ],
+        [
+          15,
+          54,
+          20
+        ]
+      ],
+      "discardedToEarlierParts": 467
+    },
+    {
+      "partId": "cloth",
+      "cells": 19533,
+      "pivotKit": [
+        0,
+        175,
+        8
+      ],
+      "boundsLocal": [
+        [
+          -42,
+          -63,
+          -26
+        ],
+        [
+          45,
+          1,
+          31
+        ]
+      ],
+      "discardedToEarlierParts": 1790
+    },
+    {
+      "partId": "left_hand",
+      "cells": 2065,
+      "pivotKit": [
+        51,
+        209,
+        9
+      ],
+      "boundsLocal": [
+        [
+          3,
+          -9,
+          -13
+        ],
+        [
+          18,
+          12,
+          12
+        ]
+      ],
+      "discardedToEarlierParts": 72
+    },
+    {
+      "partId": "right_hand",
+      "cells": 2078,
+      "pivotKit": [
+        -33,
+        141,
+        21
+      ],
+      "boundsLocal": [
+        [
+          -20,
+          -10,
+          -3
+        ],
+        [
+          1,
+          17,
+          15
+        ]
+      ],
+      "discardedToEarlierParts": 135
+    },
+    {
+      "partId": "sword",
+      "cells": 17125,
+      "pivotKit": [
+        60,
+        211,
+        12
+      ],
+      "boundsLocal": [
+        [
+          -7,
+          -211,
+          -27
+        ],
+        [
+          12,
+          78,
+          34
+        ]
+      ],
+      "discardedToEarlierParts": 128
+    },
+    {
+      "partId": "pillum",
+      "cells": 2011,
+      "pivotKit": [
+        -39,
+        140,
+        23
+      ],
+      "boundsLocal": [
+        [
+          -55,
+          -7,
+          -28
+        ],
+        [
+          74,
+          5,
+          54
+        ]
+      ],
+      "discardedToEarlierParts": 156
+    }
+  ],
+  "assembly": {
+    "fingerprint": 16955304374580601702,
+    "voxels": 167962,
+    "bounds": [
+      [
+        -94,
+        0,
+        -49
+      ],
+      [
+        72,
+        291,
+        71
+      ]
+    ],
+    "regionUnassignedBakedCells": 0,
+    "sourceHeightCells": 294.36419499858886,
+    "voxelSizeMeters": 0.006284731741945955
+  },
+  "frontView": [
+    "           HHHH     SSS",
+    "           HHHH     SSS",
+    "           HHHHH    SSS",
+    "          HHHHHH    SSS",
+    "          HHHHHH### SSS",
+    "      ####HHHHH####  S ",
+    "      ######HHH##### S ",
+    "     ############### S ",
+    "     ############### S ",
+    "      ##############h##",
+    "      ##############hh#",
+    "      ##############hh#",
+    "     ###############hhS",
+    "     ###############SSS",
+    "    #############   SSS",
+    "    #############   SSS",
+    "     ############   SSS",
+    "     #############  SSS",
+    "     #############  SSS",
+    "     ############## SSS",
+    "WWWWWhhhWC######CCC SSS",
+    "     hhhWWWCWWWCWCC SS ",
+    "       CCCCCCCCCCCCCSS ",
+    "       CCCCCCCCCCCC SS ",
+    "       CCCCCCCCCCCC SS ",
+    "       CCCCC  CCCCC SS ",
+    "       CCCCC  CCCC# SS ",
+    "       ###CC  CC### SS ",
+    "       #####  ##### SS ",
+    "      #####   ##### SS ",
+    "      #####   ##### SS ",
+    "      #####   ##### SS ",
+    "      ####     #### SS ",
+    "      ####     #### SSS",
+    "      ###      #### SSS",
+    "      ###      #### SS ",
+    "      ###       ### SS ",
+    "     ####      ####  S ",
+    "    #####      ######S ",
+    "    #####      ######S "
+  ],
+  "sideView": [
+    "   HHHSSSS       ",
+    "   HHHHSS        ",
+    "   HHHHSS        ",
+    "   HHHHSS        ",
+    "   ####SS        ",
+    "   ####SSH       ",
+    "  #####SS#       ",
+    "  #####SS##      ",
+    " ######SS##      ",
+    "#######SS##      ",
+    "#######hh##      ",
+    "#######hh##      ",
+    "######ShhS#      ",
+    "#####SSSSSS      ",
+    "   #SSSSSSSS     ",
+    "    #SSSSSS      ",
+    "   SSSSSSSSSS    ",
+    "   SSSSSSSSSS    ",
+    "   ##SSSSSS#     ",
+    "   ##SSSSSS#     ",
+    "   CCSSSSSS#WWWWW",
+    "   CCSSSSSSWWWWWW",
+    "   CCSSSSSSC     ",
+    "   CCSSSSSSC     ",
+    "   CCSSSSSS      ",
+    "     SSSSSS      ",
+    "     SSSSSS      ",
+    "     SSSSSS      ",
+    "     SSSSSS      ",
+    "    #SSSSSS      ",
+    "    #SSSSSS      ",
+    "    #SSSSSS      ",
+    "    SSSSSSS      ",
+    "    SSSSSSSS     ",
+    "    SSSSSSSS     ",
+    "    SSSSSSSS     ",
+    "    #SSSSSS      ",
+    "    ##SSSS       ",
+    "   ###SSSS#      ",
+    "   ####SS##      "
+  ]
+}

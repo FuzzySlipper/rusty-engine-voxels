@@ -1159,8 +1159,12 @@ fn overflow_error(part_id: &str, what: &str, value: [i64; 3]) -> KitError {
 // Loading
 // ---------------------------------------------------------------------------
 
-/// Maximum bytes accepted for a single canonical kit document.
-pub const MAX_KIT_BYTES: u64 = 4 * 1024 * 1024;
+/// Maximum bytes accepted for a single canonical kit document. Mesh-derived
+/// kits are much larger than hand-authored ones (the 168k-cell knight kit is
+/// ~23 MB of expanded JSON); the bound matches the project's voxel-object
+/// budget. A compact cell encoding is a deliberate future format question —
+/// the pretty JSON is the authoring-friendly reference encoding for now.
+pub const MAX_KIT_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Load and validate a canonical kit from a JSON document on disk.
 pub fn load_kit(root: &std::path::Path, relative_path: &str) -> Result<VoxelKit, KitError> {

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Knight
+* source:	https://sketchfab.com/3d-models/knight-d62d60d5e4304d2cb08b2b1678ae4215
+* author:	danielgobr481 (https://sketchfab.com/danielgobr481)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Knight" (https://sketchfab.com/3d-models/knight-d62d60d5e4304d2cb08b2b1678ae4215) by danielgobr481 (https://sketchfab.com/danielgobr481) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

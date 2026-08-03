@@ -99,6 +99,34 @@ and 34.5 MB unique mesh payload take about 2.6 seconds to admit and mesh in this
 run. See [`docs/quality-report.md`](docs/quality-report.md) for the measured tradeoff and explicit
 limits.
 
+## Mesh-derived exploded kits
+
+`voxel-kit-lab bake` authors a canonical exploded kit from a real mesh: each
+named mesh piece bakes through the Engine's static conversion at its
+cap-limited rate, independently fitted bakes re-register into one shared kit
+lattice by volume-exact re-rasterization, and voxel-space region predicates
+split pieces into parts (armor → torso/arms/legs, pants → legs). The first
+product is the checked knight kit: **11 parts, 167,962 voxels** (~133× the
+rifleman's cells) from a CC-BY Sketchfab knight with 8 named mesh pieces —
+fully inside Engine caps (max 972k of 10M voxelization work, ≤256 cells per
+axis per bake).
+
+The companion experiment `tests/kit_pivot_experiment.rs` answers "can an
+agent pose this by hand?": hand-authored pivot rotations (idle + two walk
+poses, no rig) assemble through the rig-free `assemble_placed_frame`; still
+parts contribute exactly zero churn, rigid parts hold volume, and torn seams
+surface as fusion candidates for the M3 handoff. See
+[`docs/kit-bake.md`](docs/kit-bake.md),
+`evidence/kit-bake-knight.json`, and `evidence/kit-pivot-knight.json`.
+
+```bash
+cargo run --locked --bin voxel-kit-lab -- bake \
+  --spec content/characters/knight/kit-spec.json \
+  --out content/characters/knight/character.json \
+  --report evidence/kit-bake-knight.json
+cargo test --locked --test kit_bake_experiment --test kit_pivot_experiment
+```
+
 ## Density lab
 
 The `voxel-density-lab` harness bakes complicated static meshes — whole or as

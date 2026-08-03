@@ -464,6 +464,59 @@ pub fn assemble_rough_frame(
         clip_index,
         selected.time_microseconds,
     )?;
+    let part_ids: Vec<&str> = rig_map
+        .bindings
+        .iter()
+        .map(|binding| binding.part_id.as_str())
+        .collect();
+    merge_placed_parts(
+        kit,
+        &part_ids,
+        &placements,
+        selected.time_microseconds,
+        selected.duration_microseconds,
+        settings,
+    )
+}
+
+/// Assemble one rough frame from explicit per-part placements, without a rig.
+///
+/// This is the rig-free sibling of [`assemble_rough_frame`]: manual pose
+/// authoring (agent- or editor-driven pivot rotations) supplies one rigid
+/// transform per part, and the merge — conservative rasterization, part-order
+/// overlap resolution, and fusion-candidate marking — is identical to the
+/// rig-driven path.
+///
+/// # Errors
+///
+/// Returns a typed pose validation error when a placement names an unknown
+/// part, a part is missing a placement, or rasterization rejects the settings.
+pub fn assemble_placed_frame(
+    kit: &VoxelKit,
+    placements: &BTreeMap<String, RigidTransform>,
+    time_microseconds: u64,
+    duration_microseconds: u64,
+    settings: &RasterSettings,
+) -> Result<RoughFrame, PoseError> {
+    let part_ids: Vec<&str> = kit.parts.iter().map(|part| part.id.as_str()).collect();
+    merge_placed_parts(
+        kit,
+        &part_ids,
+        placements,
+        time_microseconds,
+        duration_microseconds,
+        settings,
+    )
+}
+
+fn merge_placed_parts(
+    kit: &VoxelKit,
+    part_ids: &[&str],
+    placements: &BTreeMap<String, RigidTransform>,
+    time_microseconds: u64,
+    duration_microseconds: u64,
+    settings: &RasterSettings,
+) -> Result<RoughFrame, PoseError> {
     let part_indices: BTreeMap<&str, u32> = kit
         .parts
         .iter()
@@ -473,16 +526,19 @@ pub fn assemble_rough_frame(
 
     let fusion_margin = 2i64;
     let mut voxels: Vec<AssembledVoxelCell> = Vec::new();
-    let mut occupied: BTreeMap<[i64; 3], usize> = BTreeMap::new();
+    // HashMap: the merge and the fusion-margin scan below are lookup-only, so
+    // an ordered map buys nothing at kit scale (100k+ cells) and costs a log
+    // factor per lookup. No iteration order depends on this structure.
+    let mut occupied: std::collections::HashMap<[i64; 3], usize> = std::collections::HashMap::new();
     let mut discarded_overlaps = Vec::new();
     let part_depths = part_depths(kit);
 
-    for binding in &rig_map.bindings {
+    for part_id in part_ids {
         let part = kit
-            .part(&binding.part_id)
-            .ok_or_else(|| PoseError::Validation(format!("unknown part {}", binding.part_id)))?;
-        let part_index = part_indices[binding.part_id.as_str()];
-        let placement = placements.get(&binding.part_id).copied().ok_or_else(|| {
+            .part(part_id)
+            .ok_or_else(|| PoseError::Validation(format!("unknown part {part_id}")))?;
+        let part_index = part_indices[part_id];
+        let placement = placements.get(*part_id).copied().ok_or_else(|| {
             PoseError::Validation(format!("part {} has no constrained placement", part.id))
         })?;
         for cell in rasterize_part(part, placement, settings)? {
@@ -545,7 +601,6 @@ pub fn assemble_rough_frame(
     // Mark voxels near another part's cells as fusion candidates.
     let part_of: Vec<u32> = voxels.iter().map(|v| v.part_id).collect();
     let coords: Vec<[i64; 3]> = voxels.iter().map(|v| v.coordinate).collect();
-    let cell_set: std::collections::BTreeSet<[i64; 3]> = coords.iter().copied().collect();
     for i in 0..voxels.len() {
         if voxels[i].needs_fusion {
             continue;
@@ -558,10 +613,6 @@ pub fn assemble_rough_frame(
                         continue;
                     }
                     let n = [c[0] + dx, c[1] + dy, c[2] + dz];
-                    if !cell_set.contains(&n) {
-                        continue;
-                    }
-                    // Find the owner's part for this neighbor.
                     if let Some(&owner_idx) = occupied.get(&n) {
                         if part_of[owner_idx] != part_of[i] {
                             voxels[i].needs_fusion = true;
@@ -575,8 +626,8 @@ pub fn assemble_rough_frame(
 
     voxels.sort_by_key(|v| v.coordinate);
     Ok(RoughFrame {
-        time_microseconds: selected.time_microseconds,
-        duration_microseconds: selected.duration_microseconds,
+        time_microseconds,
+        duration_microseconds,
         voxels,
         discarded_overlaps,
     })

@@ -20,6 +20,10 @@ name = "voxel-density-lab"
 path = "src/bin/voxel-density-lab.rs"
 
 [[bin]]
+name = "voxel-kit-lab"
+path = "src/bin/voxel-kit-lab.rs"
+
+[[bin]]
 name = "rusty-engine-voxels-studio-adapter"
 path = "src/bin/studio-adapter.rs"
 

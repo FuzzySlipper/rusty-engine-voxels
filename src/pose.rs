@@ -625,7 +625,9 @@ const FACE_NEIGHBORS: [[i64; 3]; 6] = [
     [0, 0, -1],
 ];
 
-/// Count face-connected components of a cell set (BFS).
+/// Count face-connected components of a cell set (BFS). Used by the raster
+/// tests; the repair loop tracks components incrementally with a union-find.
+#[cfg(test)]
 fn connected_components(cells: &std::collections::BTreeSet<[i64; 3]>) -> usize {
     let mut seen = std::collections::BTreeSet::new();
     let mut components = 0;
@@ -857,63 +859,171 @@ pub fn rasterize_part(
     // candidates remain. Because every candidate face-touches existing cells
     // (it was binned from a neighbouring source cube), this converges to one
     // component for a rigid part.
+    //
+    // Scaling note: at kit scale (100k+ cells) the original stop condition — a
+    // full set rebuild plus a full BFS per added cell — and the per-iteration
+    // full-candidate rescan are quadratic. This loop keeps the *identical* pick
+    // sequence (and so bit-identical output) while making both incremental: one
+    // BFS labeling seeds a union-find, and a (touches, coordinate) ordered set
+    // replaces the rescan, updated only for candidates adjacent to each added
+    // cell. The pick rule is unchanged: most face-touches with existing cells,
+    // tie-broken by lowest coordinate.
+    fn find(
+        parent: &mut std::collections::BTreeMap<[i64; 3], [i64; 3]>,
+        cell: [i64; 3],
+    ) -> [i64; 3] {
+        let mut root = cell;
+        while parent[&root] != root {
+            root = parent[&root];
+        }
+        let mut step = cell;
+        while parent[&step] != step {
+            let next = parent[&step];
+            parent.insert(step, root);
+            step = next;
+        }
+        root
+    }
     let mut candidates: BTreeMap<[i64; 3], RasterCell> = sub_threshold
         .into_iter()
         .map(|c| (c.coordinate, c))
         .collect();
+    let mut live_set: std::collections::BTreeSet<[i64; 3]> =
+        cells.iter().map(|cell| cell.coordinate).collect();
+    // One BFS labeling pass over the initial cells: `parent` maps every cell to
+    // its component root (the BFS start cell), giving both the union-find's
+    // initial state and the component count.
+    let mut parent: std::collections::BTreeMap<[i64; 3], [i64; 3]> =
+        std::collections::BTreeMap::new();
+    let mut components = 0usize;
+    for start in live_set.iter().copied().collect::<Vec<_>>() {
+        if parent.contains_key(&start) {
+            continue;
+        }
+        components += 1;
+        parent.insert(start, start);
+        let mut stack = vec![start];
+        while let Some(c) = stack.pop() {
+            for d in FACE_NEIGHBORS {
+                let n = [c[0] + d[0], c[1] + d[1], c[2] + d[2]];
+                if live_set.contains(&n) && !parent.contains_key(&n) {
+                    parent.insert(n, start);
+                    stack.push(n);
+                }
+            }
+        }
+    }
+    // (touches, coordinate) ordered candidates; only candidates adjacent to an
+    // added cell ever change score, so only those are updated per iteration.
+    // The set orders ascending, so `next_back` is the highest-touch candidate,
+    // and among equal touches the *highest* coordinate — the final pick below
+    // applies the lowest-coordinate tie-break explicitly, so ties are resolved
+    // by scanning only the tied front.
+    let mut touches: std::collections::BTreeMap<[i64; 3], usize> = candidates
+        .keys()
+        .map(|coordinate| {
+            let count = FACE_NEIGHBORS
+                .iter()
+                .filter(|d| {
+                    live_set.contains(&[
+                        coordinate[0] + d[0],
+                        coordinate[1] + d[1],
+                        coordinate[2] + d[2],
+                    ])
+                })
+                .count();
+            (*coordinate, count)
+        })
+        .collect();
+    let mut heap: std::collections::BTreeSet<(usize, [i64; 3])> = touches
+        .iter()
+        .filter(|(_, count)| **count > 0)
+        .map(|(coordinate, count)| (*count, *coordinate))
+        .collect();
     for _ in 0..4096 {
-        let set: std::collections::BTreeSet<[i64; 3]> =
-            cells.iter().map(|cell| cell.coordinate).collect();
-        if set.is_empty() {
+        if live_set.is_empty() {
             // Nothing passed the threshold at all; seed with the best candidate.
             if let Some((_, cell)) = candidates.iter().next().map(|(k, v)| (*k, *v)) {
                 candidates.remove(&cell.coordinate);
                 cells.push(cell);
+                parent.insert(cell.coordinate, cell.coordinate);
+                live_set.insert(cell.coordinate);
+                touches.remove(&cell.coordinate);
+                components = 1;
+                for d in FACE_NEIGHBORS {
+                    let neighbor = [
+                        cell.coordinate[0] + d[0],
+                        cell.coordinate[1] + d[1],
+                        cell.coordinate[2] + d[2],
+                    ];
+                    if candidates.contains_key(&neighbor) {
+                        let old = touches[&neighbor];
+                        heap.remove(&(old, neighbor));
+                        touches.insert(neighbor, old + 1);
+                        heap.insert((old + 1, neighbor));
+                    }
+                }
             } else {
                 break;
             }
             continue;
         }
-        if connected_components(&set) <= 1 {
+        if components <= 1 {
             break;
         }
-        // Pick the candidate that face-touches the most existing cells (best
-        // bridge), tie-broken by lowest coordinate for determinism.
-        let best = candidates
-            .values()
-            .filter(|candidate| {
-                FACE_NEIGHBORS.iter().any(|d| {
-                    set.contains(&[
-                        candidate.coordinate[0] + d[0],
-                        candidate.coordinate[1] + d[1],
-                        candidate.coordinate[2] + d[2],
-                    ])
-                })
-            })
-            .max_by(|a, b| {
-                let touches = |c: &RasterCell| {
-                    FACE_NEIGHBORS
-                        .iter()
-                        .filter(|d| {
-                            set.contains(&[
-                                c.coordinate[0] + d[0],
-                                c.coordinate[1] + d[1],
-                                c.coordinate[2] + d[2],
-                            ])
-                        })
-                        .count()
-                };
-                touches(a)
-                    .cmp(&touches(b))
-                    // Reverse coordinate order so the smaller coordinate wins.
-                    .then_with(|| b.coordinate.cmp(&a.coordinate))
-            })
-            .copied();
+        // The best candidate is at the back of the heap; tied lowest coordinate
+        // wins, so walk the tied back-to-front run and pick the smallest.
+        let best = heap.iter().next_back().and_then(|(top_count, _)| {
+            heap.iter()
+                .rev()
+                .take_while(|(count, _)| count == top_count)
+                .map(|(_, coordinate)| *coordinate)
+                .min()
+        });
         match best {
-            Some(cell) => {
-                candidates.remove(&cell.coordinate);
+            Some(coordinate) => {
+                let cell = candidates[&coordinate];
+                candidates.remove(&coordinate);
+                let score = touches.remove(&coordinate).expect("touched candidate");
+                heap.remove(&(score, coordinate));
                 cells.push(cell);
                 cells.sort_by_key(|c| c.coordinate);
+                // The new cell starts as its own component (+1), then merges
+                // with each distinct component it face-touches (-1 each).
+                parent.insert(cell.coordinate, cell.coordinate);
+                components += 1;
+                let mut merged_root = cell.coordinate;
+                for d in FACE_NEIGHBORS {
+                    let neighbor = [
+                        cell.coordinate[0] + d[0],
+                        cell.coordinate[1] + d[1],
+                        cell.coordinate[2] + d[2],
+                    ];
+                    if live_set.contains(&neighbor) {
+                        let root_neighbor = find(&mut parent, neighbor);
+                        let root_merged = find(&mut parent, merged_root);
+                        if root_neighbor != root_merged {
+                            parent.insert(root_merged, root_neighbor);
+                            merged_root = root_neighbor;
+                            components -= 1;
+                        }
+                    }
+                }
+                live_set.insert(cell.coordinate);
+                // Update scores only for candidates adjacent to the added cell.
+                for d in FACE_NEIGHBORS {
+                    let neighbor = [
+                        cell.coordinate[0] + d[0],
+                        cell.coordinate[1] + d[1],
+                        cell.coordinate[2] + d[2],
+                    ];
+                    if candidates.contains_key(&neighbor) {
+                        let old = touches[&neighbor];
+                        heap.remove(&(old, neighbor));
+                        touches.insert(neighbor, old + 1);
+                        heap.insert((old + 1, neighbor));
+                    }
+                }
             }
             None => break,
         }

@@ -9,6 +9,7 @@ pub mod flipbook;
 pub mod format_study;
 pub mod fusion;
 pub mod kit;
+pub mod kit_bake;
 mod mesh_resource_cache;
 pub mod model;
 pub mod pose;

@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "kitId": "knight",
+  "source": {
+    "assetId": "mesh/knight",
+    "path": "content/sources/knight/knight.glb",
+    "expectedSourceSha256": "sha256:64be4d3c0bc9b60f59548ef9623a3634c8ae88155e3f40081933726e5482d924",
+    "licensePath": "content/sources/knight/LICENSE.txt"
+  },
+  "characterHeightMeters": 1.85,
+  "groundYSource": -100.5,
+  "targetCellsPerUnit": 1.49,
+  "palette": [
+    {
+      "name": "armor",
+      "slots": [
+        { "slot": 1, "displayName": "armor", "color": [0.48, 0.5, 0.55, 1.0] }
+      ]
+    },
+    {
+      "name": "helmet",
+      "slots": [
+        { "slot": 2, "displayName": "helmet", "color": [0.62, 0.65, 0.7, 1.0] }
+      ]
+    },
+    {
+      "name": "blade",
+      "slots": [
+        { "slot": 3, "displayName": "blade", "color": [0.78, 0.8, 0.84, 1.0] }
+      ]
+    },
+    {
+      "name": "leather",
+      "slots": [
+        { "slot": 4, "displayName": "leather", "color": [0.42, 0.3, 0.2, 1.0] }
+      ]
+    },
+    {
+      "name": "wood",
+      "slots": [
+        { "slot": 5, "displayName": "wood", "color": [0.5, 0.36, 0.22, 1.0] }
+      ]
+    },
+    {
+      "name": "cloth",
+      "slots": [
+        { "slot": 6, "displayName": "cloth", "color": [0.4, 0.22, 0.3, 1.0] }
+      ]
+    }
+  ],
+  "materialSlots": {
+    "0": 1,
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "4": 5,
+    "5": 4
+  },
+  "parts": [
+    {
+      "id": "torso",
+      "paletteGroups": ["armor"],
+      "pivotWorld": [0.0, 12.0, 4.0],
+      "slices": [
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yAtLeast": -45.0, "xAtLeast": -20.0, "xBelow": 20.0 }
+        },
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yAtLeast": -45.0, "yBelow": 10.0 }
+        }
+      ]
+    },
+    {
+      "id": "left_arm",
+      "paletteGroups": ["armor"],
+      "limb": true,
+      "symmetryPartner": "right_arm",
+      "pivotWorld": [20.0, 55.0, -2.0],
+      "slices": [
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yAtLeast": 10.0, "xAtLeast": 20.0 }
+        }
+      ]
+    },
+    {
+      "id": "right_arm",
+      "paletteGroups": ["armor"],
+      "limb": true,
+      "symmetryPartner": "left_arm",
+      "pivotWorld": [-20.0, 55.0, -2.0],
+      "slices": [
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yAtLeast": 10.0, "xBelow": -20.0 }
+        }
+      ]
+    },
+    {
+      "id": "left_leg",
+      "paletteGroups": ["armor", "cloth"],
+      "limb": true,
+      "symmetryPartner": "right_leg",
+      "pivotWorld": [-8.0, -45.0, 2.0],
+      "slices": [
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yBelow": -45.0, "xBelow": 0.0 }
+        },
+        {
+          "node": "Pants_Material.002_0",
+          "region": { "xBelow": 0.0 },
+          "kitSlot": 6
+        }
+      ]
+    },
+    {
+      "id": "right_leg",
+      "paletteGroups": ["armor", "cloth"],
+      "limb": true,
+      "symmetryPartner": "left_leg",
+      "pivotWorld": [8.0, -45.0, 2.0],
+      "slices": [
+        {
+          "node": "Armor_Material.002_0",
+          "region": { "yBelow": -45.0, "xAtLeast": 0.0 }
+        },
+        {
+          "node": "Pants_Material.002_0",
+          "region": { "xAtLeast": 0.0 },
+          "kitSlot": 6
+        }
+      ]
+    },
+    {
+      "id": "helmet",
+      "paletteGroups": ["helmet"],
+      "pivotWorld": [1.0, 56.5, 2.0],
+      "slices": [
+        {
+          "node": "Helmet_Material.003_0"
+        }
+      ]
+    },
+    {
+      "id": "cloth",
+      "paletteGroups": ["cloth"],
+      "pivotWorld": [0.0, 15.0, 5.0],
+      "slices": [
+        {
+          "node": "Cloth_Material.002_0",
+          "kitSlot": 6
+        }
+      ]
+    },
+    {
+      "id": "left_hand",
+      "paletteGroups": ["leather"],
+      "limb": true,
+      "symmetryPartner": "right_hand",
+      "pivotWorld": [34.0, 38.0, 6.0],
+      "slices": [
+        {
+          "node": "L.hand_Material.004_0"
+        }
+      ]
+    },
+    {
+      "id": "right_hand",
+      "paletteGroups": ["leather"],
+      "limb": true,
+      "symmetryPartner": "left_hand",
+      "pivotWorld": [-22.0, -7.0, 14.0],
+      "slices": [
+        {
+          "node": "R.hand_Material.005_0"
+        }
+      ]
+    },
+    {
+      "id": "sword",
+      "paletteGroups": ["blade"],
+      "pivotWorld": [40.0, 39.0, 8.0],
+      "slices": [
+        {
+          "node": "Sword_mat_2_0",
+          "region": { "yAtLeast": -100.5 }
+        }
+      ]
+    },
+    {
+      "id": "pillum",
+      "paletteGroups": ["wood"],
+      "pivotWorld": [-26.0, -8.0, 15.0],
+      "slices": [
+        {
+          "node": "Pillum_Material.001_0"
+        }
+      ]
+    }
+  ],
+  "sockets": [
+    {
+      "id": "neck",
+      "parts": ["torso", "helmet"],
+      "world": [0.5, 57.0, 2.0],
+      "forward": [0.0, 1.0, 0.0],
+      "radiusSource": 8.0
+    },
+    {
+      "id": "shoulder_l",
+      "parts": ["torso", "left_arm"],
+      "world": [20.0, 55.0, -2.0],
+      "forward": [1.0, 0.0, 0.0],
+      "radiusSource": 10.0
+    },
+    {
+      "id": "shoulder_r",
+      "parts": ["torso", "right_arm"],
+      "world": [-20.0, 55.0, -2.0],
+      "forward": [-1.0, 0.0, 0.0],
+      "radiusSource": 10.0
+    },
+    {
+      "id": "hip_l",
+      "parts": ["torso", "left_leg"],
+      "world": [-8.0, -45.0, 2.0],
+      "forward": [0.0, -1.0, 0.0],
+      "radiusSource": 12.0
+    },
+    {
+      "id": "hip_r",
+      "parts": ["torso", "right_leg"],
+      "world": [8.0, -45.0, 2.0],
+      "forward": [0.0, -1.0, 0.0],
+      "radiusSource": 12.0
+    },
+    {
+      "id": "waist",
+      "parts": ["torso", "cloth"],
+      "world": [0.0, 12.0, 5.0],
+      "forward": [0.0, 0.0, 1.0],
+      "radiusSource": 14.0
+    },
+    {
+      "id": "wrist_l",
+      "parts": ["left_arm", "left_hand"],
+      "world": [34.0, 38.0, 6.0],
+      "forward": [1.0, 0.0, 0.0],
+      "radiusSource": 5.0
+    },
+    {
+      "id": "wrist_r",
+      "parts": ["right_arm", "right_hand"],
+      "world": [-22.0, -7.0, 14.0],
+      "forward": [-1.0, 0.0, 0.0],
+      "radiusSource": 5.0
+    },
+    {
+      "id": "grip_l",
+      "parts": ["left_hand", "sword"],
+      "world": [40.0, 39.0, 8.0],
+      "forward": [0.0, -1.0, 0.0],
+      "radiusSource": 5.0
+    },
+    {
+      "id": "grip_r",
+      "parts": ["right_hand", "pillum"],
+      "world": [-26.0, -8.0, 15.0],
+      "forward": [-1.0, 0.0, 0.0],
+      "radiusSource": 5.0
+    }
+  ],
+  "minLimbThickness": 2,
+  "protectedParts": ["helmet", "torso", "sword"]
+}
