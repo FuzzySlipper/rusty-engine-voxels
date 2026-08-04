@@ -20,7 +20,7 @@
       "sourceTriangles": 4256,
       "voxelizationWork": 972211,
       "voxels": 96410,
-      "conversionMicroseconds": 5174415
+      "conversionMicroseconds": 5264434
     },
     {
       "node": "Pants_Material.002_0",
@@ -35,7 +35,7 @@
       "sourceTriangles": 428,
       "voxelizationWork": 175039,
       "voxels": 20419,
-      "conversionMicroseconds": 1106595
+      "conversionMicroseconds": 1145948
     },
     {
       "node": "Helmet_Material.003_0",
@@ -50,7 +50,7 @@
       "sourceTriangles": 1216,
       "voxelizationWork": 65031,
       "voxels": 8891,
-      "conversionMicroseconds": 489975
+      "conversionMicroseconds": 491987
     },
     {
       "node": "Cloth_Material.002_0",
@@ -65,7 +65,7 @@
       "sourceTriangles": 376,
       "voxelizationWork": 195170,
       "voxels": 21323,
-      "conversionMicroseconds": 1077089
+      "conversionMicroseconds": 1095559
     },
     {
       "node": "L.hand_Material.004_0",
@@ -80,7 +80,7 @@
       "sourceTriangles": 468,
       "voxelizationWork": 14786,
       "voxels": 2137,
-      "conversionMicroseconds": 115617
+      "conversionMicroseconds": 119583
     },
     {
       "node": "R.hand_Material.005_0",
@@ -95,7 +95,7 @@
       "sourceTriangles": 468,
       "voxelizationWork": 18344,
       "voxels": 2213,
-      "conversionMicroseconds": 102931
+      "conversionMicroseconds": 105317
     },
     {
       "node": "Sword_mat_2_0",
@@ -110,7 +110,7 @@
       "sourceTriangles": 604,
       "voxelizationWork": 132241,
       "voxels": 17261,
-      "conversionMicroseconds": 1227248
+      "conversionMicroseconds": 1260863
     },
     {
       "node": "Pillum_Material.001_0",
@@ -125,7 +125,7 @@
       "sourceTriangles": 276,
       "voxelizationWork": 73435,
       "voxels": 2167,
-      "conversionMicroseconds": 190282
+      "conversionMicroseconds": 195399
     }
   ],
   "parts": [
