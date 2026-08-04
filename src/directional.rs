@@ -144,12 +144,25 @@ struct RgbaImage {
 }
 
 impl DirectionalSpriteLayout {
+    /// Load one bounded, project-relative layout document.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the path escapes the project root, exceeds the
+    /// layout byte bound, or contains invalid JSON/schema fields.
     pub fn load(root: &Path, relative_path: &str) -> Result<Self, String> {
         let path = safe_join(root, relative_path)?;
         let bytes = read_bounded(&path, MAX_LAYOUT_BYTES, "directional sprite layout")?;
         serde_json::from_slice(&bytes).map_err(|error| format!("{relative_path}: {error}"))
     }
 
+    /// Validate labels, view coverage, rectangles, and bounded layout size.
+    ///
+    /// # Errors
+    ///
+    /// Returns a named diagnostic for an unsupported schema, duplicate or
+    /// unknown view, empty frame, invalid rectangle, overlap, or cell limit.
+    #[allow(clippy::too_many_lines)]
     pub fn validate(&self, image_width: u32, image_height: u32) -> Result<(), String> {
         if self.schema_version != DIRECTIONAL_LAYOUT_SCHEMA_VERSION {
             return Err(format!(
@@ -270,6 +283,12 @@ impl DirectionalSpriteLayout {
     }
 }
 
+/// Inspect one explicit layout and publish bounded crops/contact-sheet output.
+///
+/// # Errors
+///
+/// Returns an error before publication when the layout, source image,
+/// comparison artifact, path, dimensions, or output bounds are invalid.
 pub fn inspect_layout(
     root: &Path,
     layout_path: &str,
@@ -283,7 +302,7 @@ pub fn inspect_layout(
     let source_bytes = read_bounded(&source_path, MAX_SOURCE_BYTES, "directional sprite source")?;
     let image = decode_png(&source_bytes, &layout.source.background)?;
     layout.validate(image.width, image.height)?;
-    let normalized = normalize_layout(&layout, &source_bytes, image.width, image.height)?;
+    let normalized = normalize_layout(&layout, &source_bytes, image.width, image.height);
     let output_dir = bounded_local_path(root, output_path)?;
     if output_dir.exists() {
         return Err(format!(
@@ -332,7 +351,7 @@ pub fn inspect_layout(
         .map(|path| {
             let comparison_path = safe_join(root, path)?;
             let bytes = read_bounded(&comparison_path, MAX_SOURCE_BYTES, "comparison render")?;
-            if !path.ends_with(".png") && !path.ends_with(".svg") {
+            if !has_extension(path, "png") && !has_extension(path, "svg") {
                 return Err(format!(
                     "comparison render must be a project-relative .png or .svg: {path}"
                 ));
@@ -362,7 +381,7 @@ fn normalize_layout(
     source_bytes: &[u8],
     width: u32,
     height: u32,
-) -> Result<NormalizedDirectionalLayout, String> {
+) -> NormalizedDirectionalLayout {
     let mut actions = layout.actions.clone();
     for action in &mut actions {
         for frame in &mut action.frames {
@@ -400,7 +419,7 @@ fn normalize_layout(
         }
     }
     // Validation rejects overlaps, so the sum is the union area.
-    Ok(NormalizedDirectionalLayout {
+    NormalizedDirectionalLayout {
         schema_version: layout.schema_version,
         id: layout.id.clone(),
         source: NormalizedSpriteSource {
@@ -417,9 +436,10 @@ fn normalize_layout(
         covered_area,
         unused_area: u64::from(width) * u64::from(height) - covered_area,
         missing_views,
-    })
+    }
 }
 
+#[allow(clippy::format_push_string)]
 fn contact_sheet_svg(
     normalized: &NormalizedDirectionalLayout,
     crops: &BTreeMap<String, Vec<u8>>,
@@ -659,12 +679,18 @@ fn require_identity(value: &str, path: &str) -> Result<(), String> {
 }
 
 fn data_uri(path: &str, bytes: &[u8]) -> String {
-    let mime = if path.ends_with(".svg") {
+    let mime = if has_extension(path, "svg") {
         "image/svg+xml"
     } else {
         "image/png"
     };
     format!("data:{mime};base64,{}", base64_encode(bytes))
+}
+
+fn has_extension(path: &str, extension: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|value| value.eq_ignore_ascii_case(extension))
 }
 
 fn escape_xml(value: &str) -> String {
