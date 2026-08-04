@@ -3,6 +3,8 @@
 /.studio-cache/
 /.runtime/
 /.video-motion-cache/
+.engine-development/
 __pycache__/
 *.pending
 /.density-cache/
+local/
