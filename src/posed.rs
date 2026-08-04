@@ -21,8 +21,7 @@ use serde_json::json;
 
 use crate::assemble::{assemble_placed_frame, RoughFrame};
 use crate::flipbook::{
-    compile_posed_flipbook, publish_compiled_flipbook, FlipbookCompileSettings,
-    FlipbookPublication,
+    compile_posed_flipbook, publish_compiled_flipbook, FlipbookCompileSettings, FlipbookPublication,
 };
 use crate::kit::{load_kit, neutral_part_transforms, VoxelKit};
 use crate::pose::{euler_degrees_to_quaternion, RasterSettings, RigidTransform};
@@ -446,7 +445,11 @@ pub fn run_posed_flipbook(
         ));
     }
 
-    let spec_bytes = read_bounded(&safe_join(root, spec_path)?, MAX_POSE_SPEC_BYTES, "pose spec")?;
+    let spec_bytes = read_bounded(
+        &safe_join(root, spec_path)?,
+        MAX_POSE_SPEC_BYTES,
+        "pose spec",
+    )?;
     let frames = frames
         .iter()
         .map(|frame| downsample_rough_frame(frame, spec.cell_downsample))
@@ -462,8 +465,13 @@ pub fn run_posed_flipbook(
         body_collision: None,
         hit_regions: Vec::new(),
     };
-    let compiled =
-        compile_posed_flipbook(&kit, &frames, &compile_settings, &spec_bytes, cell_size_meters)?;
+    let compiled = compile_posed_flipbook(
+        &kit,
+        &frames,
+        &compile_settings,
+        &spec_bytes,
+        cell_size_meters,
+    )?;
     let publication = publish_compiled_flipbook(root, object_directory, &compiled)?;
 
     let clip = &compiled.asset.clips[0];
@@ -523,7 +531,6 @@ pub fn write_posed_flipbook_report(
     relative_path: &str,
     run: &PosedFlipbookRun,
 ) -> Result<(), String> {
-    let pretty =
-        serde_json::to_string_pretty(&run.evidence).map_err(|error| error.to_string())?;
+    let pretty = serde_json::to_string_pretty(&run.evidence).map_err(|error| error.to_string())?;
     atomic_write(&safe_join(root, relative_path)?, pretty.as_bytes())
 }

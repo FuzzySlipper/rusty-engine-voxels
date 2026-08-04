@@ -423,7 +423,9 @@ fn voxel_frame_runs(
     frame: &RoughFrame,
     material_slots: impl IntoIterator<Item = u16>,
 ) -> Result<VoxelFrame, String> {
-    let (min, max) = frame.bounds().ok_or("posed flipbook frame contains no voxels")?;
+    let (min, max) = frame
+        .bounds()
+        .ok_or("posed flipbook frame contains no voxels")?;
     let mut cells: Vec<([i64; 3], u16)> = frame
         .voxels
         .iter()

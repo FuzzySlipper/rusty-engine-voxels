@@ -11,8 +11,8 @@ use rusty_engine_voxels::flipbook::{
     compile_posed_flipbook, publish_compiled_flipbook, FlipbookCompileSettings,
 };
 use rusty_engine_voxels::kit::load_kit;
-use rusty_engine_voxels::posed::{assemble_pose_spec, downsample_rough_frame, load_pose_spec};
 use rusty_engine_voxels::pose::RasterSettings;
+use rusty_engine_voxels::posed::{assemble_pose_spec, downsample_rough_frame, load_pose_spec};
 use rusty_engine_voxels::project::{read_bounded, safe_join};
 use rusty_engine_voxels::runtime::load_runtime_project;
 use voxel_object_runtime::{admit_voxel_object_json, VoxelObjectRuntimeLimits};
@@ -31,8 +31,8 @@ fn compile_checked_spec() -> rusty_engine_voxels::flipbook::CompiledFlipbook {
     let spec = load_pose_spec(&root, SPEC).expect("checked pose spec loads");
     let kit = load_kit(&root, &spec.kit).expect("checked knight kit loads");
     spec.validate(&kit).expect("checked pose spec validates");
-    let frames = assemble_pose_spec(&kit, &spec, &RasterSettings::default())
-        .expect("pose spec assembles");
+    let frames =
+        assemble_pose_spec(&kit, &spec, &RasterSettings::default()).expect("pose spec assembles");
     assert_eq!(frames.len(), 4);
     let frames = frames
         .iter()
@@ -47,8 +47,8 @@ fn compile_checked_spec() -> rusty_engine_voxels::flipbook::CompiledFlipbook {
             frame.bounds()
         );
     }
-    let spec_bytes =
-        read_bounded(&safe_join(&root, SPEC).unwrap(), 256 * 1024, "pose spec").expect("spec bytes");
+    let spec_bytes = read_bounded(&safe_join(&root, SPEC).unwrap(), 256 * 1024, "pose spec")
+        .expect("spec bytes");
     let settings = FlipbookCompileSettings {
         asset_id: format!("voxel-object/posed-{}", spec.id),
         clip_id: spec.clip_id.clone(),
@@ -98,7 +98,9 @@ fn pose_spec_validation_names_offending_content() {
 
     let mut duplicate_name = base.clone();
     duplicate_name.frames[1].name = duplicate_name.frames[0].name.clone();
-    let error = duplicate_name.validate(&kit).expect_err("duplicate frame name");
+    let error = duplicate_name
+        .validate(&kit)
+        .expect_err("duplicate frame name");
     assert!(error.contains("more than once"), "{error}");
 
     let mut bad_downsample = base.clone();
@@ -125,8 +127,11 @@ fn posed_flipbook_compiles_publishes_and_loads_in_studio_runtime() {
     assert!(compiled.canonical_json.len() <= voxel_asset::MAX_VOXEL_OBJECT_ARTIFACT_BYTES);
 
     // Engine strict admission, the same path the Studio adapter uses at load.
-    admit_voxel_object_json(&compiled.canonical_json, VoxelObjectRuntimeLimits::default())
-        .expect("compiled object admits");
+    admit_voxel_object_json(
+        &compiled.canonical_json,
+        VoxelObjectRuntimeLimits::default(),
+    )
+    .expect("compiled object admits");
 
     // Content-addressed publication is immutable and idempotent.
     let publication_root = root().join("target/tmp/posed-flipbook-publication");
@@ -152,9 +157,14 @@ fn posed_flipbook_compiles_publishes_and_loads_in_studio_runtime() {
     assert_eq!(runtime.loaded.project.instances.len(), 1);
     let instance = &runtime.loaded.project.instances[0];
     assert_eq!(instance.instance_id, "knight-posed-walk");
-    assert_eq!(instance.voxel_object_asset_id, "voxel-object/posed-knight-walk");
+    assert_eq!(
+        instance.voxel_object_asset_id,
+        "voxel-object/posed-knight-walk"
+    );
     assert!(
-        runtime.objects.contains_key("voxel-object/posed-knight-walk"),
+        runtime
+            .objects
+            .contains_key("voxel-object/posed-knight-walk"),
         "the posed flipbook object is admitted and registered"
     );
 }
