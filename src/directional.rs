@@ -303,6 +303,18 @@ pub fn inspect_layout(
     let image = decode_png(&source_bytes, &layout.source.background)?;
     layout.validate(image.width, image.height)?;
     let normalized = normalize_layout(&layout, &source_bytes, image.width, image.height);
+    let comparison = comparison_path
+        .map(|path| {
+            if !has_extension(path, "png") && !has_extension(path, "svg") {
+                return Err(format!(
+                    "comparison render must be a project-relative .png or .svg: {path}"
+                ));
+            }
+            let comparison_path = safe_join(root, path)?;
+            let bytes = read_bounded(&comparison_path, MAX_SOURCE_BYTES, "comparison render")?;
+            Ok((path.to_owned(), bytes))
+        })
+        .transpose()?;
     let output_dir = bounded_local_path(root, output_path)?;
     if output_dir.exists() {
         return Err(format!(
@@ -347,18 +359,6 @@ pub fn inspect_layout(
         &output_dir.join("layout.normalized.json"),
         normalized_json.as_bytes(),
     )?;
-    let comparison = comparison_path
-        .map(|path| {
-            let comparison_path = safe_join(root, path)?;
-            let bytes = read_bounded(&comparison_path, MAX_SOURCE_BYTES, "comparison render")?;
-            if !has_extension(path, "png") && !has_extension(path, "svg") {
-                return Err(format!(
-                    "comparison render must be a project-relative .png or .svg: {path}"
-                ));
-            }
-            Ok((path.to_owned(), bytes))
-        })
-        .transpose()?;
     let contact_sheet_svg =
         contact_sheet_svg(&normalized, &crops, action_filter, frame_filter, comparison)?;
     if contact_sheet_svg.len() > MAX_CONTACT_DIMENSION * MAX_CONTACT_DIMENSION {
