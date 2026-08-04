@@ -37,6 +37,7 @@ core-assets = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "c02
 core-space = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "c02754812d53df5363c9e6475c685c54e532f5e5" }
 core-voxel = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "c02754812d53df5363c9e6475c685c54e532f5e5" }
 gif = "0.13"
+png = "0.17"
 render-model = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "c02754812d53df5363c9e6475c685c54e532f5e5" }
 render-projection = { git = "https://github.com/FuzzySlipper/rusty-engine", rev = "c02754812d53df5363c9e6475c685c54e532f5e5" }
 rusty-engine-voxels-revision = { path = "tools/engine-revision" }

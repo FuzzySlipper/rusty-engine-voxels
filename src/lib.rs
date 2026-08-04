@@ -5,6 +5,7 @@ pub mod churn;
 pub mod cleanup;
 pub mod conversion;
 pub mod density;
+pub mod directional;
 pub mod flipbook;
 pub mod format_study;
 pub mod fusion;
