@@ -5,8 +5,10 @@ use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::validation::{
-    checked_provider_pin_at, parse_engine_source, EngineSource, ACTIVE_CARRIER_PATHS, ENGINE_CRATES,
+    checked_provider_pin_at, parse_engine_development, parse_engine_source, EngineSource,
+    ACTIVE_CARRIER_PATHS, DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_CRATES,
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateReceipt {
@@ -14,6 +16,108 @@ pub struct UpdateReceipt {
     pub commit: String,
     pub dry_run: bool,
     pub diff: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DevelopmentReceipt {
+    pub schema_version: u32,
+    pub mode: String,
+    pub repository: String,
+    pub requested_ref: String,
+    pub resolved_commit: String,
+    pub source: String,
+    pub source_path: Option<String>,
+    pub dirty: bool,
+    pub certification: bool,
+    pub applied: bool,
+}
+
+/// Resolve the committed rolling-development intent once and refresh all
+/// exact carriers to that one result. The resulting SHA is operational
+/// development evidence, not a reverse-certification claim.
+pub fn sync_development_revision(
+    repo_root: &Path,
+    worktree: Option<&Path>,
+    report_only: bool,
+) -> Result<DevelopmentReceipt, String> {
+    let intent = parse_engine_development(
+        &fs::read_to_string(repo_root.join(DEVELOPMENT_MANIFEST))
+            .map_err(|error| format!("{DEVELOPMENT_MANIFEST} cannot be read: {error}"))?,
+    )?;
+    let (commit, source, source_path, dirty) = if let Some(worktree) = worktree {
+        let source_path = worktree
+            .canonicalize()
+            .map_err(|error| format!("local Engine worktree cannot be resolved: {error}"))?;
+        if !source_path.join("Cargo.toml").is_file() {
+            return Err(format!(
+                "local Engine worktree {} is missing Cargo.toml",
+                source_path.display()
+            ));
+        }
+        let commit = git(&source_path, &["rev-parse", "HEAD"])?.trim().to_owned();
+        if !is_commit(&commit) {
+            return Err(format!(
+                "local Engine worktree {} did not resolve an exact HEAD",
+                source_path.display()
+            ));
+        }
+        let dirty = !git(&source_path, &["status", "--porcelain=v1"])?
+            .trim()
+            .is_empty();
+        (commit, "local".to_owned(), Some(source_path), dirty)
+    } else {
+        let output = run(
+            "git",
+            &["ls-remote", &intent.repository, DEVELOPMENT_REF],
+            Path::new("/"),
+        )?;
+        let commit = output
+            .lines()
+            .find_map(|line| line.split_whitespace().next())
+            .ok_or_else(|| format!("public Engine ref {DEVELOPMENT_REF} returned no commit"))?
+            .to_owned();
+        if !is_commit(&commit) {
+            return Err(format!(
+                "public Engine ref {DEVELOPMENT_REF} did not resolve an exact commit"
+            ));
+        }
+        (commit, "public".to_owned(), None, false)
+    };
+
+    if !report_only {
+        if source == "local" && dirty {
+            return Err(format!(
+                "local Engine worktree {} is dirty; use --report-only or provide a clean worktree",
+                source_path
+                    .as_deref()
+                    .unwrap_or(Path::new("<unknown>"))
+                    .display()
+            ));
+        }
+        update_engine_revision(repo_root, &commit, false)?;
+    }
+
+    let report = DevelopmentReceipt {
+        schema_version: 1,
+        mode: "development".to_owned(),
+        repository: intent.repository,
+        requested_ref: intent.r#ref,
+        resolved_commit: commit,
+        source,
+        source_path: source_path.map(|path| path.display().to_string()),
+        dirty,
+        certification: false,
+        applied: !report_only,
+    };
+    let report_root = repo_root.join(".engine-development");
+    fs::create_dir_all(&report_root)
+        .map_err(|error| format!(".engine-development cannot be created: {error}"))?;
+    let encoded = serde_json::to_string_pretty(&report)
+        .map_err(|error| format!("development resolution cannot be encoded: {error}"))?;
+    fs::write(report_root.join("resolution.json"), format!("{encoded}\n"))
+        .map_err(|error| format!("development resolution cannot be written: {error}"))?;
+    Ok(report)
 }
 
 /// Proves and prepares an exact Engine revision change in a disposable worktree.
@@ -586,7 +690,13 @@ mod tests {
                 Ok(())
             },
         );
-        assert!(head_race.expect_err("HEAD race").contains("HEAD changed"));
+        assert!(
+            head_race
+                .as_ref()
+                .expect_err("HEAD race")
+                .contains("HEAD changed"),
+            "{head_race:?}"
+        );
 
         let carrier_race = update_engine_revision_with(
             &fixture.root,

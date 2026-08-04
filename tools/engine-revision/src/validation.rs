@@ -19,6 +19,8 @@ pub const ENGINE_CRATES: [&str; 12] = [
     "voxel-object-runtime",
 ];
 pub const ACTIVE_CARRIER_PATHS: [&str; 3] = ["engine-source.json", "Cargo.toml", "Cargo.lock"];
+pub const DEVELOPMENT_MANIFEST: &str = "engine-development.json";
+pub const DEVELOPMENT_REF: &str = "refs/heads/main";
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -37,6 +39,31 @@ pub struct ProviderPinReadout {
     pub commit: String,
     pub manifest_dependency_count: usize,
     pub locked_provider_package_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EngineDevelopment {
+    pub schema_version: u32,
+    pub repository: String,
+    pub r#ref: String,
+}
+
+/// Decodes the explicit rolling-development intent. It deliberately admits
+/// only the public Engine main branch; exact commits remain the certification
+/// carrier and are resolved by the consumer command once per sync.
+pub fn parse_engine_development(value: &str) -> Result<EngineDevelopment, String> {
+    let source: EngineDevelopment = serde_json::from_str(value)
+        .map_err(|error| format!("{DEVELOPMENT_MANIFEST} cannot be decoded: {error}"))?;
+    if source.schema_version != 1
+        || source.repository != ENGINE_REPOSITORY
+        || source.r#ref != DEVELOPMENT_REF
+    {
+        return Err(format!(
+            "{DEVELOPMENT_MANIFEST} must select {ENGINE_REPOSITORY} {DEVELOPMENT_REF}"
+        ));
+    }
+    Ok(source)
 }
 
 /// Reads and validates every active Engine carrier below `repo_root`.
@@ -288,6 +315,20 @@ mod tests {
         assert_eq!(readout.commit, OLD);
         assert_eq!(readout.manifest_dependency_count, 12);
         assert!(readout.locked_provider_package_count >= 12);
+    }
+
+    #[test]
+    fn accepts_only_the_public_main_development_intent() {
+        let value = format!(
+            "{{\"schemaVersion\":1,\"repository\":\"{ENGINE_REPOSITORY}\",\"ref\":\"{DEVELOPMENT_REF}\"}}"
+        );
+        let source = parse_engine_development(&value).expect("development intent should pass");
+        assert_eq!(source.r#ref, DEVELOPMENT_REF);
+        assert!(parse_engine_development(&value.replace(DEVELOPMENT_REF, "main")).is_err());
+        assert!(parse_engine_development(
+            &value.replace(ENGINE_REPOSITORY, "https://example.invalid/rusty-engine")
+        )
+        .is_err());
     }
 
     #[test]

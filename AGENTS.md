@@ -17,3 +17,13 @@ dependencies on `rusty-engine` or `rusty-engine-demo`.
 - The Studio adapter may reject unrelated protocol operations, but responses for supported
   operations must remain closed, bounded, and attributable to a named owner.
 - Keep generated caches and provider checkouts outside version control.
+
+## Den Guidance Bootstrap
+
+- Project ID: `rusty-engine-voxels`
+- Resolve live guidance with the Den MCP `get_agent_guidance` tool before
+  substantial work.
+- Treat the resolved Den guidance packet and its referenced Den documents as
+  the source of truth.
+- If Den is unreachable, stop and tell the user which Den tool or command
+  failed and what you were about to do. Do not reconstruct Den state from local files.

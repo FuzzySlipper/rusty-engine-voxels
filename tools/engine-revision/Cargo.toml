@@ -3,7 +3,7 @@ name = "rusty-engine-voxels-revision"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.89"
-description = "Exact Rusty Engine revision validation and update command for the voxel lab"
+description = "Rusty Engine development resolution and exact certification commands for the voxel lab"
 license = "MIT"
 
 [workspace]
