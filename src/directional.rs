@@ -328,17 +328,20 @@ pub fn inspect_layout(
         &output_dir.join("layout.normalized.json"),
         normalized_json.as_bytes(),
     )?;
-    let contact_sheet_svg = contact_sheet_svg(
-        &normalized,
-        &crops,
-        action_filter,
-        frame_filter,
-        comparison_path.map(|path| {
-            let source = safe_join(root, path)
-                .and_then(|path| read_bounded(&path, MAX_SOURCE_BYTES, "comparison render"));
-            source.ok().map(|bytes| (path.to_owned(), bytes))
-        }),
-    )?;
+    let comparison = comparison_path
+        .map(|path| {
+            let comparison_path = safe_join(root, path)?;
+            let bytes = read_bounded(&comparison_path, MAX_SOURCE_BYTES, "comparison render")?;
+            if !path.ends_with(".png") && !path.ends_with(".svg") {
+                return Err(format!(
+                    "comparison render must be a project-relative .png or .svg: {path}"
+                ));
+            }
+            Ok((path.to_owned(), bytes))
+        })
+        .transpose()?;
+    let contact_sheet_svg =
+        contact_sheet_svg(&normalized, &crops, action_filter, frame_filter, comparison)?;
     if contact_sheet_svg.len() > MAX_CONTACT_DIMENSION * MAX_CONTACT_DIMENSION {
         return Err("contact sheet exceeds bounded output size".to_owned());
     }
@@ -422,7 +425,7 @@ fn contact_sheet_svg(
     crops: &BTreeMap<String, Vec<u8>>,
     action_filter: Option<&str>,
     frame_filter: Option<&str>,
-    comparison: Option<Option<(String, Vec<u8>)>>,
+    comparison: Option<(String, Vec<u8>)>,
 ) -> Result<String, String> {
     let mut rows = Vec::new();
     for action in &normalized.actions {
@@ -457,8 +460,7 @@ fn contact_sheet_svg(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\"><rect width=\"100%\" height=\"100%\" fill=\"#16181d\"/><text x=\"12\" y=\"22\" fill=\"#f5f7fa\" font-family=\"monospace\" font-size=\"14\">{}</text>",
         escape_xml(&format!("{} — explicit sprite layout; missing views are not synthesized", normalized.id))
     );
-    let render_uri =
-        comparison.and_then(|value| value.map(|(path, bytes)| data_uri(&path, &bytes)));
+    let render_uri = comparison.map(|(path, bytes)| data_uri(&path, &bytes));
     for (row_index, (action, frame)) in rows.iter().enumerate() {
         let y = 48 + u32::try_from(row_index).unwrap_or(0) * card_height;
         for (column, direction) in normalized.directions.iter().enumerate() {
