@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-sentinel-authoring",
+  "experiment": "directional-sprite-reference",
+  "status": "proof_of_concept",
+  "source": {
+    "kind": "uncertain_local_sprite_sheet",
+    "layoutPath": "local/directional-sprite-test/zombieman.layout.json",
+    "imagePath": "local/directional-sprite-test/zombieman.png",
+    "imageSha256": "sha256:43dd2b0c85296db06f3adf2b7704b71f0a90f5aef79670a619e0bdc95deae6c0",
+    "dimensions": [738, 884],
+    "provenanceNote": "Test-only source copied from /home/stash/sprites; no production license or provenance claim."
+  },
+  "layoutDecision": {
+    "directions": ["front", "right", "back", "left"],
+    "action": "idle",
+    "frameCount": 2,
+    "viewPolicy": "explicit four-cardinal views; no mirroring or synthesized missing views",
+    "comparisonArtifacts": [
+      "local/directional-sprite-test/inspection-with-voxel/contact-sheet.svg",
+      "local/directional-sprite-test/directional-sentinel-voxel-reference.svg"
+    ]
+  },
+  "voxelDecision": {
+    "characterPath": "content/characters/directional-sentinel/character.json",
+    "posesPath": "content/characters/directional-sentinel/poses/idle.poses.json",
+    "projectPath": "content/projects/directional-sprite-experiment.project.json",
+    "objectPath": "content/voxel-objects/posed-directional-sentinel-82f68630da81d56797d00161eb11c3ae9c0ad2083440a57434054bc4354d1ec7.voxel-object.json",
+    "objectHash": "sha256:82f68630da81d56797d00161eb11c3ae9c0ad2083440a57434054bc4354d1ec7",
+    "coordinateSystem": "right_handed_y_up",
+    "cellSizeMeters": 0.1,
+    "pivot": [0, 0, 0],
+    "groundY": 0,
+    "neutralFacing": [0, 0, -1],
+    "depthPolicy": "authored compact depth; hidden depth is not inferred from the sheet",
+    "palettePolicy": "three explicit authored material slots: body, head, weapon",
+    "playbackPolicy": "explicit clip/idle frames with 120000 microsecond durations; harsh pose changes only; no tweening"
+  },
+  "limitations": [
+    "Sprite perspective and depth are an authored interpretation.",
+    "The uncertain sprite sheet and comparison renders are disposable local evidence.",
+    "The licensed Kenney GLB in the project is a Studio render carrier only; it is not the sprite or voxel source."
+  ]
+}

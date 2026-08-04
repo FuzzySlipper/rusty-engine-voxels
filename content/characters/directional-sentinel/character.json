@@ -1,0 +1,773 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-sentinel",
+  "version": 1,
+  "convention": {
+    "coordinateSystem": "right_handed_y_up",
+    "forwardAxis": "-Z",
+    "voxelSizeMeters": 0.1,
+    "groundY": 0,
+    "neutralFacing": [
+      0,
+      0,
+      -1
+    ]
+  },
+  "palette": [
+    {
+      "name": "body",
+      "slots": [
+        {
+          "slot": 1,
+          "displayName": "body",
+          "color": [
+            0.32,
+            0.42,
+            0.52,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "head",
+      "slots": [
+        {
+          "slot": 2,
+          "displayName": "head",
+          "color": [
+            0.72,
+            0.66,
+            0.42,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "weapon",
+      "slots": [
+        {
+          "slot": 3,
+          "displayName": "weapon",
+          "color": [
+            0.78,
+            0.22,
+            0.18,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "sentinel",
+      "version": 1,
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "cells": [
+        {
+          "coordinate": [
+            -2,
+            0,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            0,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            0,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            1,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            1,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            1,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            2,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            2,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            2,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            3,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            3,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -2,
+            3,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            0,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            0,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            0,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            1,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            1,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            1,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            2,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            2,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            2,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            3,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            3,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            3,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            -1,
+            4,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            -1,
+            4,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            -1,
+            4,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            -1,
+            5,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            -1,
+            5,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            -1,
+            5,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            0,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            0,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            0,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            1,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            1,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            1,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            2,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            2,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            2,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            3,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            3,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            3,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            0,
+            4,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            4,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            4,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            5,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            5,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            0,
+            5,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            0,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            0,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            0,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            1,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            1,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            1,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            2,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            2,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            2,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            3,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            3,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            3,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            1,
+            4,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            4,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            4,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            5,
+            -1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            5,
+            0
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            1,
+            5,
+            1
+          ],
+          "materialSlot": 2
+        },
+        {
+          "coordinate": [
+            2,
+            0,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            0,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            0,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            1,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            1,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            1,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            2,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            2,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            2,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            3,
+            -1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            3,
+            0
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            2,
+            3,
+            1
+          ],
+          "materialSlot": 1
+        },
+        {
+          "coordinate": [
+            3,
+            2,
+            0
+          ],
+          "materialSlot": 3
+        },
+        {
+          "coordinate": [
+            3,
+            3,
+            0
+          ],
+          "materialSlot": 3
+        },
+        {
+          "coordinate": [
+            4,
+            2,
+            0
+          ],
+          "materialSlot": 3
+        },
+        {
+          "coordinate": [
+            4,
+            3,
+            0
+          ],
+          "materialSlot": 3
+        },
+        {
+          "coordinate": [
+            5,
+            2,
+            0
+          ],
+          "materialSlot": 3
+        },
+        {
+          "coordinate": [
+            5,
+            3,
+            0
+          ],
+          "materialSlot": 3
+        }
+      ],
+      "sockets": [],
+      "paletteGroups": [
+        "body",
+        "head",
+        "weapon"
+      ],
+      "limb": false,
+      "deformationBudget": {
+        "maxLengthChange": 0,
+        "maxVolumeChange": 0,
+        "allowJointCompression": false
+      },
+      "protectedRegions": []
+    }
+  ],
+  "invariants": {
+    "minLimbThickness": 1,
+    "protectedParts": [
+      "sentinel"
+    ],
+    "volumeRange": [
+      1,
+      1000
+    ],
+    "requiredSockets": [],
+    "fixedDimensions": []
+  }
+}

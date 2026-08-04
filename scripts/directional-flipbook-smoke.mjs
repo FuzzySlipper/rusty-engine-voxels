@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const [decoderPath, adapter, root, project = 'local/directional-sprite-test/directional-sentinel.project.json'] = process.argv.slice(2);
+const [decoderPath, adapter, root, project = 'content/projects/directional-sprite-experiment.project.json'] = process.argv.slice(2);
 if (decoderPath === undefined || adapter === undefined || root === undefined) {
   throw new Error('usage: directional-flipbook-smoke.mjs DECODER ADAPTER ROOT [PROJECT]');
 }

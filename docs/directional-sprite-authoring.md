@@ -42,7 +42,9 @@ The document is a project-relative JSON file with `schemaVersion: 1`:
 `colorKey` and `colorKeys` are exact RGBA values only. They are useful for
 pixel-art sheets with a cyan cell fill and a different page background; no
 tolerance, palette inference, recoloring, mirroring, or blur is performed.
-The source and all generated output must live below ignored `local/`.
+The uncertain source sheet, layout, and generated comparison output live below
+ignored `local/`; the authored voxel inputs are provenance-safe files under
+`content/`.
 
 ## Inspect and compare
 
@@ -86,7 +88,7 @@ not alter project authority:
 
 ```bash
 ./scripts/studio.sh \\
-  --project local/directional-sprite-test/directional-sentinel.project.json
+  --project content/projects/directional-sprite-experiment.project.json
 ```
 
 The local experiment uses the repository's licensed Kenney GLB as a renderer
@@ -108,7 +110,10 @@ frames, and uncertain sheets under `local/` remain non-production.
    depth, palette cleanup, symmetry, pivot, cell size, and missing-view policy
    in authored data; do not add a converter.
 5. Keep generated crops, SVGs, renders, and scratch specs under `local/`.
-   Only provenance-safe canonical authored assets belong in `content/`.
+   The canonical authored character, poses, voxel object, and project live in
+   `content/characters/directional-sentinel/`, `content/voxel-objects/`, and
+   `content/projects/directional-sprite-experiment.project.json`; uncertain
+   sprite sources and derived comparisons remain local-only.
 
 Focused verification is sufficient for this tooling phase:
 `cargo test --lib directional`, `cargo check --locked --bin voxel-kit-lab`,

@@ -1,0 +1,2515 @@
+{
+  "schemaVersion": 1,
+  "assetId": "voxel-object/posed-directional-sentinel",
+  "grid": {
+    "coordinateSystem": "rightHandedYUp",
+    "cellSize": 0.1,
+    "chunkSize": 16,
+    "pivot": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "bounds": {
+    "min": [
+      -6,
+      -1,
+      -6
+    ],
+    "max": [
+      5,
+      5,
+      5
+    ]
+  },
+  "defaultFrame": {
+    "bounds": {
+      "min": [
+        -2,
+        0,
+        -1
+      ],
+      "max": [
+        5,
+        5,
+        1
+      ]
+    },
+    "representation": {
+      "kind": "sparseRuns",
+      "sparseRuns": [
+        {
+          "start": [
+            -2,
+            0,
+            -1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            0,
+            0
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            0,
+            1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            1,
+            -1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            1,
+            0
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            1,
+            1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            2,
+            -1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            2,
+            0
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            2,
+            1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            3,
+            -1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            3,
+            0
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -2,
+            3,
+            1
+          ],
+          "length": 5,
+          "materialSlot": 1
+        },
+        {
+          "start": [
+            -1,
+            4,
+            -1
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            -1,
+            4,
+            0
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            -1,
+            4,
+            1
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            -1,
+            5,
+            -1
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            -1,
+            5,
+            0
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            -1,
+            5,
+            1
+          ],
+          "length": 3,
+          "materialSlot": 2
+        },
+        {
+          "start": [
+            3,
+            2,
+            0
+          ],
+          "length": 3,
+          "materialSlot": 3
+        },
+        {
+          "start": [
+            3,
+            3,
+            0
+          ],
+          "length": 3,
+          "materialSlot": 3
+        }
+      ]
+    },
+    "voxelDataHash": "sha256:5d4ca470f67109a82698de48c990b885f485e23a31e5d14c2ad8ad99324ca09c"
+  },
+  "clips": [
+    {
+      "id": "clip/idle",
+      "name": "Directional idle (harsh authored poses)",
+      "framesPerSecond": 8.333333333333334,
+      "frames": [
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -2,
+                0,
+                -1
+              ],
+              "max": [
+                5,
+                5,
+                1
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    3,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    3,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:5d4ca470f67109a82698de48c990b885f485e23a31e5d14c2ad8ad99324ca09c"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -2,
+                -1,
+                -2
+              ],
+              "max": [
+                5,
+                5,
+                2
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    2,
+                    -1,
+                    1
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    0,
+                    -2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    1,
+                    -2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    1,
+                    2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    2,
+                    -2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    2,
+                    2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    3,
+                    -2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    2,
+                    3,
+                    2
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    3,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    3,
+                    2,
+                    0
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    3,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    3,
+                    3,
+                    0
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:927258b7514d755d5d8267bd5bd6f01c2204197a7e6bcadc83f1fbd7bb5fc50e"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -1,
+                0,
+                -6
+              ],
+              "max": [
+                1,
+                5,
+                1
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -1,
+                    0,
+                    -3
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    -3
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -3
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -3
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    0,
+                    2,
+                    -6
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    2,
+                    -5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    2,
+                    -4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    3,
+                    -6
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    3,
+                    -5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    3,
+                    -4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:f394deb6d0e87bb3d368a53808f0fa4c4fe60c5263bb2f93ae888ec075fe82c5"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -2,
+                -1,
+                -6
+              ],
+              "max": [
+                1,
+                5,
+                1
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -3
+                  ],
+                  "length": 4,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -3
+                  ],
+                  "length": 4,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -3
+                  ],
+                  "length": 4,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -3
+                  ],
+                  "length": 4,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    0,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    1,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -6
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -4
+                  ],
+                  "length": 2,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -6
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -4
+                  ],
+                  "length": 2,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    1,
+                    -1,
+                    -3
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    1,
+                    1,
+                    -4
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    1,
+                    2,
+                    -4
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    1,
+                    3,
+                    -4
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:c2024b1c3d322ec429d0ef994d02dcb80bcd7bb97a9d7ab4faf9230e1461cc4b"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -6,
+                0,
+                -2
+              ],
+              "max": [
+                1,
+                5,
+                0
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -6,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -6,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    -2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    -2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    -2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    -2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:483c8fd35c214a678f958d5241c1d6d4daef7fa5be1c8b30e5a726cb9c9e8c2d"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -6,
+                0,
+                -2
+              ],
+              "max": [
+                1,
+                5,
+                1
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -6,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -6,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -4,
+                    0,
+                    -2
+                  ],
+                  "length": 6,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -4,
+                    1,
+                    -2
+                  ],
+                  "length": 6,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -4,
+                    2,
+                    -2
+                  ],
+                  "length": 6,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -4,
+                    2,
+                    -1
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -4,
+                    3,
+                    -2
+                  ],
+                  "length": 6,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -4,
+                    3,
+                    -1
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    0,
+                    1
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    1
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    1
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    -1
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    0
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    1
+                  ],
+                  "length": 1,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:d83866048aa40372c88232e7087fbdba87e79462af94d0eca5076290671fa19d"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -2,
+                0,
+                -2
+              ],
+              "max": [
+                0,
+                5,
+                5
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    3
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    3
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:2a57aea12ed2259519c6af65f95317d106b93a9f3fd1e7de43926bbccb5052f8"
+          }
+        },
+        {
+          "durationSeconds": 0.12,
+          "frame": {
+            "bounds": {
+              "min": [
+                -3,
+                0,
+                -2
+              ],
+              "max": [
+                1,
+                5,
+                5
+              ]
+            },
+            "representation": {
+              "kind": "sparseRuns",
+              "sparseRuns": [
+                {
+                  "start": [
+                    -3,
+                    0,
+                    2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    1,
+                    2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    2,
+                    2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -3,
+                    3,
+                    2
+                  ],
+                  "length": 5,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    0,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    1,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    2,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -2
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    3,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 1
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    4,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    -1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    0
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -2,
+                    5,
+                    1
+                  ],
+                  "length": 3,
+                  "materialSlot": 2
+                },
+                {
+                  "start": [
+                    -1,
+                    2,
+                    3
+                  ],
+                  "length": 2,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    -1,
+                    3,
+                    3
+                  ],
+                  "length": 2,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    2,
+                    4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    2,
+                    5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    3,
+                    4
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                },
+                {
+                  "start": [
+                    0,
+                    3,
+                    5
+                  ],
+                  "length": 1,
+                  "materialSlot": 3
+                }
+              ]
+            },
+            "voxelDataHash": "sha256:2c1fa6c83f98b954cdfd4767b5d4d83aa4b30bc1395ba4447a4bedddf9f95ec8"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultClip": "clip/idle",
+  "materialPalette": [
+    {
+      "materialSlot": 1,
+      "materialAssetId": "material/directional-sentinel-1",
+      "displayName": "body"
+    },
+    {
+      "materialSlot": 2,
+      "materialAssetId": "material/directional-sentinel-2",
+      "displayName": "head"
+    },
+    {
+      "materialSlot": 3,
+      "materialAssetId": "material/directional-sentinel-3",
+      "displayName": "weapon"
+    }
+  ],
+  "materialMap": [
+    {
+      "sourceMaterialSlot": 1,
+      "sourceMaterialName": "body",
+      "voxelMaterialSlot": 1
+    },
+    {
+      "sourceMaterialSlot": 2,
+      "sourceMaterialName": "head",
+      "voxelMaterialSlot": 2
+    },
+    {
+      "sourceMaterialSlot": 3,
+      "sourceMaterialName": "weapon",
+      "voxelMaterialSlot": 3
+    }
+  ],
+  "provenance": {
+    "kind": "authored",
+    "sourcePath": "content/characters/directional-sentinel/poses/idle.poses.json",
+    "sourceSha256": "sha256:9ca7e7326d653b8ffdde303f8826e0b72320fa648046e81ca5719dd7f9fd6c15",
+    "sourceByteCount": 1803,
+    "converter": "rusty-engine-voxels.exploded-kit-flipbook.v1",
+    "settingsSha256": "sha256:a8436e53d128f7dcf63e0809ae18abc2b35641c9b6f32a8cd4996669f5588b5a"
+  },
+  "contentHash": "sha256:82f68630da81d56797d00161eb11c3ae9c0ad2083440a57434054bc4354d1ec7"
+}

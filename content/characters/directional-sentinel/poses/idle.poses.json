@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-sentinel",
+  "kit": "content/characters/directional-sentinel/character.json",
+  "cellDownsample": 1,
+  "clipId": "clip/idle",
+  "clipName": "Directional idle (harsh authored poses)",
+  "frames": [
+    {
+      "name": "front-0",
+      "durationMicroseconds": 120000,
+        "deltas": [
+          {
+            "part": "sentinel",
+            "yDeg": 0
+          }
+        ],
+      "chains": []
+    },
+    {
+      "name": "front-1",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 10
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "right-0",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 90
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "right-1",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 100
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "back-0",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 180
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "back-1",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 190
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "left-0",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 270
+        }
+      ],
+      "chains": []
+    },
+    {
+      "name": "left-1",
+      "durationMicroseconds": 120000,
+      "deltas": [
+        {
+          "part": "sentinel",
+          "yDeg": 280
+        }
+      ],
+      "chains": []
+    }
+  ]
+}
