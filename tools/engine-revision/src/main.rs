@@ -1,7 +1,8 @@
 use std::path::Path;
 
 use rusty_engine_voxels_revision::{
-    checked_provider_pin_at, sync_development_revision, update_engine_revision,
+    check_development_resolution, checked_provider_pin_at, sync_development_revision,
+    update_engine_revision,
 };
 
 fn main() {
@@ -38,6 +39,17 @@ fn run() -> Result<(), String> {
                 readout.commit,
                 readout.manifest_dependency_count,
                 readout.locked_provider_package_count
+            );
+            Ok(())
+        }
+        [command, subcommand] if command == "dev" && subcommand == "check" => {
+            let report = check_development_resolution(&repo_root)?;
+            println!(
+                "Development resolution check passed: {} -> {} ({}{}).",
+                report.requested_ref,
+                report.resolved_commit,
+                report.source,
+                if report.dirty { ", dirty" } else { "" }
             );
             Ok(())
         }
@@ -117,7 +129,7 @@ fn development_sync(
 }
 
 fn development_usage() -> String {
-    "dev sync [--worktree /absolute/engine-root] [--report-only] [--json]".to_owned()
+    "dev check | dev sync [--worktree /absolute/engine-root] [--report-only] [--json]".to_owned()
 }
 
 fn certification_usage() -> String {

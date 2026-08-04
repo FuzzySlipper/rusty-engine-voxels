@@ -79,6 +79,12 @@ derive from that exact public commit. `scripts/engine-revision check` is the com
 worktree. It does not infer or rewrite Studio protocol compatibility, historical evidence, or prose.
 Those remain intentional work followed by both `scripts/verify.sh` and `scripts/verify-studio.sh`.
 
+For early downstream work, `engine-development.json` is the explicit rolling intent. Use
+`scripts/engine-revision dev sync` to resolve/report one current public or local Engine SHA and
+`scripts/engine-revision dev check` to verify the saved resolution against the active carriers.
+Development reports are operational compatibility evidence; exact certification remains the
+separate `certify check`/`certify update` path above.
+
 The managed Studio launcher clones that revision into `.studio-cache`. It never inspects a sibling
 `rusty-engine` checkout, and the ordinary Rust gate has no Node or browser dependency.
 

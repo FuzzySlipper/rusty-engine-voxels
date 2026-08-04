@@ -208,6 +208,10 @@ or atlas parser here.
 # Check the canonical Engine source against all Rust and lockfile projections.
 ./scripts/engine-revision check
 
+# Resolve/report the rolling development source and verify an applied resolution.
+./scripts/engine-revision dev sync --report-only --json
+./scripts/engine-revision dev check
+
 # Prove an exact public revision and preview the bounded carrier diff.
 ./scripts/engine-revision update <40-character-public-sha> --dry-run
 

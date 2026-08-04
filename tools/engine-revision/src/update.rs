@@ -8,7 +8,7 @@ use crate::validation::{
     checked_provider_pin_at, parse_engine_development, parse_engine_source, EngineSource,
     ACTIVE_CARRIER_PATHS, DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_CRATES,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateReceipt {
@@ -18,8 +18,8 @@ pub struct UpdateReceipt {
     pub diff: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DevelopmentReceipt {
     pub schema_version: u32,
     pub mode: String,
@@ -33,9 +33,71 @@ pub struct DevelopmentReceipt {
     pub applied: bool,
 }
 
+/// Validate the last rolling-development resolution against the current
+/// exact carriers. This is an operational coherence check, not certification
+/// evidence: the report must remain explicitly non-certifying and its resolved
+/// SHA must be the SHA currently projected into the consumer.
+///
+/// # Errors
+///
+/// Returns an error when the intent or report is missing, malformed, stale,
+/// certifying, or inconsistent with the active exact carriers.
+pub fn check_development_resolution(repo_root: &Path) -> Result<DevelopmentReceipt, String> {
+    let intent = parse_engine_development(
+        &fs::read_to_string(repo_root.join(DEVELOPMENT_MANIFEST))
+            .map_err(|error| format!("{DEVELOPMENT_MANIFEST} cannot be read: {error}"))?,
+    )?;
+    let report_path = repo_root
+        .join(".engine-development")
+        .join("resolution.json");
+    let report_text = fs::read_to_string(&report_path)
+        .map_err(|error| format!(".engine-development/resolution.json cannot be read: {error}"))?;
+    let report: DevelopmentReceipt = serde_json::from_str(&report_text).map_err(|error| {
+        format!(".engine-development/resolution.json cannot be decoded: {error}")
+    })?;
+    if report.schema_version != 1
+        || report.mode != "development"
+        || report.repository != intent.repository
+        || report.requested_ref != intent.r#ref
+        || !is_commit(&report.resolved_commit)
+        || report.certification
+    {
+        return Err(
+            ".engine-development/resolution.json is not a supported non-certifying development report"
+                .to_owned(),
+        );
+    }
+    match report.source.as_str() {
+        "public" if report.source_path.is_none() && !report.dirty => {}
+        "local"
+            if report
+                .source_path
+                .as_deref()
+                .is_some_and(|path| !path.is_empty()) => {}
+        _ => {
+            return Err(
+                ".engine-development/resolution.json has inconsistent source metadata".to_owned(),
+            )
+        }
+    }
+    let active = checked_provider_pin_at(repo_root)?;
+    if active.commit != report.resolved_commit {
+        return Err(format!(
+            ".engine-development/resolution.json resolves {} but active carriers use {}",
+            report.resolved_commit, active.commit
+        ));
+    }
+    Ok(report)
+}
+
 /// Resolve the committed rolling-development intent once and refresh all
 /// exact carriers to that one result. The resulting SHA is operational
 /// development evidence, not a reverse-certification claim.
+///
+/// # Errors
+///
+/// Returns an error when the intent or source cannot be resolved, a local
+/// source is dirty, or the exact carrier update fails.
 pub fn sync_development_revision(
     repo_root: &Path,
     worktree: Option<&Path>,
@@ -484,6 +546,13 @@ mod tests {
             )
             .expect("manifest");
             fs::write(root.join("Cargo.lock"), lockfile(OLD)).expect("lock");
+            fs::write(
+                root.join(DEVELOPMENT_MANIFEST),
+                format!(
+                    "{{\"schemaVersion\":1,\"repository\":\"{ENGINE_REPOSITORY}\",\"ref\":\"{DEVELOPMENT_REF}\"}}\n"
+                ),
+            )
+            .expect("development intent");
             fs::write(root.join("history.md"), format!("historical pin {OLD}\n")).expect("history");
             run("git", &["init", "--quiet"], &root).expect("git init");
             run("git", &["add", "."], &root).expect("git add");
@@ -715,5 +784,40 @@ mod tests {
         assert!(carrier_race
             .expect_err("carrier race")
             .contains("carrier or lock files are dirty"));
+    }
+
+    #[test]
+    fn development_check_accepts_coherent_report_and_rejects_stale_or_extended_reports() {
+        let fixture = Fixture::new();
+        let report_root = fixture.root.join(".engine-development");
+        fs::create_dir_all(&report_root).expect("report directory");
+        let report = format!(
+            "{{\"schemaVersion\":1,\"mode\":\"development\",\"repository\":\"{ENGINE_REPOSITORY}\",\"requestedRef\":\"{DEVELOPMENT_REF}\",\"resolvedCommit\":\"{OLD}\",\"source\":\"public\",\"sourcePath\":null,\"dirty\":false,\"certification\":false,\"applied\":true}}\n"
+        );
+        fs::write(report_root.join("resolution.json"), &report).expect("report");
+        assert_eq!(
+            check_development_resolution(&fixture.root)
+                .expect("coherent development report")
+                .resolved_commit,
+            OLD
+        );
+
+        fs::write(
+            report_root.join("resolution.json"),
+            report.replace(OLD, NEW),
+        )
+        .expect("stale report");
+        assert!(check_development_resolution(&fixture.root)
+            .expect_err("stale report should fail")
+            .contains("active carriers use"));
+
+        fs::write(
+            report_root.join("resolution.json"),
+            report.replace('}', ",\"unexpected\":true}"),
+        )
+        .expect("extended report");
+        assert!(check_development_resolution(&fixture.root)
+            .expect_err("extended report should fail")
+            .contains("cannot be decoded"));
     }
 }

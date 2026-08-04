@@ -12,6 +12,8 @@ Run these commands from the repository root:
 
 ```bash
 ./scripts/engine-revision check
+./scripts/engine-revision dev check
+./scripts/engine-revision dev sync --report-only --json
 ./scripts/engine-revision update <40-character-public-sha> --dry-run
 ./scripts/engine-revision update <40-character-public-sha>
 ```
@@ -20,6 +22,13 @@ Run these commands from the repository root:
 malformed or extended source manifests; sibling, path, branch, tag, floating, aliased, mixed, or
 non-canonical Cargo sources; missing or duplicate package blocks; and any disagreement between the
 manifest, eight direct dependencies, and every locked Engine package.
+
+`dev sync` resolves the committed `engine-development.json` intent (`refs/heads/main`) to one
+public or explicitly supplied local Engine SHA and writes the ignored
+`.engine-development/resolution.json` report. `--report-only` inspects a moving source without
+changing the exact carriers. After a non-reporting sync, `dev check` strictly decodes that report
+and verifies that the active carriers use the same SHA; it rejects stale or tampered reports.
+Development mode is operational compatibility work, not certification evidence.
 
 `update` first requires the current pin to pass `check` and only refuses dirty active carriers. It
 therefore preserves unrelated work while preventing an update from overwriting edits to:

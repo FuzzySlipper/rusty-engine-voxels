@@ -52,6 +52,11 @@ pub struct EngineDevelopment {
 /// Decodes the explicit rolling-development intent. It deliberately admits
 /// only the public Engine main branch; exact commits remain the certification
 /// carrier and are resolved by the consumer command once per sync.
+///
+/// # Errors
+///
+/// Returns an error when the manifest is malformed or names anything other
+/// than the canonical public Engine main branch.
 pub fn parse_engine_development(value: &str) -> Result<EngineDevelopment, String> {
     let source: EngineDevelopment = serde_json::from_str(value)
         .map_err(|error| format!("{DEVELOPMENT_MANIFEST} cannot be decoded: {error}"))?;
