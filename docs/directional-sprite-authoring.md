@@ -154,6 +154,16 @@ RMESH source paths; the sprite sheet and the authored voxel poses remain the
 actual experiment inputs. The carrier is not used to generate the voxel
 frames, and uncertain sheets under `local/` remain non-production.
 
+## Reference-media review loop
+
+The useful next step after a candidate exists is not another automatic sprite
+voxelizer. Use the manifest-driven Studio review pack in
+[`docs/reference-media-review.md`](reference-media-review.md) to put each
+reference view beside a real shared-renderer capture. The same manifest shape
+can describe this directional sheet, an extracted video frame sequence, or a
+future turntable capture. It records correspondence and camera intent without
+claiming that either hidden depth or frame matching was inferred.
+
 ## Agent recipe
 
 1. Copy an uncertain test sheet into ignored `local/`; do not check it in or

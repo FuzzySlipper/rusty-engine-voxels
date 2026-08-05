@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-sentinel-reference-review",
+  "candidate": {
+    "projectFile": "content/projects/directional-sprite-experiment.project.json",
+    "entityId": 1,
+    "objectAssetId": "voxel-object/posed-directional-sentinel",
+    "clipId": "clip/idle"
+  },
+  "reference": {
+    "kind": "directional-sprite",
+    "source": "local/directional-sprite-test/zombieman.png",
+    "entries": [
+      {
+        "id": "idle-0-front",
+        "label": "Idle 0 / front sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-0--front.png",
+        "direction": "front",
+        "sourceFrameIndex": 0,
+        "candidateFrameIndex": 0,
+        "camera": "default"
+      },
+      {
+        "id": "idle-0-right",
+        "label": "Idle 0 / right sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-0--right.png",
+        "direction": "right",
+        "sourceFrameIndex": 0,
+        "candidateFrameIndex": 2,
+        "camera": "quarter-right"
+      },
+      {
+        "id": "idle-0-back",
+        "label": "Idle 0 / back sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-0--back.png",
+        "direction": "back",
+        "sourceFrameIndex": 0,
+        "candidateFrameIndex": 4,
+        "camera": "back"
+      },
+      {
+        "id": "idle-0-left",
+        "label": "Idle 0 / left sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-0--left.png",
+        "direction": "left",
+        "sourceFrameIndex": 0,
+        "candidateFrameIndex": 6,
+        "camera": "quarter-left"
+      },
+      {
+        "id": "idle-1-front",
+        "label": "Idle 1 / front sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-1--front.png",
+        "direction": "front",
+        "sourceFrameIndex": 1,
+        "candidateFrameIndex": 1,
+        "camera": "default"
+      },
+      {
+        "id": "idle-1-right",
+        "label": "Idle 1 / right sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-1--right.png",
+        "direction": "right",
+        "sourceFrameIndex": 1,
+        "candidateFrameIndex": 3,
+        "camera": "quarter-right"
+      },
+      {
+        "id": "idle-1-back",
+        "label": "Idle 1 / back sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-1--back.png",
+        "direction": "back",
+        "sourceFrameIndex": 1,
+        "candidateFrameIndex": 5,
+        "camera": "back"
+      },
+      {
+        "id": "idle-1-left",
+        "label": "Idle 1 / left sprite",
+        "path": "local/directional-sprite-test/inspection-v2/crops/idle--idle-1--left.png",
+        "direction": "left",
+        "sourceFrameIndex": 1,
+        "candidateFrameIndex": 7,
+        "camera": "quarter-left"
+      }
+    ]
+  },
+  "cameras": {
+    "default": {
+      "zoomSteps": 18,
+      "orbits": []
+    },
+    "quarter-right": {
+      "zoomSteps": 18,
+      "orbits": [{ "dx": -180, "dy": 0, "steps": 12 }]
+    },
+    "back": {
+      "zoomSteps": 18,
+      "orbits": [{ "dx": -360, "dy": 0, "steps": 20 }]
+    },
+    "quarter-left": {
+      "zoomSteps": 18,
+      "orbits": [{ "dx": 180, "dy": 0, "steps": 12 }]
+    }
+  },
+  "interpretation": "The checked sprite is an uncertain local reference. This review deliberately compares the authored candidate to each view; it does not claim that the candidate was reconstructed automatically or that hidden depth is correct."
+}
