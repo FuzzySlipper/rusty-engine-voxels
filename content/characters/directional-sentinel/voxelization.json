@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "directional-sentinel-pixel-voxelization",
+  "kit": "content/characters/directional-sentinel/character.json",
+  "layout": "local/directional-sprite-test/zombieman.layout.json",
+  "sourceImage": "local/directional-sprite-test/zombieman.png",
+  "expectedSourceSha256": "sha256:43dd2b0c85296db06f3adf2b7704b71f0a90f5aef79670a619e0bdc95deae6c0",
+  "outputAssetId": "voxel-object/posed-directional-sentinel",
+  "clipId": "clip/idle",
+  "clipName": "Directional idle (explicit pixel slabs)",
+  "cellSizeMeters": 0.01,
+  "depthCells": 24,
+  "frameDurationMicroseconds": 120000
+}

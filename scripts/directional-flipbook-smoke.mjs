@@ -28,6 +28,14 @@ if (clip === undefined || clip.frames.length !== 8
   || instance.instance.voxelObjectAssetId !== 'voxel-object/posed-directional-sentinel') {
   throw new Error('directional project omitted the eight-frame directional clip');
 }
+const voxelCounts = clip.frames.map((frame) => frame.voxelCount);
+if (asset.grid.cellSize !== 0.01
+  || Math.min(...voxelCounts) < 10_000
+  || Math.max(...voxelCounts) > 100_000
+  || asset.defaultFrame.voxelCount !== voxelCounts[0]) {
+  throw new Error('directional pixel voxel density is outside the 10k..100k target: '
+    + voxelCounts.join(','));
+}
 const projectHash = opened.project.identity.projectHash;
 const frameRequests = clip.frames.map((_, frameIndex) => ({
   type: 'previewVoxelObjectInstance',
@@ -65,6 +73,9 @@ console.log(JSON.stringify({
   asset: asset.assetId,
   directions: ['front', 'right', 'back', 'left'],
   frameCount: clip.frames.length,
+  cellSizeMeters: asset.grid.cellSize,
+  voxelCounts,
+  peakVoxelsPerFrame: Math.max(...voxelCounts),
   runtimeFrames,
   frameSwitchProjectionOps: scrubs.filter((response) =>
     response.projection.ops.some((operation) => operation.op === 'setVoxelObjectFrame')).length,

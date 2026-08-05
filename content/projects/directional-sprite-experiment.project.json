@@ -9,14 +9,14 @@
     "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
     "expectedSourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
     "licensePath": "content/sources/kenney-retro-character/LICENSE.txt",
-    "targetAssetId": "voxel-object/posed-directional-sentinel",
+    "targetAssetId": "voxel-object/directional-sentinel-render-carrier",
     "objectDirectory": "content/voxel-objects",
     "resolution": [
-      8,
-      7,
-      3
+      64,
+      64,
+      24
     ],
-    "cellSize": 0.1,
+    "cellSize": 0.01,
     "chunkSize": 16,
     "pivot": [
       0,
@@ -78,8 +78,8 @@
   "voxelObjects": [
     {
       "assetId": "voxel-object/posed-directional-sentinel",
-      "path": "content/voxel-objects/posed-directional-sentinel-82f68630da81d56797d00161eb11c3ae9c0ad2083440a57434054bc4354d1ec7.voxel-object.json",
-      "expectedContentHash": "sha256:82f68630da81d56797d00161eb11c3ae9c0ad2083440a57434054bc4354d1ec7"
+      "path": "content/voxel-objects/posed-directional-sentinel-c825561702dfe5a3da9df1ad8c8d0f46a65da3f6f1cf165744e06c991f24422a.voxel-object.json",
+      "expectedContentHash": "sha256:c825561702dfe5a3da9df1ad8c8d0f46a65da3f6f1cf165744e06c991f24422a"
     }
   ],
   "instances": [

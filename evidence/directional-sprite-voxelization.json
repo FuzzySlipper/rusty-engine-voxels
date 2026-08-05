@@ -1,0 +1,299 @@
+{
+  "cellSizeMeters": 0.01,
+  "depthCells": 24,
+  "directions": [
+    "front",
+    "right",
+    "back",
+    "left"
+  ],
+  "frames": [
+    {
+      "anchor": [
+        20,
+        54
+      ],
+      "bounds": {
+        "max": [
+          20,
+          54,
+          12
+        ],
+        "min": [
+          -20,
+          0,
+          -11
+        ]
+      },
+      "direction": "front",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 0,
+      "sourceRect": {
+        "height": 57,
+        "width": 41,
+        "x": 44,
+        "y": 33
+      },
+      "voxelDataHash": "sha256:6f3b4a39a58e28cc8d7ba2b3ade2cd056548e64f01fca4ab9e9ce3c6dc6e6d7b",
+      "voxels": 23832
+    },
+    {
+      "anchor": [
+        20,
+        54
+      ],
+      "bounds": {
+        "max": [
+          16,
+          54,
+          12
+        ],
+        "min": [
+          -20,
+          0,
+          -11
+        ]
+      },
+      "direction": "front",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 1,
+      "sourceRect": {
+        "height": 57,
+        "width": 41,
+        "x": 44,
+        "y": 130
+      },
+      "voxelDataHash": "sha256:d684c77f90f62f31046cee51a88cb1aa00fd0b1955509dd853209ea14fe4d0a0",
+      "voxels": 24528
+    },
+    {
+      "anchor": [
+        19,
+        53
+      ],
+      "bounds": {
+        "max": [
+          12,
+          53,
+          17
+        ],
+        "min": [
+          -11,
+          0,
+          -18
+        ]
+      },
+      "direction": "right",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 0,
+      "sourceRect": {
+        "height": 57,
+        "width": 38,
+        "x": 127,
+        "y": 33
+      },
+      "voxelDataHash": "sha256:e6def08eac43a6fc4b980a2bbc73ad2dec8fdd750ec64f5f94c83223e1c984f7",
+      "voxels": 22008
+    },
+    {
+      "anchor": [
+        19,
+        53
+      ],
+      "bounds": {
+        "max": [
+          12,
+          53,
+          19
+        ],
+        "min": [
+          -11,
+          0,
+          -13
+        ]
+      },
+      "direction": "right",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 1,
+      "sourceRect": {
+        "height": 57,
+        "width": 38,
+        "x": 127,
+        "y": 130
+      },
+      "voxelDataHash": "sha256:44840665aaaf122971cd48450c11e2b24c9849be5ef27e2b7b59fa01805add4d",
+      "voxels": 21048
+    },
+    {
+      "anchor": [
+        20,
+        50
+      ],
+      "bounds": {
+        "max": [
+          13,
+          50,
+          11
+        ],
+        "min": [
+          -19,
+          0,
+          -12
+        ]
+      },
+      "direction": "back",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 0,
+      "sourceRect": {
+        "height": 57,
+        "width": 40,
+        "x": 378,
+        "y": 33
+      },
+      "voxelDataHash": "sha256:9df489445cf32584d3915fb1b4cdc7380c6d15ef388667d7c88a7df7bd569754",
+      "voxels": 20160
+    },
+    {
+      "anchor": [
+        20,
+        53
+      ],
+      "bounds": {
+        "max": [
+          20,
+          53,
+          11
+        ],
+        "min": [
+          -4,
+          0,
+          -12
+        ]
+      },
+      "direction": "back",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 1,
+      "sourceRect": {
+        "height": 57,
+        "width": 40,
+        "x": 378,
+        "y": 130
+      },
+      "voxelDataHash": "sha256:0e5dd41cc78a315644476ca07b9986d68a799d2378c9d36632d136100028d9e0",
+      "voxels": 20952
+    },
+    {
+      "anchor": [
+        20,
+        61
+      ],
+      "bounds": {
+        "max": [
+          11,
+          50,
+          17
+        ],
+        "min": [
+          -12,
+          0,
+          -15
+        ]
+      },
+      "direction": "left",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 0,
+      "sourceRect": {
+        "height": 63,
+        "width": 41,
+        "x": 465,
+        "y": 33
+      },
+      "voxelDataHash": "sha256:3255e23adda1ac1ad28069c845be5d1e09d97bd5ba72b46d786ff31b95738e0d",
+      "voxels": 19944
+    },
+    {
+      "anchor": [
+        20,
+        60
+      ],
+      "bounds": {
+        "max": [
+          11,
+          53,
+          -1
+        ],
+        "min": [
+          -12,
+          0,
+          -20
+        ]
+      },
+      "direction": "left",
+      "materialSlots": [
+        1,
+        2,
+        3
+      ],
+      "sourceFrameIndex": 1,
+      "sourceRect": {
+        "height": 63,
+        "width": 41,
+        "x": 465,
+        "y": 130
+      },
+      "voxelDataHash": "sha256:ff0685a0c1c944f7380cb533c216b37f5b48b60b2278558edd89b2f054841c72",
+      "voxels": 12072
+    }
+  ],
+  "kind": "directionalSpriteVoxelization",
+  "kit": "content/characters/directional-sentinel/character.json",
+  "layout": "local/directional-sprite-test/zombieman.layout.json",
+  "layoutSha256": "sha256:37c45d82f502a4082781193688fa16930ff7f7fdd12a62690db057982edd7bd8",
+  "materialSlots": [
+    1,
+    2,
+    3
+  ],
+  "peakVoxelsPerFrame": 24528,
+  "publication": {
+    "assetId": "voxel-object/posed-directional-sentinel",
+    "byteCount": 5356245,
+    "contentHash": "sha256:c825561702dfe5a3da9df1ad8c8d0f46a65da3f6f1cf165744e06c991f24422a",
+    "path": "content/voxel-objects/posed-directional-sentinel-c825561702dfe5a3da9df1ad8c8d0f46a65da3f6f1cf165744e06c991f24422a.voxel-object.json"
+  },
+  "schemaVersion": 1,
+  "sourceBundleSha256": "sha256:ffc512bc7f8d071db89907a38e1c56525b1df68eff3311d24f014fd3a0b2cc19",
+  "sourceImage": "local/directional-sprite-test/zombieman.png",
+  "sourceImageSha256": "sha256:43dd2b0c85296db06f3adf2b7704b71f0a90f5aef79670a619e0bdc95deae6c0",
+  "spec": "content/characters/directional-sentinel/voxelization.json",
+  "specSha256": "sha256:f59363c746440c9557bb25d4f04e3d559dcc839aec3dd72afb477630dcdce83f",
+  "totalVoxels": 164544
+}
