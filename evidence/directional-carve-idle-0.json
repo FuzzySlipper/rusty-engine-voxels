@@ -1,0 +1,105 @@
+{
+  "carveThreshold": 2,
+  "carvedFrame": {
+    "bounds": {
+      "max": [
+        22,
+        53,
+        22
+      ],
+      "min": [
+        -22,
+        0,
+        -22
+      ]
+    },
+    "voxelDataHash": "sha256:86e546192dcbb53f6122e68caefbd92c173069e41e3ec0d0b96ae04e43a6de9f",
+    "voxels": 51877
+  },
+  "cellSizeMeters": 0.01,
+  "directions": [
+    "front",
+    "right",
+    "back",
+    "left"
+  ],
+  "frameId": "idle-0",
+  "kind": "directionalCarve",
+  "kit": "content/characters/directional-sentinel/character.json",
+  "layout": "local/directional-sprite-test/zombieman.layout.json",
+  "layoutSha256": "sha256:37c45d82f502a4082781193688fa16930ff7f7fdd12a62690db057982edd7bd8",
+  "publication": {
+    "assetId": "voxel-object/posed-directional-sentinel-carve",
+    "byteCount": 2684762,
+    "contentHash": "sha256:ed5672170869e8098815012e89cbd64f090a619460c8486ba07b7892f264cc78",
+    "path": "content/voxel-objects/posed-directional-sentinel-carve-ed5672170869e8098815012e89cbd64f090a619460c8486ba07b7892f264cc78.voxel-object.json"
+  },
+  "schemaVersion": 1,
+  "sourceBundleSha256": "sha256:361adb17de9f6d6397010aff7c1138c65142d0b7ba0a61796b9ed35611d20cb9",
+  "sourceImage": "local/directional-sprite-test/zombieman.png",
+  "sourceImageSha256": "sha256:43dd2b0c85296db06f3adf2b7704b71f0a90f5aef79670a619e0bdc95deae6c0",
+  "spec": "content/characters/directional-sentinel/carve-idle-0.json",
+  "specSha256": "sha256:47238b4d76dc484b7367843cf4b2c251350cbaec53efdb25c9de5e3cbe5932ad",
+  "views": [
+    {
+      "anchor": [
+        20,
+        54
+      ],
+      "direction": "front",
+      "height": 57,
+      "rect": {
+        "height": 57,
+        "width": 41,
+        "x": 44,
+        "y": 33
+      },
+      "width": 41
+    },
+    {
+      "anchor": [
+        19,
+        53
+      ],
+      "direction": "right",
+      "height": 57,
+      "rect": {
+        "height": 57,
+        "width": 38,
+        "x": 127,
+        "y": 33
+      },
+      "width": 38
+    },
+    {
+      "anchor": [
+        20,
+        50
+      ],
+      "direction": "back",
+      "height": 57,
+      "rect": {
+        "height": 57,
+        "width": 40,
+        "x": 378,
+        "y": 33
+      },
+      "width": 40
+    },
+    {
+      "anchor": [
+        20,
+        61
+      ],
+      "direction": "left",
+      "height": 63,
+      "rect": {
+        "height": 63,
+        "width": 41,
+        "x": 465,
+        "y": 33
+      },
+      "width": 41
+    }
+  ]
+}

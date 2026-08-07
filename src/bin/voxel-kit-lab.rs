@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rusty_engine_voxels::directional::inspect_layout;
+use rusty_engine_voxels::directional_carve::run_directional_carve;
 use rusty_engine_voxels::directional_voxel::run_directional_voxelization;
 use rusty_engine_voxels::kit_bake::{run_kit_bake, write_kit_bake_output};
 use rusty_engine_voxels::posed::{run_posed_flipbook, write_posed_flipbook_report};
@@ -100,9 +101,26 @@ fn run() -> Result<(), String> {
                 serde_json::to_string_pretty(&result.evidence).map_err(|error| error.to_string())?
             );
         }
+        "directional-carve" => {
+            let spec = spec.ok_or("directional-carve requires --spec PATH")?;
+            let out = out.unwrap_or_else(|| "content/voxel-objects".to_owned());
+            let result = run_directional_carve(&root, &spec, &out)?;
+            if let Some(report) = report {
+                let bytes = format!(
+                    "{}\n",
+                    serde_json::to_string_pretty(&result.evidence)
+                        .map_err(|error| error.to_string())?
+                );
+                atomic_write(&safe_join(&root, &report)?, bytes.as_bytes())?;
+            }
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&result.evidence).map_err(|error| error.to_string())?
+            );
+        }
         _ => {
             return Err(
-                "usage: voxel-kit-lab <bake|poses|sprite-inspect|directional-voxelize> --spec PATH [--out PATH --report PATH --action ID --frame ID --comparison PATH] [--root PATH]"
+                "usage: voxel-kit-lab <bake|poses|sprite-inspect|directional-voxelize|directional-carve> --spec PATH [--out PATH --report PATH --action ID --frame ID --comparison PATH] [--root PATH]"
                     .to_owned(),
             )
         }

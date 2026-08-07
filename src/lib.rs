@@ -6,6 +6,7 @@ pub mod cleanup;
 pub mod conversion;
 pub mod density;
 pub mod directional;
+pub mod directional_carve;
 pub mod directional_voxel;
 pub mod flipbook;
 pub mod format_study;
