@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 3,
+  "projectId": "llm-kit-test",
+  "name": "LLM Kit Test — Single View Vague Reference",
+  "entryScene": "scene/directional-sentinel",
+  "revision": 1,
+  "conversion": {
+    "sourceAssetId": "mesh-animation/directional-sentinel-render-carrier",
+    "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
+    "expectedSourceSha256": "sha256:c71255a41c0373f0d2ef52593369d5fd9d2f6220ae548aff8cd6bf5edb403674",
+    "licensePath": "content/sources/kenney-retro-character/LICENSE.txt",
+    "targetAssetId": "voxel-object/directional-sentinel-render-carrier",
+    "objectDirectory": "content/voxel-objects",
+    "resolution": [64, 64, 24],
+    "cellSize": 0.01,
+    "chunkSize": 16,
+    "pivot": [0, 0, 0],
+    "anchorPolicy": { "kind": "preserveSourceSpace" },
+    "clips": [
+      {
+        "sourceClipName": "idle",
+        "outputClipId": "clip/idle",
+        "outputName": "Directional idle",
+        "sampleRateHz": 8,
+        "startMicroseconds": 0,
+        "endPolicy": "includeClipEnd"
+      }
+    ],
+    "defaultClip": "clip/idle"
+  },
+  "textures": [],
+  "atlases": [],
+  "materials": [
+    { "assetId": "material/directional-sentinel-1", "displayName": "body", "color": [0.32, 0.42, 0.52, 1], "roughness": 0.8 },
+    { "assetId": "material/directional-sentinel-2", "displayName": "head", "color": [0.72, 0.66, 0.42, 1], "roughness": 0.7 },
+    { "assetId": "material/directional-sentinel-3", "displayName": "weapon", "color": [0.78, 0.22, 0.18, 1], "roughness": 0.6 }
+  ],
+  "voxelObjects": [
+    {
+      "assetId": "voxel-object/posed-directional-sentinel-llm",
+      "path": "content/voxel-objects/posed-directional-sentinel-llm-a116b38ba766a32951fd0f0faf73af5652862e850df5a1a498645dd4b25190b4.voxel-object.json",
+      "expectedContentHash": "sha256:a116b38ba766a32951fd0f0faf73af5652862e850df5a1a498645dd4b25190b4"
+    }
+  ],
+  "instances": [
+    {
+      "entityId": 1,
+      "instanceId": "directional-sentinel",
+      "voxelObjectAssetId": "voxel-object/posed-directional-sentinel-llm",
+      "frame": { "kind": "clip", "clipId": "clip/idle-llm", "frameIndex": 0 },
+      "translation": [0, 0, 0],
+      "rotation": [0, 0, 0, 1],
+      "scale": [1, 1, 1],
+      "collisionPolicy": { "kind": "none" }
+    }
+  ]
+}
