@@ -10,6 +10,7 @@ fn root() -> PathBuf {
 }
 
 #[test]
+#[ignore = "requires the developer-local directional sprite source under local/"]
 fn dense_directional_object_regenerates_byte_identically_and_stays_grounded() {
     let root = root();
     let run = run_directional_voxelization(&root, SPEC, "target/directional-voxelization-test")
