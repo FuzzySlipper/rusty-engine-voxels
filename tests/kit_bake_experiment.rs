@@ -13,7 +13,6 @@ fn root() -> PathBuf {
 
 const KNIGHT_SPEC: &str = "content/characters/knight/kit-spec.json";
 const KNIGHT_KIT: &str = "content/characters/knight/character.json";
-const KNIGHT_REPORT: &str = "evidence/kit-bake-knight.json";
 
 #[test]
 fn knight_bake_regenerates_the_checked_kit_deterministically() {
@@ -33,7 +32,10 @@ fn knight_bake_regenerates_the_checked_kit_deterministically() {
     );
 
     // Writing the same output again is idempotent.
-    write_kit_bake_output(&root(), KNIGHT_KIT, KNIGHT_REPORT, &first).expect("output writes");
+    let output_root = format!("target/test-evidence/kit-bake-{}", std::process::id());
+    let kit_path = format!("{output_root}/character.json");
+    let report_path = format!("{output_root}/report.json");
+    write_kit_bake_output(&root(), &kit_path, &report_path, &first).expect("output writes");
 }
 
 #[test]

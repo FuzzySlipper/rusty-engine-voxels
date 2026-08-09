@@ -22,7 +22,6 @@ fn root() -> PathBuf {
 }
 
 const KNIGHT_KIT: &str = "content/characters/knight/character.json";
-const REPORT: &str = "evidence/kit-pivot-knight.json";
 
 /// A hand-authored pose: per-part euler deltas (degrees) about each part's
 /// own pivot, plus chains whose child part inherits a parent's rotation about
@@ -523,5 +522,9 @@ fn manual_pivoting_poses_a_mesh_derived_kit() {
         ));
     }
     evidence.push_str("  ]\n}\n");
-    atomic_write(&root().join(REPORT), evidence.as_bytes()).expect("report writes");
+    let report = root().join(format!(
+        "target/test-evidence/kit-pivot-knight-{}.json",
+        std::process::id()
+    ));
+    atomic_write(&report, evidence.as_bytes()).expect("report writes");
 }

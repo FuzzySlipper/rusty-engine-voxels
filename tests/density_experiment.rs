@@ -90,9 +90,12 @@ fn smoke_bakes_regenerate_identically() {
 #[test]
 fn smoke_report_write_round_trips() {
     let evidence = smoke_evidence();
-    let report = "evidence/density/bulky-knight-smoke.json";
-    write_density_evidence(&root(), report, &evidence).expect("report writes");
-    let written = std::fs::read_to_string(root().join(report)).expect("report reads");
+    let report = format!(
+        "target/test-evidence/density/bulky-knight-smoke-{}.json",
+        std::process::id()
+    );
+    write_density_evidence(&root(), &report, &evidence).expect("report writes");
+    let written = std::fs::read_to_string(root().join(&report)).expect("report reads");
     let reparsed: serde_json::Value = serde_json::from_str(&written).expect("report parses");
     let direct = serde_json::to_value(&evidence).expect("evidence serializes to a value");
     assert_eq!(reparsed, direct);
