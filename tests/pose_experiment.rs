@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use rusty_engine::voxel_convert;
 use rusty_engine_voxels::kit::{assemble_neutral, load_kit, neutral_part_transforms};
 use rusty_engine_voxels::pose::{
     admit_node_world_transform, derive_bind_transform, evaluate_node_poses,

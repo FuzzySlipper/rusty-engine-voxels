@@ -3,7 +3,7 @@
   "projectId": "rusty-engine-voxels",
   "name": "Rusty Engine Voxel Lab — Retro Character High Fidelity",
   "entryScene": "scene/voxel-lab-high-fidelity",
-  "revision": 2,
+  "revision": 3,
   "conversion": {
     "sourceAssetId": "mesh-animation/retro-character",
     "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
@@ -66,14 +66,28 @@
         0.24,
         1.0
       ],
-      "roughness": 0.82
+      "roughness": 0.82,
+      "textureTint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "emissionColor": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "emissive": 0.0,
+      "version": 1
     }
   ],
   "voxelObjects": [
     {
       "assetId": "voxel-object/retro-character-high-fidelity",
-      "path": "content/voxel-objects/retro-character-high-fidelity-65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64.voxel-object.json",
-      "expectedContentHash": "sha256:65746e7b044e85167bf76b97f65ed757d1ea4094d38a0d85389505fef7dffe64"
+      "path": "content/voxel-objects/retro-character-high-fidelity-f7472e9cc183859173d16d9be2ec2dfe53a0664448679706a82c9f62d15dab69.voxel-object.json",
+      "expectedContentHash": "sha256:f7472e9cc183859173d16d9be2ec2dfe53a0664448679706a82c9f62d15dab69"
     }
   ],
   "instances": [

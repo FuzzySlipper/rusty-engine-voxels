@@ -3,7 +3,7 @@
   "projectId": "rusty-engine-voxels",
   "name": "Rusty Engine Voxel Lab",
   "entryScene": "scene/voxel-lab",
-  "revision": 4,
+  "revision": 5,
   "conversion": {
     "sourceAssetId": "mesh-animation/retro-character",
     "sourcePath": "content/sources/kenney-retro-character/character-medium.glb",
@@ -66,14 +66,28 @@
         0.24,
         1.0
       ],
-      "roughness": 0.82
+      "roughness": 0.82,
+      "textureTint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "emissionColor": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "emissive": 0.0,
+      "version": 1
     }
   ],
   "voxelObjects": [
     {
       "assetId": "voxel-object/retro-character",
-      "path": "content/voxel-objects/retro-character-900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c.voxel-object.json",
-      "expectedContentHash": "sha256:900ac2ff013fec886312157ca0e24a1203f76ee748b4bb34369cd07b4063b27c"
+      "path": "content/voxel-objects/retro-character-1483afa2bce307705ed8ce78a261828c9e8251730ff121adee109abd2bd571ce.voxel-object.json",
+      "expectedContentHash": "sha256:1483afa2bce307705ed8ce78a261828c9e8251730ff121adee109abd2bd571ce"
     }
   ],
   "instances": [
@@ -81,9 +95,9 @@
       "entityId": 1,
       "instanceId": "retro-character",
       "voxelObjectAssetId": "voxel-object/retro-character",
-    "frame": {
-      "kind": "default"
-    },
+      "frame": {
+        "kind": "default"
+      },
       "translation": [
         0.0,
         0.0,
@@ -100,12 +114,12 @@
         1.0,
         1.0
       ],
-    "collisionPolicy": {
-      "kind": "stableFrame",
-      "frame": {
-        "kind": "default"
+      "collisionPolicy": {
+        "kind": "stableFrame",
+        "frame": {
+          "kind": "default"
+        }
       }
-    }
     }
   ]
 }

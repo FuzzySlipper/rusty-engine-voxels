@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use render_model::{PackedMeshResource, MAX_MESH_RESOURCE_BYTES};
+use rusty_engine::render_model;
 use serde::Serialize;
 
 use crate::project::{read_bounded, safe_join};

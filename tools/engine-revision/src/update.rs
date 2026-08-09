@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::validation::{
     checked_provider_pin_at, parse_engine_development, parse_engine_source, EngineSource,
-    ACTIVE_CARRIER_PATHS, DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_CRATES,
+    ACTIVE_CARRIER_PATHS, DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_PACKAGE,
 };
 use serde::{Deserialize, Serialize};
 
@@ -312,18 +312,6 @@ fn rewrite_active_carriers(
     fs::write(source_path, format!("{encoded}\n"))
         .map_err(|error| format!("engine-source.json cannot be written: {error}"))?;
 
-    let manifest_path = repo_root.join("Cargo.toml");
-    let manifest = fs::read_to_string(&manifest_path)
-        .map_err(|error| format!("Cargo.toml cannot be read: {error}"))?;
-    let occurrences = manifest.matches(previous_commit).count();
-    if occurrences != ENGINE_CRATES.len() {
-        return Err(format!(
-            "Cargo.toml expected {} active commit carriers; observed {occurrences}",
-            ENGINE_CRATES.len()
-        ));
-    }
-    fs::write(manifest_path, manifest.replace(previous_commit, commit))
-        .map_err(|error| format!("Cargo.toml cannot be written: {error}"))?;
     Ok(())
 }
 
@@ -360,15 +348,17 @@ fn prove_public_commit(repository: &str, commit: &str) -> Result<(), String> {
     })
 }
 
-fn regenerate_lock(candidate: &Path, _previous: &str, _commit: &str) -> Result<(), String> {
+fn regenerate_lock(candidate: &Path, _previous: &str, commit: &str) -> Result<(), String> {
     let manifest_path = candidate.join("Cargo.toml");
     let manifest = path_text(&manifest_path)?;
     run(
         "cargo",
         &[
-            "metadata",
-            "--format-version",
-            "1",
+            "update",
+            "-p",
+            ENGINE_PACKAGE,
+            "--precise",
+            commit,
             "--manifest-path",
             manifest,
         ],
@@ -533,16 +523,11 @@ mod tests {
                 ),
             )
             .expect("source");
-            let dependencies = ENGINE_CRATES
-                .iter()
-                .map(|name| {
-                    format!("{name} = {{ git = \"{ENGINE_REPOSITORY}\", rev = \"{OLD}\" }}")
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
             fs::write(
                 root.join("Cargo.toml"),
-                format!("[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n\n[dependencies]\n{dependencies}\n"),
+                format!(
+                    "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n\n[dependencies]\n{ENGINE_PACKAGE} = {{ git = \"{ENGINE_REPOSITORY}\", branch = \"main\" }}\n"
+                ),
             )
             .expect("manifest");
             fs::write(root.join("Cargo.lock"), lockfile(OLD)).expect("lock");
@@ -623,15 +608,9 @@ mod tests {
     }
 
     fn lockfile(commit: &str) -> String {
-        ENGINE_CRATES
-            .iter()
-            .map(|name| {
-                format!(
-                    "[[package]]\nname = \"{name}\"\nsource = \"git+{ENGINE_REPOSITORY}?rev={commit}#{commit}\"\n"
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        format!(
+            "[[package]]\nname = \"{ENGINE_PACKAGE}\"\nsource = \"git+{ENGINE_REPOSITORY}?branch=main#{commit}\"\n\n[[package]]\nname = \"render-model\"\nsource = \"git+{ENGINE_REPOSITORY}?branch=main#{commit}\"\n"
+        )
     }
 
     #[test]

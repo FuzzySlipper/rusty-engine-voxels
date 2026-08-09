@@ -10,6 +10,7 @@ use std::io::Cursor;
 use std::path::Path;
 
 use png::{BitDepth, ColorType, Decoder, Transformations};
+use rusty_engine::voxel_asset;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use voxel_asset::{encode_voxel_object, with_computed_voxel_object_hashes};
@@ -167,12 +168,20 @@ pub fn run_directional_carve(
                         .views
                         .iter()
                         .find(|v| &v.direction == direction)
-                        .ok_or_else(|| format!("frame {} missing direction {direction}", spec.frame_id))?;
+                        .ok_or_else(|| {
+                            format!("frame {} missing direction {direction}", spec.frame_id)
+                        })?;
                     let rect = view.rect.clone().ok_or_else(|| {
-                        format!("frame {} direction {direction} is explicitly missing", spec.frame_id)
+                        format!(
+                            "frame {} direction {direction} is explicitly missing",
+                            spec.frame_id
+                        )
                     })?;
                     let anchor = view.anchor.clone().ok_or_else(|| {
-                        format!("frame {} direction {direction} missing anchor", spec.frame_id)
+                        format!(
+                            "frame {} direction {direction} missing anchor",
+                            spec.frame_id
+                        )
                     })?;
                     let cropped = crop_rect(&image, &rect)?;
                     target_views.push(ViewRgba {
@@ -211,9 +220,7 @@ pub fn run_directional_carve(
             frame.len()
         ));
     }
-    let bounds = frame
-        .bounds()
-        .ok_or("carved frame has no voxels")?;
+    let bounds = frame.bounds().ok_or("carved frame has no voxels")?;
     if bounds.0[1] != 0 {
         return Err(format!(
             "carved frame not grounded at y=0; min y is {}",
@@ -297,10 +304,22 @@ fn build_carved_frame(
     views: &[ViewRgba],
     spec: &DirectionalCarveSpec,
 ) -> Result<RoughFrame, String> {
-    let front = views.iter().find(|v| v.direction == "front").ok_or("missing front")?;
-    let right = views.iter().find(|v| v.direction == "right").ok_or("missing right")?;
-    let back = views.iter().find(|v| v.direction == "back").ok_or("missing back")?;
-    let left = views.iter().find(|v| v.direction == "left").ok_or("missing left")?;
+    let front = views
+        .iter()
+        .find(|v| v.direction == "front")
+        .ok_or("missing front")?;
+    let right = views
+        .iter()
+        .find(|v| v.direction == "right")
+        .ok_or("missing right")?;
+    let back = views
+        .iter()
+        .find(|v| v.direction == "back")
+        .ok_or("missing back")?;
+    let left = views
+        .iter()
+        .find(|v| v.direction == "left")
+        .ok_or("missing left")?;
 
     let max_width = views.iter().map(|v| v.width as i32).max().unwrap_or(40);
     let max_height = views.iter().map(|v| v.height as i32).max().unwrap_or(57);
@@ -314,34 +333,35 @@ fn build_carved_frame(
             for z in -half_d..=half_d {
                 let mut hits = 0;
                 let mut sample_pixels: Vec<[u8; 4]> = Vec::new();
-                if let Some(px) = sample_view(front, x as i64, y as i64) {
+                if let Some(px) = sample_view(front, x, i64::from(y)) {
                     if px[3] != 0 {
                         hits += 1;
                         sample_pixels.push(px);
                     }
                 }
-                if let Some(px) = sample_view(right, -z as i64, y as i64) {
+                if let Some(px) = sample_view(right, -z, i64::from(y)) {
                     if px[3] != 0 {
                         hits += 1;
                         sample_pixels.push(px);
                     }
                 }
-                if let Some(px) = sample_view(back, -x as i64, y as i64) {
+                if let Some(px) = sample_view(back, -x, i64::from(y)) {
                     if px[3] != 0 {
                         hits += 1;
                         sample_pixels.push(px);
                     }
                 }
-                if let Some(px) = sample_view(left, z as i64, y as i64) {
+                if let Some(px) = sample_view(left, z, i64::from(y)) {
                     if px[3] != 0 {
                         hits += 1;
                         sample_pixels.push(px);
                     }
                 }
                 if hits >= spec.carve_threshold as i32 {
-                    let material_slot = material_slot_from_samples(&sample_pixels, y as u32, max_height as u32);
+                    let material_slot =
+                        material_slot_from_samples(&sample_pixels, y as u32, max_height as u32);
                     voxels.push(AssembledVoxelCell {
-                        coordinate: [x as i64, y as i64, z as i64],
+                        coordinate: [x, i64::from(y), z],
                         material_slot,
                         part_id: 0,
                         source_voxel_index: voxels.len() as u32,
@@ -487,21 +507,4 @@ fn background_key(background: &crate::directional::SpriteBackground, pixel: &[u8
         .as_ref()
         .is_some_and(|key| pixel == key)
         || background.color_keys.iter().any(|key| pixel == key)
-}
-
-impl RgbaImage {
-    fn pixel(&self, x: u32, y: u32) -> Result<[u8; 4], String> {
-        if x >= self.width || y >= self.height {
-            return Err(format!(
-                "sprite pixel {x},{y} is outside {}x{}",
-                self.width, self.height
-            ));
-        }
-        let offset = usize::try_from((y * self.width + x) * 4)
-            .map_err(|_| "sprite pixel offset overflow")?;
-        self.pixels
-            .get(offset..offset + 4)
-            .and_then(|bytes| bytes.try_into().ok())
-            .ok_or_else(|| "sprite pixel buffer is truncated".to_owned())
-    }
 }

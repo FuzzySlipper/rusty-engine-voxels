@@ -17,11 +17,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn checked_pin_is_closed_exact_and_manifest_derived() {
+    fn checked_resolution_uses_one_complete_facade_and_exact_lock() {
         let readout = checked_provider_pin().expect("checked provider pin should be coherent");
         assert_eq!(engine_revision().expect("runtime revision"), readout.commit);
-        assert_eq!(readout.manifest_dependency_count, 12);
-        assert!(readout.locked_provider_package_count >= 12);
+        assert_eq!(readout.manifest_dependency_count, 1);
+        assert!(readout.locked_provider_package_count >= 1);
         for source in [
             include_str!("conversion.rs"),
             include_str!("churn.rs"),
@@ -52,7 +52,7 @@ mod tests {
         );
         assert!(validate_provider_pin(
             source,
-            &manifest.replace(&revision, "0000000000000000000000000000000000000000"),
+            &manifest.replace("branch = \"main\"", "branch = \"release\""),
             lock,
         )
         .is_err());

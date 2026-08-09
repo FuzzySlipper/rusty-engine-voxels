@@ -8,5 +8,5 @@ pub use update::{
 pub use validation::{
     checked_provider_pin_at, parse_engine_development, parse_engine_source, validate_provider_pin,
     EngineDevelopment, EngineSource, ProviderPinReadout, ACTIVE_CARRIER_PATHS,
-    DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_CRATES, ENGINE_REPOSITORY,
+    DEVELOPMENT_MANIFEST, DEVELOPMENT_REF, ENGINE_PACKAGE, ENGINE_REPOSITORY,
 };

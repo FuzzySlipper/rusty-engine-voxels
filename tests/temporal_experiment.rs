@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+use rusty_engine::{voxel_asset, voxel_convert};
 use rusty_engine_voxels::assemble::{
     assemble_rough_schedule, select_pose_schedule, PoseSelectionSettings,
 };

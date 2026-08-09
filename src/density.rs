@@ -24,6 +24,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::time::Instant;
 
+use rusty_engine::{voxel_asset, voxel_convert, voxel_object_runtime};
 use serde::{Deserialize, Serialize};
 use voxel_asset::{
     VoxelAssetMaterialBinding, VoxelAssetMaterialMapping, VoxelConversionFitPolicy,
@@ -250,6 +251,7 @@ fn run_bake(
                 transform: identity_transform(),
                 material_policy: ConversionMaterialPolicy::default(),
             },
+            source_bounds: None,
             pivot: bake.pivot,
             anchor_policy: voxel_convert::AnimationAnchorPolicy::PreserveSourceSpace,
         },

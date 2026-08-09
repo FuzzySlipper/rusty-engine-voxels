@@ -25,7 +25,7 @@ fn run() -> Result<(), String> {
             }
             let readout = checked_provider_pin_at(&repo_root)?;
             println!(
-                "Engine revision {} is coherent across {} manifest dependencies and {} locked provider packages.",
+                "Engine revision {} is coherent across {} complete facade dependency and {} locked provider packages.",
                 readout.commit,
                 readout.manifest_dependency_count,
                 readout.locked_provider_package_count
@@ -35,7 +35,7 @@ fn run() -> Result<(), String> {
         [command, subcommand] if command == "certify" && subcommand == "check" => {
             let readout = checked_provider_pin_at(&repo_root)?;
             println!(
-                "Engine revision {} is coherent across {} manifest dependencies and {} locked provider packages.",
+                "Engine revision {} is coherent across {} complete facade dependency and {} locked provider packages.",
                 readout.commit,
                 readout.manifest_dependency_count,
                 readout.locked_provider_package_count
@@ -146,7 +146,7 @@ fn update(repo_root: &Path, commit: &str, dry_run: bool) -> Result<(), String> {
         );
     } else {
         println!(
-            "Updated Engine {} -> {}. Review and commit the three active carrier changes.",
+            "Updated Engine {} -> {}. Review the synchronized source manifest and lock resolution.",
             receipt.previous_commit, receipt.commit
         );
     }

@@ -8,6 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
+use rusty_engine::voxel_asset;
 use serde::{Deserialize, Serialize};
 use voxel_asset::{
     encode_voxel_object, with_computed_voxel_frame_hash, with_computed_voxel_object_hashes,

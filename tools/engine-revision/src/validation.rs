@@ -4,20 +4,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 pub const ENGINE_REPOSITORY: &str = "https://github.com/FuzzySlipper/rusty-engine";
-pub const ENGINE_CRATES: [&str; 12] = [
-    "asset-catalog",
-    "core-assets",
-    "core-space",
-    "core-voxel",
-    "render-model",
-    "render-projection",
-    "svc-mesh",
-    "svc-spatial",
-    "svc-volume",
-    "voxel-asset",
-    "voxel-convert",
-    "voxel-object-runtime",
-];
+pub const ENGINE_PACKAGE: &str = "rusty-engine";
 pub const ACTIVE_CARRIER_PATHS: [&str; 3] = ["engine-source.json", "Cargo.toml", "Cargo.lock"];
 pub const DEVELOPMENT_MANIFEST: &str = "engine-development.json";
 pub const DEVELOPMENT_REF: &str = "refs/heads/main";
@@ -130,47 +117,27 @@ pub fn validate_provider_pin(
     })
 }
 
-fn validate_manifest(manifest: &str, source: &EngineSource) -> Result<usize, String> {
+fn validate_manifest(manifest: &str, _source: &EngineSource) -> Result<usize, String> {
     let dependencies = section(manifest, "dependencies")
         .ok_or("Cargo.toml is missing its dependencies section")?;
-    for crate_name in ENGINE_CRATES {
-        let prefix = format!("{crate_name} =");
-        let matches = dependencies
-            .lines()
-            .map(str::trim)
-            .filter(|line| line.starts_with(&prefix))
-            .collect::<Vec<_>>();
-        if matches.len() != 1 {
-            return Err(format!(
-                "Cargo.toml expected exactly one {crate_name} dependency; observed {}",
-                matches.len()
-            ));
-        }
-        let expected = format!(
-            "{crate_name} = {{ git = \"{ENGINE_REPOSITORY}\", rev = \"{}\" }}",
-            source.commit
-        );
-        if matches[0] != expected {
-            return Err(format!(
-                "Cargo.toml {crate_name} must use the canonical exact Engine pin"
-            ));
-        }
+    let expected =
+        format!("{ENGINE_PACKAGE} = {{ git = \"{ENGINE_REPOSITORY}\", branch = \"main\" }}");
+    let matches = dependencies
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with(&format!("{ENGINE_PACKAGE} =")))
+        .collect::<Vec<_>>();
+    if matches.len() != 1 || matches[0] != expected {
+        return Err(format!(
+            "Cargo.toml must declare exactly one canonical rolling {ENGINE_PACKAGE} facade dependency"
+        ));
     }
 
     for line in dependencies.lines().map(str::trim) {
         let lower = line.to_ascii_lowercase();
-        let aliases_engine_crate = ENGINE_CRATES
-            .iter()
-            .any(|crate_name| lower.contains(&format!("package = \"{crate_name}\"")));
+        let aliases_engine_package = lower.contains("package = \"rusty-engine\"");
         let references_engine_repository = lower.contains("fuzzyslipper/rusty-engine");
-        if (aliases_engine_crate || references_engine_repository)
-            && !ENGINE_CRATES.iter().any(|crate_name| {
-                line == format!(
-                    "{crate_name} = {{ git = \"{ENGINE_REPOSITORY}\", rev = \"{}\" }}",
-                    source.commit
-                )
-            })
-        {
+        if (aliases_engine_package || references_engine_repository) && line != expected {
             return Err(format!(
                 "Cargo.toml contains an unexpected Engine dependency carrier: {line}"
             ));
@@ -178,53 +145,39 @@ fn validate_manifest(manifest: &str, source: &EngineSource) -> Result<usize, Str
     }
     for line in manifest.lines().map(str::trim) {
         let lower = line.to_ascii_lowercase();
-        let aliases_engine_crate = ENGINE_CRATES
-            .iter()
-            .any(|crate_name| lower.contains(&format!("package = \"{crate_name}\"")));
+        let aliases_engine_package = lower.contains("package = \"rusty-engine\"");
         let references_engine_repository = lower.contains("fuzzyslipper/rusty-engine");
-        if (aliases_engine_crate || references_engine_repository)
-            && !ENGINE_CRATES.iter().any(|crate_name| {
-                line == format!(
-                    "{crate_name} = {{ git = \"{ENGINE_REPOSITORY}\", rev = \"{}\" }}",
-                    source.commit
-                )
-            })
-        {
+        if (aliases_engine_package || references_engine_repository) && line != expected {
             return Err(format!(
                 "Cargo.toml contains an Engine carrier outside the closed dependency set: {line}"
             ));
         }
     }
-    Ok(ENGINE_CRATES.len())
+    Ok(1)
 }
 
 fn validate_lockfile(lockfile: &str, source: &EngineSource) -> Result<usize, String> {
-    let expected_source = format!(
-        "git+{ENGINE_REPOSITORY}?rev={}#{}",
-        source.commit, source.commit
-    );
+    let expected_source = format!("git+{ENGINE_REPOSITORY}?branch=main#{}", source.commit);
     let blocks = lockfile.split("[[package]]").skip(1).collect::<Vec<_>>();
-    for crate_name in ENGINE_CRATES {
-        let name_line = format!("name = \"{crate_name}\"");
-        let matches = blocks
-            .iter()
-            .filter(|block| block.lines().any(|line| line.trim() == name_line))
-            .collect::<Vec<_>>();
-        if matches.len() != 1 {
-            return Err(format!(
-                "Cargo.lock expected exactly one package block for {crate_name}; observed {}",
-                matches.len()
-            ));
-        }
-        let observed = matches[0].lines().map(str::trim).find_map(|line| {
-            line.strip_prefix("source = \"")
-                .and_then(|v| v.strip_suffix('"'))
-        });
-        if observed != Some(expected_source.as_str()) {
-            return Err(format!(
-                "Cargo.lock {crate_name} does not resolve the canonical exact Engine pin"
-            ));
-        }
+    let name_line = format!("name = \"{ENGINE_PACKAGE}\"");
+    let matches = blocks
+        .iter()
+        .filter(|block| block.lines().any(|line| line.trim() == name_line))
+        .collect::<Vec<_>>();
+    if matches.len() != 1 {
+        return Err(format!(
+            "Cargo.lock expected exactly one package block for {ENGINE_PACKAGE}; observed {}",
+            matches.len()
+        ));
+    }
+    let observed = matches[0].lines().map(str::trim).find_map(|line| {
+        line.strip_prefix("source = \"")
+            .and_then(|v| v.strip_suffix('"'))
+    });
+    if observed != Some(expected_source.as_str()) {
+        return Err(format!(
+            "Cargo.lock {ENGINE_PACKAGE} does not resolve the canonical rolling Engine source at the selected exact commit"
+        ));
     }
 
     let provider_sources = lockfile
@@ -292,34 +245,25 @@ mod tests {
         )
     }
 
-    fn manifest(commit: &str) -> String {
-        let dependencies = ENGINE_CRATES
-            .iter()
-            .map(|name| format!("{name} = {{ git = \"{ENGINE_REPOSITORY}\", rev = \"{commit}\" }}"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        format!("[package]\nname = \"consumer\"\n\n[dependencies]\n{dependencies}\n")
+    fn manifest() -> String {
+        format!(
+            "[package]\nname = \"consumer\"\n\n[dependencies]\n{ENGINE_PACKAGE} = {{ git = \"{ENGINE_REPOSITORY}\", branch = \"main\" }}\n"
+        )
     }
 
     fn lockfile(commit: &str) -> String {
-        ENGINE_CRATES
-            .iter()
-            .map(|name| {
-                format!(
-                    "[[package]]\nname = \"{name}\"\nsource = \"git+{ENGINE_REPOSITORY}?rev={commit}#{commit}\"\n"
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        format!(
+            "[[package]]\nname = \"{ENGINE_PACKAGE}\"\nsource = \"git+{ENGINE_REPOSITORY}?branch=main#{commit}\"\n\n[[package]]\nname = \"render-model\"\nsource = \"git+{ENGINE_REPOSITORY}?branch=main#{commit}\"\n"
+        )
     }
 
     #[test]
-    fn accepts_one_closed_exact_pin() {
-        let readout = validate_provider_pin(&source(OLD), &manifest(OLD), &lockfile(OLD))
+    fn accepts_one_complete_rolling_facade_at_one_exact_resolution() {
+        let readout = validate_provider_pin(&source(OLD), &manifest(), &lockfile(OLD))
             .expect("coherent pin should pass");
         assert_eq!(readout.commit, OLD);
-        assert_eq!(readout.manifest_dependency_count, 12);
-        assert!(readout.locked_provider_package_count >= 12);
+        assert_eq!(readout.manifest_dependency_count, 1);
+        assert_eq!(readout.locked_provider_package_count, 2);
     }
 
     #[test]
@@ -353,24 +297,24 @@ mod tests {
 
     #[test]
     fn rejects_missing_floating_aliased_and_sibling_manifest_carriers() {
-        let base = manifest(OLD);
+        let base = manifest();
         assert!(validate_provider_pin(
             &source(OLD),
-            &base.replace("render-model =", "missing-render-model ="),
+            &base.replace("rusty-engine =", "missing-rusty-engine ="),
             &lockfile(OLD)
         )
         .is_err());
         assert!(validate_provider_pin(
             &source(OLD),
-            &base.replace(&format!("rev = \"{OLD}\""), "branch = \"main\""),
+            &base.replace("branch = \"main\"", &format!("rev = \"{OLD}\"")),
             &lockfile(OLD)
         )
         .is_err());
         assert!(validate_provider_pin(
             &source(OLD),
             &base.replace(
-                "render-model =",
-                "renderer = { package = \"render-model\", path = \"../rusty-engine/rust/crates/render-model\" } #"
+                "rusty-engine =",
+                "engine = { package = \"rusty-engine\", path = \"../rusty-engine/rust/crates/rusty-engine\" } #"
             ),
             &lockfile(OLD)
         )
@@ -389,24 +333,23 @@ mod tests {
     fn rejects_missing_duplicate_stale_and_noncanonical_lock_blocks() {
         let lock = lockfile(OLD);
         let first = format!(
-            "[[package]]\nname = \"render-model\"\nsource = \"git+{ENGINE_REPOSITORY}?rev={OLD}#{OLD}\"\n"
+            "[[package]]\nname = \"{ENGINE_PACKAGE}\"\nsource = \"git+{ENGINE_REPOSITORY}?branch=main#{OLD}\"\n"
         );
         assert!(
-            validate_provider_pin(&source(OLD), &manifest(OLD), &lock.replace(&first, "")).is_err()
+            validate_provider_pin(&source(OLD), &manifest(), &lock.replace(&first, "")).is_err()
         );
         assert!(
-            validate_provider_pin(&source(OLD), &manifest(OLD), &format!("{lock}\n{first}"))
-                .is_err()
+            validate_provider_pin(&source(OLD), &manifest(), &format!("{lock}\n{first}")).is_err()
         );
         assert!(validate_provider_pin(
             &source(OLD),
-            &manifest(OLD),
+            &manifest(),
             &lock.replace(OLD, "2222222222222222222222222222222222222222")
         )
         .is_err());
         assert!(validate_provider_pin(
             &source(OLD),
-            &manifest(OLD),
+            &manifest(),
             &lock.replace("FuzzySlipper", "fuzzyslipper")
         )
         .is_err());

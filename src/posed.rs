@@ -16,6 +16,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use rusty_engine::voxel_asset;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 

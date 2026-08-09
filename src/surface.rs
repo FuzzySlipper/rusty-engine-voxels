@@ -12,6 +12,7 @@ use render_model::{
     RenderMaterialDescriptor, TextureDescriptor, TextureFilter, TexturePayloadSource, TextureWrap,
 };
 use render_projection::project_catalog_material;
+use rusty_engine::{asset_catalog, core_assets, render_model, render_projection};
 use serde::Serialize;
 
 use crate::model::{

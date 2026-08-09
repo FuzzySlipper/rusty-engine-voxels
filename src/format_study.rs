@@ -24,6 +24,7 @@
 use std::path::Path;
 use std::time::Instant;
 
+use rusty_engine::svc_mesh;
 use serde::Serialize;
 use svc_mesh::MeshPayload;
 

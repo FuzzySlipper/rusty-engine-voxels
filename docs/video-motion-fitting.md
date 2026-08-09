@@ -68,7 +68,7 @@ The canonical kit remains unchanged, all fitted parts are rigid, and
   correction;
 - contact frames have no fitted right-foot slide;
 - the checked fit is reproducible from the admitted landmarks;
-- the generated `motion.glb` imports through the exact Engine pin; and
+- the generated `motion.glb` imports through the exact locked Engine resolution; and
 - its 16-frame `fitted-run` traverses M2 assembly, M3 fusion, M4 canonical
   compilation/runtime admission, and M6 temporal analysis.
 

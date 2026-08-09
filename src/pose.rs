@@ -28,6 +28,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
 
+use rusty_engine::voxel_convert;
 use serde::{Deserialize, Serialize};
 use voxel_convert::{evaluate_clip_node_poses, ImportedAnimatedModel, NodePoseRigidScalePolicy};
 

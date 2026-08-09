@@ -22,6 +22,7 @@
 
 use std::collections::BTreeMap;
 
+use rusty_engine::voxel_convert;
 use serde::Serialize;
 use voxel_convert::ImportedAnimatedModel;
 

@@ -11,6 +11,7 @@ use render_model::{
 use render_projection::{
     VoxelObjectProjectionInstance, VoxelObjectProjectionResult, VoxelObjectRenderProjector,
 };
+use rusty_engine::{render_model, render_projection, voxel_object_runtime};
 use serde::Serialize;
 use voxel_object_runtime::{
     admit_voxel_object_json, AdmittedVoxelObject, VoxelObjectCollisionPolicy,

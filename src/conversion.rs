@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use rusty_engine::{voxel_asset, voxel_convert};
 use serde::Serialize;
 use voxel_asset::{
     VoxelAssetMaterialBinding, VoxelAssetMaterialMapping, VoxelConversionFitPolicy,
@@ -129,6 +130,7 @@ pub fn prepare_project_conversion(
                 transform: identity_transform(),
                 material_policy: ConversionMaterialPolicy::default(),
             },
+            source_bounds: None,
             pivot: conversion.pivot,
             anchor_policy: conversion.anchor_policy,
         },

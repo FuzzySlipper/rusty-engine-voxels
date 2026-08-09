@@ -18,6 +18,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use rusty_engine::voxel_asset;
 use serde::Serialize;
 
 use crate::provider_pin::engine_revision;

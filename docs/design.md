@@ -72,18 +72,24 @@ link without requiring a generic downstream component schema.
 
 ## Provider pin
 
-`engine-source.json` is the sole authored Rusty Engine identity. The eight direct Rust dependencies,
-their generated Cargo lock entries, runtime evidence readout, and managed Studio checkout all
-derive from that exact public commit. `scripts/engine-revision check` is the common strict validator;
-`scripts/engine-revision update <sha>` prepares a bounded projection change through a disposable
-worktree. It does not infer or rewrite Studio protocol compatibility, historical evidence, or prose.
-Those remain intentional work followed by both `scripts/verify.sh` and `scripts/verify-studio.sh`.
+`Cargo.toml` declares one unconditional `rusty-engine` facade from the canonical public `main`
+branch. Engine libraries remain visible through their preserved namespaces (for example,
+`rusty_engine::voxel_convert`); this project neither selects individual Engine crates nor imports
+the renderer implementation. `Cargo.lock` records the exact Engine commit used by a build, and
+`engine-source.json` selects that same commit for runtime evidence and the managed Engine-owned
+Studio checkout. `scripts/engine-revision check` strictly validates this coherent projection;
+`scripts/engine-revision update <sha>` prepares a bounded exact-resolution change through a
+disposable worktree. It does not infer or rewrite Studio protocol compatibility, historical
+evidence, or prose. Those remain intentional work followed by both `scripts/verify.sh` and
+`scripts/verify-studio.sh`.
 
 For early downstream work, `engine-development.json` is the explicit rolling intent. Use
 `scripts/engine-revision dev sync` to resolve/report one current public or local Engine SHA and
 `scripts/engine-revision dev check` to verify the saved resolution against the active carriers.
-Development reports are operational compatibility evidence; exact certification remains the
-separate `certify check`/`certify update` path above.
+Development reports are operational compatibility evidence. The ordinary verification gate
+resolves public `main` and fails loudly when the checked lock/source projection is stale. Bounded
+review, reproduction, and rollback can still select an exact public SHA through the separate
+`certify check`/`certify update` spelling.
 
 The managed Studio launcher clones that revision into `.studio-cache`. It never inspects a sibling
 `rusty-engine` checkout, and the ordinary Rust gate has no Node or browser dependency.

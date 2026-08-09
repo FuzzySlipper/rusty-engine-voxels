@@ -7,6 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
+use rusty_engine::{voxel_asset, voxel_object_runtime};
 use rusty_engine_voxels::flipbook::{
     compile_posed_flipbook, publish_compiled_flipbook, FlipbookCompileSettings,
 };

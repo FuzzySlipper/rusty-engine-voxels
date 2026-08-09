@@ -205,7 +205,7 @@ or atlas parser here.
 ## Commands
 
 ```bash
-# Check the canonical Engine source against all Rust and lockfile projections.
+# Check the rolling facade declaration and exact source/lock projection.
 ./scripts/engine-revision check
 
 # Resolve/report the rolling development source and verify an applied resolution.
@@ -244,9 +244,10 @@ cargo run --locked --bin voxel-lab -- load
 den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels
 ```
 
-`engine-source.json` is the only authored Engine identity. The update command projects it into the
-twelve direct Rust dependencies and the generated Cargo lockfile without rewriting historical
-evidence, protocol compatibility, or prose. See
+`Cargo.toml` has one rolling dependency on the complete `rusty-engine` facade. `Cargo.lock` and
+`engine-source.json` record one matching exact resolution for Rust builds, evidence attribution,
+and the Engine-owned Studio checkout. The update command changes only that exact resolution; it
+does not rewrite historical evidence, protocol compatibility, or prose. See
 [`docs/engine-revision-updates.md`](docs/engine-revision-updates.md) for the failure, dry-run, and
 rollback contract.
 

@@ -5,6 +5,8 @@ VOXEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 node "$VOXEL_ROOT/scripts/generate-textured-voxel-fixture.mjs" --check
 "$VOXEL_ROOT/scripts/engine-revision" check
+"$VOXEL_ROOT/scripts/engine-revision" dev sync --report-only >/dev/null
+"$VOXEL_ROOT/scripts/engine-revision" dev check
 CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision" \
   cargo fmt --manifest-path "$VOXEL_ROOT/tools/engine-revision/Cargo.toml" -- --check
 CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision" \

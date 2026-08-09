@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use rusty_engine::voxel_convert;
 use rusty_engine_voxels::assemble::socket_constrained_part_placements;
 use rusty_engine_voxels::kit::{load_kit, neutral_part_transforms};
 use rusty_engine_voxels::pose::{RigMap, RigidTransform};

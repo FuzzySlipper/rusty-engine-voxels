@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+use rusty_engine::voxel_convert;
 use rusty_engine_voxels::assemble::{
     assemble_rough_schedule, select_pose_schedule, socket_constrained_part_placements,
     DiscardedCanonicalVoxel, PoseSelectionSettings,

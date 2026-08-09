@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::{Component, Path};
 
+use rusty_engine::voxel_convert;
 use serde::{Deserialize, Serialize};
 use voxel_convert::{AnimationAnchorPolicy, AnimationEndPolicy};
 

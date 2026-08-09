@@ -10,6 +10,7 @@ use std::io::Cursor;
 use std::path::Path;
 
 use png::{BitDepth, ColorType, Decoder, Transformations};
+use rusty_engine::voxel_asset;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use voxel_asset::{encode_voxel_object, with_computed_voxel_object_hashes};

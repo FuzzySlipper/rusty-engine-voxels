@@ -5,6 +5,9 @@ use render_model::{
     MaterialUvStrategy, RenderDiff, RenderMaterialDescriptor, RenderMetadata, Transform,
 };
 use render_projection::{VoxelObjectProjectionInstance, VoxelObjectRenderProjector};
+use rusty_engine::{
+    render_model, render_projection, voxel_asset, voxel_convert, voxel_object_runtime,
+};
 use rusty_engine_voxels::assemble::{
     assemble_rough_schedule, select_pose_schedule, PoseSelectionSettings,
 };
