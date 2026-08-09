@@ -22,6 +22,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.89
         with:
           components: clippy, rustfmt
+      - name: Install Engine webview build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev
       - uses: Swatinem/rust-cache@v2
       - run: ./scripts/verify.sh
 
@@ -30,6 +36,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.89
+      - name: Install Engine webview build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev
       - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
