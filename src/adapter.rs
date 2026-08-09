@@ -27,13 +27,13 @@ use crate::mesh_resource_cache::{
 use crate::model::{
     experiment_color, ProjectAtlas, ProjectAtlasPadding, ProjectAtlasRegion,
     ProjectCollisionPolicy, ProjectFrameSelection, ProjectMaterial, ProjectMaterialOverride,
-    ProjectTexture, ProjectTextureFilter, ProjectTextureWrap, ProjectVoxelAlphaMode,
-    ProjectVoxelObjectInstance, ProjectVoxelSurface, ProjectVoxelSurfaceMapping,
-    MAX_JSON_SAFE_ENTITY_ID,
+    ProjectSurfaceMode, ProjectTexture, ProjectTextureFilter, ProjectTextureWrap,
+    ProjectVoxelAlphaMode, ProjectVoxelObjectInstance, ProjectVoxelSurface,
+    ProjectVoxelSurfaceMapping, MAX_JSON_SAFE_ENTITY_ID,
 };
 use crate::project::{
-    atomic_write, load_project, read_bounded, safe_join, save_project, stage_project,
-    LoadedProject, MAX_SOURCE_BYTES,
+    atomic_write, load_project, read_bounded, safe_join, stage_project, LoadedProject,
+    MAX_SOURCE_BYTES,
 };
 use crate::runtime::{
     complete_packed_projection, load_runtime_project, load_runtime_project_from_loaded,
@@ -46,7 +46,7 @@ use crate::surface::{
     material_content_hash,
 };
 
-const PROTOCOL_VERSION: u64 = 14;
+const PROTOCOL_VERSION: u64 = 15;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_VOXEL_OBJECT_INSTANCE_BATCH: usize = 32;
@@ -116,6 +116,7 @@ const OPERATIONS: &[&str] = &[
     "prepareVoxelObjectPlacement",
     "attachVoxelObjectInstance",
     "attachVoxelObjectInstances",
+    "setVoxelObjectInstanceSurfaceMode",
     "previewVoxelObjectInstance",
     "closeProject",
 ];
@@ -208,6 +209,9 @@ impl StudioAdapter {
             "discardVoxelObjectConversion" => self.discard_conversion(&request_id, request),
             "attachVoxelObjectInstance" => self.attach_instance(&request_id, request),
             "attachVoxelObjectInstances" => self.attach_instances(&request_id, request),
+            "setVoxelObjectInstanceSurfaceMode" => {
+                self.set_instance_surface_mode(&request_id, request)
+            }
             "previewVoxelObjectInstance" => self.preview_instance(&request_id, request),
             "closeProject" => {
                 self.open = None;
@@ -1112,6 +1116,7 @@ impl StudioAdapter {
             entity_id: owner_entity_id,
             instance_id: input.instance.instance_id.clone(),
             voxel_object_asset_id: input.instance.voxel_object_asset_id.clone(),
+            surface_mode: input.instance.surface_mode,
             frame: input.instance.frame.clone(),
             translation: input.instance.translation,
             rotation: input.instance.rotation,
@@ -1122,12 +1127,26 @@ impl StudioAdapter {
         project
             .instances
             .sort_by(|left, right| left.instance_id.cmp(&right.instance_id));
-        project.revision = project.revision.saturating_add(1);
-        let saved = save_project(&loaded, &project).map_err(AdapterError::project)?;
-        let runtime = load_runtime_project(&saved.root, &saved.relative_path)
+        project.revision = project
+            .revision
+            .checked_add(1)
+            .ok_or_else(|| AdapterError::project("project revision is exhausted"))?;
+        ensure_surface_mode_supported(
+            &runtime,
+            &input.instance.voxel_object_asset_id,
+            &[],
+            input.instance.surface_mode,
+            "instance.surfaceMode",
+        )?;
+        let staged_loaded =
+            stage_project(&runtime.loaded, &project).map_err(AdapterError::project)?;
+        let staged_runtime = load_runtime_project_from_loaded(staged_loaded.clone())
             .map_err(AdapterError::project)?;
-        let readout = self.accept_runtime_project(runtime)?;
-        Ok(response(
+        let mut staged_projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, staged_mesh_resources) =
+            project_readout_from_runtime(&staged_runtime, &mut staged_projector)
+                .map_err(AdapterError::project)?;
+        let result = response(
             "projectMutationApplied",
             request_id,
             json!({
@@ -1143,7 +1162,17 @@ impl StudioAdapter {
                 },
                 "project": readout,
             }),
-        ))
+        );
+        ensure_bounded_mutation_response(&result, "surface-aware attachment")?;
+        self.ensure_disk_project_hash(&loaded, &input.expected_project_hash)?;
+        atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
+            .map_err(AdapterError::project)?;
+        self.open = Some(staged_loaded);
+        self.runtime = Some(staged_runtime);
+        self.projector = staged_projector;
+        self.mesh_resources = staged_mesh_resources;
+        self.playback.clear();
+        Ok(result)
     }
 
     fn attach_instances(
@@ -1247,6 +1276,13 @@ impl StudioAdapter {
                     )
                 })?;
             resolve_frame(object, &placement.instance.frame).map_err(AdapterError::project)?;
+            ensure_surface_mode_supported(
+                &current,
+                &placement.instance.voxel_object_asset_id,
+                &[],
+                placement.instance.surface_mode,
+                &format!("placements[{index}].instance.surfaceMode"),
+            )?;
             next_owner_entity_id = next_owner_entity_id
                 .checked_add(1)
                 .filter(|entity_id| *entity_id <= MAX_JSON_SAFE_ENTITY_ID)
@@ -1272,6 +1308,7 @@ impl StudioAdapter {
                 entity_id: next_owner_entity_id,
                 instance_id: placement.instance.instance_id,
                 voxel_object_asset_id: placement.instance.voxel_object_asset_id,
+                surface_mode: placement.instance.surface_mode,
                 frame: placement.instance.frame,
                 translation: placement.instance.translation,
                 rotation: placement.instance.rotation,
@@ -1331,6 +1368,95 @@ impl StudioAdapter {
                 ),
             ));
         }
+        atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
+            .map_err(AdapterError::project)?;
+        self.open = Some(staged_loaded);
+        self.runtime = Some(staged_runtime);
+        self.projector = staged_projector;
+        self.mesh_resources = staged_mesh_resources;
+        self.playback.clear();
+        Ok(result)
+    }
+
+    fn set_instance_surface_mode(
+        &mut self,
+        request_id: &str,
+        request: Value,
+    ) -> Result<Value, AdapterError> {
+        let input: SetInstanceSurfaceModeRequest = decode_request(request)?;
+        self.ensure_project_hash(&input.expected_project_hash)?;
+        let open = self.require_open()?.clone();
+        let current =
+            load_runtime_project(&open.root, &open.relative_path).map_err(AdapterError::project)?;
+        if current.loaded.project_hash != input.expected_project_hash {
+            return Err(AdapterError::at(
+                "project.staleHash",
+                "expectedProjectHash",
+                format!(
+                    "expected {}, current project is {}",
+                    input.expected_project_hash, current.loaded.project_hash
+                ),
+            ));
+        }
+        if input.scene_id != current.loaded.project.entry_scene {
+            return Err(AdapterError::at(
+                "project.unknownScene",
+                "sceneId",
+                "scene is not the voxel lab entry scene",
+            ));
+        }
+        let mut project = current.loaded.project.clone();
+        let instance = project
+            .instances
+            .iter_mut()
+            .find(|instance| instance.instance_id == input.instance_id)
+            .ok_or_else(|| {
+                AdapterError::at(
+                    "voxelObject.instanceMissing",
+                    "instanceId",
+                    "voxel-object instance is not in the selected scene",
+                )
+            })?;
+        let before = instance.surface_mode;
+        ensure_surface_mode_supported(
+            &current,
+            &instance.voxel_object_asset_id,
+            &instance.material_overrides,
+            input.surface_mode,
+            "surfaceMode",
+        )?;
+        instance.surface_mode = input.surface_mode;
+        if before != input.surface_mode {
+            project.revision = project
+                .revision
+                .checked_add(1)
+                .ok_or_else(|| AdapterError::project("project revision is exhausted"))?;
+        }
+
+        let staged_loaded =
+            stage_project(&current.loaded, &project).map_err(AdapterError::project)?;
+        let staged_runtime = load_runtime_project_from_loaded(staged_loaded.clone())
+            .map_err(AdapterError::project)?;
+        let mut staged_projector = VoxelObjectRenderProjector::with_packed_mesh_resources();
+        let (readout, staged_mesh_resources) =
+            project_readout_from_runtime(&staged_runtime, &mut staged_projector)
+                .map_err(AdapterError::project)?;
+        let result = response(
+            "projectMutationApplied",
+            request_id,
+            json!({
+                "receipt": {
+                    "kind": "voxelObjectSurfaceModeSet",
+                    "sceneId": input.scene_id,
+                    "instanceId": input.instance_id,
+                    "before": before.as_str(),
+                    "after": input.surface_mode.as_str(),
+                },
+                "project": readout,
+            }),
+        );
+        ensure_bounded_mutation_response(&result, "surface-mode mutation")?;
+        self.ensure_disk_project_hash(&open, &input.expected_project_hash)?;
         atomic_write(&staged_loaded.path, staged_loaded.canonical_json.as_bytes())
             .map_err(AdapterError::project)?;
         self.open = Some(staged_loaded);
@@ -1471,6 +1597,62 @@ impl StudioAdapter {
             .map_err(AdapterError::project)?;
         Ok((selection.path.clone(), bytes))
     }
+}
+
+fn ensure_surface_mode_supported(
+    runtime: &RuntimeProject,
+    asset_id: &str,
+    material_overrides: &[ProjectMaterialOverride],
+    surface_mode: ProjectSurfaceMode,
+    path: &str,
+) -> Result<(), AdapterError> {
+    if surface_mode.is_default() {
+        return Ok(());
+    }
+    let object = runtime.objects.get(asset_id).ok_or_else(|| {
+        AdapterError::at(
+            "project.unknownAsset",
+            path,
+            format!("voxel object {asset_id:?} is not loaded"),
+        )
+    })?;
+    let uses_textured_material = object.source().material_palette.iter().any(|binding| {
+        let material_asset_id = material_overrides
+            .iter()
+            .find(|override_binding| override_binding.material_slot == binding.material_slot)
+            .map_or(binding.material_asset_id.as_str(), |override_binding| {
+                override_binding.material_asset_id.as_str()
+            });
+        runtime.loaded.project.materials.iter().any(|material| {
+            material.asset_id == material_asset_id && material.voxel_surface.is_some()
+        })
+    });
+    if uses_textured_material {
+        return Err(AdapterError::at(
+            "voxelObject.surfaceTextureUnsupported",
+            path,
+            format!(
+                "{} has no stable UV contract for a textured voxel-object material",
+                surface_mode.as_str()
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn ensure_bounded_mutation_response(result: &Value, operation: &str) -> Result<(), AdapterError> {
+    let response_bytes = serde_json::to_vec(result)
+        .map_err(|error| AdapterError::new("adapter.responseEncode", error.to_string()))?;
+    if response_bytes.len() > MAX_RESPONSE_BYTES {
+        return Err(AdapterError::new(
+            "adapter.responseTooLarge",
+            format!(
+                "{operation} response is {} bytes, exceeding the {MAX_RESPONSE_BYTES}-byte bound",
+                response_bytes.len()
+            ),
+        ));
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -1952,6 +2134,21 @@ struct AttachInstancesRequest {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SetInstanceSurfaceModeRequest {
+    #[serde(rename = "type")]
+    _type: String,
+    #[serde(rename = "protocolVersion")]
+    _protocol_version: u64,
+    #[serde(rename = "requestId")]
+    _request_id: String,
+    expected_project_hash: String,
+    scene_id: String,
+    instance_id: String,
+    surface_mode: ProjectSurfaceMode,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct AttachPlacement {
     scene_id: String,
     instance: AttachInstance,
@@ -1978,6 +2175,7 @@ struct PreviewInstanceRequest {
 struct AttachInstance {
     instance_id: String,
     voxel_object_asset_id: String,
+    surface_mode: ProjectSurfaceMode,
     frame: ProjectFrameSelection,
     translation: [f32; 3],
     rotation: [f32; 4],
@@ -2395,6 +2593,7 @@ fn studio_instance(instance: &ProjectVoxelObjectInstance) -> Value {
     json!({
         "instanceId": instance.instance_id,
         "voxelObjectAssetId": instance.voxel_object_asset_id,
+        "surfaceMode": instance.surface_mode.as_str(),
         "frame": instance.frame,
         "translation": instance.translation,
         "rotation": instance.rotation,

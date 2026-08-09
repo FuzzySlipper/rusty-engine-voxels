@@ -6,7 +6,7 @@ use rusty_engine_voxels::adapter::StudioAdapter;
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
 use serde_json::{json, Value};
 
-const PROTOCOL_VERSION: u64 = 14;
+const PROTOCOL_VERSION: u64 = 15;
 const DIRECTIONAL_ATLAS_PNG: &[u8] = include_bytes!("../content/textures/directional-atlas.png");
 static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(1);
 
@@ -35,6 +35,56 @@ impl Drop for TempProject {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.root);
     }
+}
+
+#[test]
+fn protocol_15_textured_reconstructed_surface_rejects_without_partial_project_state() {
+    let project = TempProject::new();
+    let mut adapter = StudioAdapter::default();
+    let opened = open(&mut adapter, &project, "surface-mode-open");
+    let original_hash = project_hash(&opened);
+    let textured = adapter
+        .dispatch(upsert_request(
+            "surface-mode-texture",
+            &original_hash,
+            &directional_texture_path(&project),
+            None,
+            None,
+            repeat_mapping(),
+        ))
+        .expect("textured greedy surface should publish");
+    let textured_hash = project_hash(&textured["project"]);
+    let before = project.project_bytes();
+
+    let rejected = adapter
+        .dispatch(json!({
+            "type": "setVoxelObjectInstanceSurfaceMode",
+            "protocolVersion": PROTOCOL_VERSION,
+            "requestId": "surface-mode-marching",
+            "expectedProjectHash": textured_hash,
+            "sceneId": "scene/voxel-lab",
+            "instanceId": "retro-character",
+            "surfaceMode": "marchingCubes",
+        }))
+        .expect_err("textured reconstructed surface should reject");
+    assert!(
+        format!("{rejected:?}").contains("voxelObject.surfaceTextureUnsupported"),
+        "unexpected rejection: {rejected:?}"
+    );
+    assert_eq!(project.project_bytes(), before);
+
+    let reread = adapter
+        .dispatch(json!({
+            "type": "readProject",
+            "protocolVersion": PROTOCOL_VERSION,
+            "requestId": "surface-mode-reread",
+        }))
+        .expect("project should remain readable after rejection");
+    assert_eq!(project_hash(&reread["project"]), textured_hash);
+    assert_eq!(
+        reread["project"]["voxelObjectAuthoring"]["instances"][0]["instance"]["surfaceMode"],
+        "greedyCubes"
+    );
 }
 
 #[test]

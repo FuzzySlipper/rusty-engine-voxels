@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use rusty_engine_voxels::adapter::StudioAdapter;
-use rusty_engine_voxels::model::MAX_JSON_SAFE_ENTITY_ID;
+use rusty_engine_voxels::model::{ProjectSurfaceMode, MAX_JSON_SAFE_ENTITY_ID};
 use rusty_engine_voxels::project::{load_project, save_project};
 use rusty_engine_voxels::DEFAULT_PROJECT_FILE;
 use serde_json::{json, Value};
 
-const STUDIO_PROTOCOL_VERSION: u64 = 14;
+const STUDIO_PROTOCOL_VERSION: u64 = 15;
 const ENTRY_SCENE: &str = "scene/voxel-lab";
 const ASSET_ID: &str = "voxel-object/retro-character";
 static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(1);
@@ -33,6 +33,64 @@ impl TempProject {
         fs::read(self.root.join(DEFAULT_PROJECT_FILE))
             .expect("temporary project bytes should be readable")
     }
+
+    fn primary_object_bytes(&self) -> Vec<u8> {
+        let loaded = load_project(&self.root, DEFAULT_PROJECT_FILE).expect("project should load");
+        fs::read(self.root.join(&loaded.project.voxel_objects[0].path))
+            .expect("voxel object bytes should be readable")
+    }
+}
+
+#[test]
+fn protocol_15_surface_mode_switch_is_authoritative_persistent_and_object_preserving() {
+    let project = TempProject::new();
+    let object_before = project.primary_object_bytes();
+    let mut adapter = StudioAdapter::default();
+    let opened = open_project(&mut adapter, &project, "surface-open");
+    let initial_hash = project_hash(&opened);
+    let initial_resource_hash = opened["project"]["meshResources"][0]["contentHash"]
+        .as_str()
+        .expect("greedy mesh resource should have a hash")
+        .to_owned();
+    assert_eq!(
+        opened["project"]["voxelObjectAuthoring"]["instances"][0]["instance"]["surfaceMode"],
+        "greedyCubes"
+    );
+
+    let applied = adapter
+        .dispatch(surface_mode_request(
+            "surface-marching",
+            &initial_hash,
+            "retro-character",
+            "marchingCubes",
+        ))
+        .expect("marching-cubes surface should publish");
+    assert_eq!(applied["receipt"]["kind"], "voxelObjectSurfaceModeSet");
+    assert_eq!(applied["receipt"]["before"], "greedyCubes");
+    assert_eq!(applied["receipt"]["after"], "marchingCubes");
+    assert_eq!(
+        applied["project"]["voxelObjectAuthoring"]["instances"][0]["instance"]["surfaceMode"],
+        "marchingCubes"
+    );
+    assert_ne!(
+        applied["project"]["meshResources"][0]["contentHash"],
+        initial_resource_hash
+    );
+    assert_eq!(project.primary_object_bytes(), object_before);
+
+    let saved =
+        load_project(&project.root, DEFAULT_PROJECT_FILE).expect("saved project should load");
+    assert_eq!(
+        saved.project.instances[0].surface_mode,
+        ProjectSurfaceMode::MarchingCubes
+    );
+    let mut restarted = StudioAdapter::default();
+    let reopened = open_project(&mut restarted, &project, "surface-reopen");
+    assert_eq!(project_hash(&reopened), project_hash(&applied));
+    assert_eq!(
+        reopened["project"]["voxelObjectAuthoring"]["instances"][0]["instance"]["surfaceMode"],
+        "marchingCubes"
+    );
 }
 
 impl Drop for TempProject {
@@ -58,7 +116,7 @@ fn protocol_14_batch_attachment_is_ordered_atomic_and_restart_stable() {
             "requestId": "batch-describe",
         }))
         .expect("protocol 14 describe should succeed");
-    assert_eq!(described["adapter"]["protocolVersion"], 14);
+    assert_eq!(described["adapter"]["protocolVersion"], 15);
     assert!(described["adapter"]["operations"]
         .as_array()
         .expect("operations should be an array")
@@ -326,6 +384,23 @@ fn batch_request(request_id: &str, expected_project_hash: &str, placements: Vec<
     })
 }
 
+fn surface_mode_request(
+    request_id: &str,
+    expected_project_hash: &str,
+    instance_id: &str,
+    surface_mode: &str,
+) -> Value {
+    json!({
+        "type": "setVoxelObjectInstanceSurfaceMode",
+        "protocolVersion": STUDIO_PROTOCOL_VERSION,
+        "requestId": request_id,
+        "expectedProjectHash": expected_project_hash,
+        "sceneId": ENTRY_SCENE,
+        "instanceId": instance_id,
+        "surfaceMode": surface_mode,
+    })
+}
+
 fn placement(instance_id: &str, asset_id: &str) -> Value {
     placement_with(
         instance_id,
@@ -348,6 +423,7 @@ fn placement_with(
         "instance": {
             "instanceId": instance_id,
             "voxelObjectAssetId": asset_id,
+            "surfaceMode": "greedyCubes",
             "frame": { "kind": "default" },
             "translation": [0.0, 0.0, 0.0],
             "rotation": [0.0, 0.0, 0.0, 1.0],

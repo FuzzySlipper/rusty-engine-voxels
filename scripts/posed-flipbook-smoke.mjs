@@ -7,7 +7,7 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
-const PROTOCOL_VERSION = 14;
+const PROTOCOL_VERSION = 15;
 const PROJECT = 'content/projects/knight-flipbook.project.json';
 
 const open = {

@@ -12,7 +12,7 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
-const PROTOCOL_VERSION = 14;
+const PROTOCOL_VERSION = 15;
 const initialRequests = [
   { type: 'describe', protocolVersion: PROTOCOL_VERSION, requestId: 'describe-smoke' },
   {
@@ -50,13 +50,15 @@ if (opened.project.projection.ops.length !== 3
   throw new Error('Studio open response omitted the checked voxel object projection');
 }
 const baselineResources = validateMeshResources(root, opened.project.meshResources);
-if (!described.adapter.operations.includes('attachVoxelObjectInstances')) {
-  throw new Error('protocol 14 describe omitted attachVoxelObjectInstances');
+if (!described.adapter.operations.includes('attachVoxelObjectInstances')
+  || !described.adapter.operations.includes('setVoxelObjectInstanceSurfaceMode')) {
+  throw new Error('protocol 15 describe omitted voxel-object instance mutations');
 }
 
 const batchRoot = mkdtempSync(join(tmpdir(), 'rusty-engine-voxels-batch-'));
 let batchReceipt;
 let batchProjectHash;
+let surfaceModeResourceHash;
 try {
   cpSync(join(root, 'content'), join(batchRoot, 'content'), { recursive: true });
   const batchProjectPath = join(batchRoot, 'content/projects/voxel-lab.project.json');
@@ -106,6 +108,41 @@ try {
     || reopenedBatch.project.voxelObjectAuthoring.instances.length !== 3) {
     throw new Error('protocol 14 batch did not survive a fresh adapter process');
   }
+
+  const surfaceResponses = runRequests(adapter, [
+    {
+      type: 'openProject',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'surface-mode-open-smoke',
+      root: batchRoot,
+      projectFile: 'content/projects/voxel-lab.project.json',
+    },
+    {
+      type: 'setVoxelObjectInstanceSurfaceMode',
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: 'surface-mode-marching-smoke',
+      expectedProjectHash: batchProjectHash,
+      sceneId: 'scene/voxel-lab',
+      instanceId: 'smoke-request-first',
+      surfaceMode: 'marchingCubes',
+    },
+  ], 'surface-mode mutation');
+  const surfaceApplied = surfaceResponses[1];
+  const switched = surfaceApplied?.type === 'projectMutationApplied'
+    ? surfaceApplied.project.voxelObjectAuthoring.instances.find(
+      (entry) => entry.instance.instanceId === 'smoke-request-first',
+    )
+    : undefined;
+  if (surfaceApplied?.type !== 'projectMutationApplied'
+    || surfaceApplied.receipt.kind !== 'voxelObjectSurfaceModeSet'
+    || surfaceApplied.receipt.before !== 'greedyCubes'
+    || surfaceApplied.receipt.after !== 'marchingCubes'
+    || switched?.instance.surfaceMode !== 'marchingCubes'
+    || surfaceApplied.project.meshResources?.length !== 2) {
+    throw new Error('managed protocol 15 decoder did not accept the authoritative surface-mode mutation');
+  }
+  batchProjectHash = surfaceApplied.project.identity.projectHash;
+  surfaceModeResourceHash = surfaceApplied.project.meshResources[0]?.contentHash;
 
   const beforeRejectedBatch = readFileSync(batchProjectPath);
   const rejectedResponses = runRequests(adapter, [
@@ -294,6 +331,8 @@ console.log(JSON.stringify({
   batchPlacements: batchReceipt.placements.length,
   batchOwnerEntityIds: batchReceipt.placements.map((placement) => placement.ownerEntityId),
   batchRestartHash: batchProjectHash,
+  surfaceMode: 'marchingCubes',
+  surfaceModeResourceHash,
   invalidLaterBatchRejected: true,
   missingAssetRejected: true,
   corruptAssetRejected: true,
@@ -319,6 +358,7 @@ function voxelObjectPlacement(instanceId, assetId = 'voxel-object/retro-characte
     instance: {
       instanceId,
       voxelObjectAssetId: assetId,
+      surfaceMode: 'greedyCubes',
       frame: { kind: 'default' },
       translation: [0, 0, 0],
       rotation: [0, 0, 0, 1],

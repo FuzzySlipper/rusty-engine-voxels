@@ -81,8 +81,7 @@ impl StudioVoxelObjectPlayback {
             .find(|entry| entry.instance_id == instance_id)
             .ok_or(StudioPlaybackError::UnknownInstance)?;
         let object = runtime
-            .objects
-            .get(&instance.voxel_object_asset_id)
+            .object_for_instance(instance)
             .ok_or(StudioPlaybackError::UnknownAsset)?;
         let durable_runtime_frame =
             resolve_frame(object, &instance.frame).map_err(StudioPlaybackError::Runtime)?;

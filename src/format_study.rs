@@ -396,6 +396,7 @@ mod tests {
             .collect::<Vec<_>>();
         let indices = (0..vertices).collect::<Vec<_>>();
         MeshPayload {
+            surface_mode: svc_mesh::SurfaceMode::GreedyCubes,
             positions,
             normals,
             tile_coordinates: Vec::new(),
@@ -412,6 +413,7 @@ mod tests {
                 faces_emitted: 0,
                 source_faces: 0,
                 faces_culled: 0,
+                ..svc_mesh::MeshStats::default()
             },
         }
     }

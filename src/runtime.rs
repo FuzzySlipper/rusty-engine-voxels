@@ -14,12 +14,15 @@ use render_projection::{
 use rusty_engine::{render_model, render_projection, voxel_object_runtime};
 use serde::Serialize;
 use voxel_object_runtime::{
-    admit_voxel_object_json, AdmittedVoxelObject, VoxelObjectCollisionPolicy,
-    VoxelObjectCollisionResolution, VoxelObjectLoopMode, VoxelObjectPlaybackRate,
-    VoxelObjectPlaybackStatus, VoxelObjectPlayer, VoxelObjectRuntimeLimits,
+    admit_voxel_object_json, admit_voxel_object_with_options, AdmittedVoxelObject,
+    VoxelObjectAdmissionOptions, VoxelObjectCollisionPolicy, VoxelObjectCollisionResolution,
+    VoxelObjectLoopMode, VoxelObjectPlaybackRate, VoxelObjectPlaybackStatus, VoxelObjectPlayer,
+    VoxelObjectRuntimeLimits,
 };
 
-use crate::model::{ProjectFrameSelection, ProjectMaterial, ProjectVoxelObjectInstance};
+use crate::model::{
+    ProjectFrameSelection, ProjectMaterial, ProjectSurfaceMode, ProjectVoxelObjectInstance,
+};
 use crate::project::{load_project, read_bounded_text, safe_join, LoadedProject, MAX_OBJECT_BYTES};
 use crate::provider_pin::engine_revision;
 use crate::surface::{load_surface_assets, SurfaceAssets};
@@ -105,6 +108,7 @@ pub struct RuntimeBehaviorEvidence {
 pub struct RuntimeProject {
     pub loaded: LoadedProject,
     pub objects: BTreeMap<String, AdmittedVoxelObject>,
+    surface_objects: BTreeMap<(String, ProjectSurfaceMode), AdmittedVoxelObject>,
     pub surface: SurfaceAssets,
     pub resources: RuntimeResourceEvidence,
 }
@@ -147,10 +151,39 @@ pub(crate) fn load_runtime_project_from_loaded_with_surface(
         }
         objects.insert(entry.asset_id.clone(), object);
     }
+    let requested_surface_objects = loaded
+        .project
+        .instances
+        .iter()
+        .filter(|instance| !instance.surface_mode.is_default())
+        .map(|instance| {
+            (
+                instance.voxel_object_asset_id.clone(),
+                instance.surface_mode,
+            )
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut surface_objects = BTreeMap::new();
+    for (asset_id, surface_mode) in requested_surface_objects {
+        let canonical = objects
+            .get(&asset_id)
+            .ok_or_else(|| format!("surface mode references unloaded {asset_id}"))?;
+        let admission_started = Instant::now();
+        let object = admit_voxel_object_with_options(
+            canonical.source(),
+            VoxelObjectAdmissionOptions {
+                surface_mode: surface_mode.as_engine(),
+                ..VoxelObjectAdmissionOptions::default()
+            },
+        )
+        .map_err(|error| format!("{asset_id} {}: {error}", surface_mode.as_str()))?;
+        admission_and_meshing_microseconds = admission_and_meshing_microseconds
+            .saturating_add(admission_started.elapsed().as_micros());
+        surface_objects.insert((asset_id, surface_mode), object);
+    }
     for instance in &loaded.project.instances {
-        let object = objects
-            .get(&instance.voxel_object_asset_id)
-            .ok_or_else(|| {
+        let object =
+            object_for_instance_parts(&objects, &surface_objects, instance).ok_or_else(|| {
                 format!(
                     "instance {} references unloaded {}",
                     instance.instance_id, instance.voxel_object_asset_id
@@ -174,9 +207,34 @@ pub(crate) fn load_runtime_project_from_loaded_with_surface(
     Ok(RuntimeProject {
         loaded,
         objects,
+        surface_objects,
         surface,
         resources,
     })
+}
+
+impl RuntimeProject {
+    pub(crate) fn object_for_instance(
+        &self,
+        instance: &ProjectVoxelObjectInstance,
+    ) -> Option<&AdmittedVoxelObject> {
+        object_for_instance_parts(&self.objects, &self.surface_objects, instance)
+    }
+}
+
+fn object_for_instance_parts<'a>(
+    objects: &'a BTreeMap<String, AdmittedVoxelObject>,
+    surface_objects: &'a BTreeMap<(String, ProjectSurfaceMode), AdmittedVoxelObject>,
+    instance: &ProjectVoxelObjectInstance,
+) -> Option<&'a AdmittedVoxelObject> {
+    if instance.surface_mode.is_default() {
+        objects.get(&instance.voxel_object_asset_id)
+    } else {
+        surface_objects.get(&(
+            instance.voxel_object_asset_id.clone(),
+            instance.surface_mode,
+        ))
+    }
 }
 
 pub fn verify_runtime_project(
@@ -685,8 +743,7 @@ fn projection_instance<'a>(
     frame_override: Option<u32>,
 ) -> Result<VoxelObjectProjectionInstance<'a>, String> {
     let object = runtime
-        .objects
-        .get(&instance.voxel_object_asset_id)
+        .object_for_instance(instance)
         .ok_or_else(|| format!("unknown object {}", instance.voxel_object_asset_id))?;
     Ok(VoxelObjectProjectionInstance {
         instance_id: instance.instance_id.clone(),

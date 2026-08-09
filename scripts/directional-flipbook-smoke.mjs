@@ -7,7 +7,7 @@ if (decoderPath === undefined || adapter === undefined || root === undefined) {
 }
 
 const { decodeStudioAdapterResponse } = await import(pathToFileURL(decoderPath).href);
-const protocolVersion = 14;
+const protocolVersion = 15;
 const open = {
   type: 'openProject',
   protocolVersion,

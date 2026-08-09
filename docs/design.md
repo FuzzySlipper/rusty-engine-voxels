@@ -44,8 +44,8 @@ renderer-neutral diff production. Experiments should expose gaps in those owners
 their implementations locally.
 
 Studio owns transient forms, filesystem selection, candidate preview, viewport input, sampling
-cadence, and visual presentation. The project adapter implements Studio protocol 14 only as an
-explicit host boundary; protocol 14 is neither the voxel project schema nor an industry voxel
+cadence, and visual presentation. The project adapter implements Studio protocol 15 only as an
+explicit host boundary; protocol 15 is neither the voxel project schema nor an industry voxel
 standard. The retained single-placement operation remains an explicit one-instance upsert.
 Protocol 14 additionally admits 1–32 ordered placements as one create-only transaction: it rejects
 duplicate or existing identities, stale project hashes, invalid later entries, exhausted JSON-safe
@@ -53,6 +53,14 @@ owner IDs, oversized project/readout encodings, and unsupported material overrid
 the project document once. Owner IDs and the receipt preserve request order even though canonical
 instances are sorted by authored identity. Complete runtime admission and renderer projection are
 staged before publication, and a fresh adapter process reconstructs the same accepted owners.
+
+Protocol 15 also persists one default-compatible surface mode per voxel-object instance. Studio's
+Entity inspector submits only the named mode mutation under the current project hash. The adapter
+re-admits the canonical object through Engine's selected `SurfaceMode`, stages the complete
+projection and bounded response, rechecks the disk hash, and only then atomically publishes the
+project. Greedy omission remains compatible with existing project bytes. Reconstructed modes do
+not change canonical voxel-object, collision, navigation, or gameplay facts, and an effective
+textured material produces a typed rejection because reconstructed UVs are not defined.
 
 The adapter owns one transient `VoxelObjectPlayer` session, clears it on open/reread/mutation/close,
 and never serializes its posture into this project's durable instance frame.
