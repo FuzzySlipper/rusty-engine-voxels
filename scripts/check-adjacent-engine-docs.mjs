@@ -10,7 +10,7 @@ export function validateAdjacentEngineDocs(documents) {
     const statements = content
       .split(/\n\s*\n/u)
       .flatMap((paragraph) =>
-        paragraph.replace(/\n+/gu, ' ').split(/(?<=[.!?])(?:\s+|$)/u),
+        paragraph.replace(/\n+/gu, ' ').split(/(?<=[.!?;])(?:\s+|$)/u),
       )
       .map((statement) => statement.trim())
       .filter(Boolean);
@@ -18,7 +18,7 @@ export function validateAdjacentEngineDocs(documents) {
     for (const statement of statements) {
       const mentionsEngine = /\bEngine\b/iu.test(statement);
       const namesEnginePin =
-        /\bEngine(?:'s| provider)? (?:is |remains |was |has been )?pin(?:ned|ning|s)?\b|\bpin(?:ned|ning|s)? (?:the )?Engine\b/iu.test(
+        /\bEngine(?:'s| provider)? (?:is |remains |was |has been )?pin(?:ned|ning|s)?\b|\bpin(?:ned|ning|s)? (?:the )?Engine\b|\bEngine(?:'s| provider)?\b[^.!?;]*\bnot unpinned\b/iu.test(
           statement,
         );
       const stale =
@@ -29,9 +29,11 @@ export function validateAdjacentEngineDocs(documents) {
       const explicitlyHistorical =
         /\b(?:historical|historically|older|previous|retired)\b/iu.test(
           statement,
-        );
+        ) && !/\bcurrent\b/iu.test(statement);
       const explicitlyAbsent =
-        /\b(?:does not|do not|never|no|not|without)\b/iu.test(statement);
+        /\b(?:has|have|there is) no (?:provider|Engine) pin\b|\bwithout (?:an? )?(?:provider|Engine) pin\b/iu.test(
+          statement,
+        );
 
       if (stale && !explicitlyHistorical && !explicitlyAbsent) {
         throw new Error(

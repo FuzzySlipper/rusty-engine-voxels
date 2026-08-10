@@ -14,11 +14,23 @@ test('rejects current provider-pin guidance', () => {
 });
 
 test('rejects a current claim beside historical evidence', () => {
+  for (const separator of ['. ', '; ', ', but ']) {
+    assert.throws(
+      () =>
+        validateAdjacentEngineDocs({
+          'docs/design.md': `Historical evidence records an Engine pin${separator}the current Engine provider is pinned to revision abcdef1.`,
+        }),
+      /stale current Engine dependency guidance/,
+    );
+  }
+});
+
+test('rejects unrelated negation of an unpinned provider', () => {
   assert.throws(
     () =>
       validateAdjacentEngineDocs({
         'docs/design.md':
-          'Historical evidence records an Engine pin. The current Engine provider is pinned to revision abcdef1.',
+          'The Engine provider is not unpinned; it remains pinned to revision abcdef1.',
       }),
     /stale current Engine dependency guidance/,
   );
