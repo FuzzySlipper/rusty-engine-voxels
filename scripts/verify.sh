@@ -3,6 +3,8 @@ set -euo pipefail
 
 VOXEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+node --test "$VOXEL_ROOT/scripts/check-adjacent-engine-docs.test.mjs"
+node "$VOXEL_ROOT/scripts/check-adjacent-engine-docs.mjs"
 node "$VOXEL_ROOT/scripts/generate-textured-voxel-fixture.mjs" --check
 cargo fmt --manifest-path "$VOXEL_ROOT/Cargo.toml" -- --check
 cargo clippy --locked --all-targets \

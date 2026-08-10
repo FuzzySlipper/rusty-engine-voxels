@@ -148,8 +148,8 @@ corpus against candidate mesh-payload encodings so the upstream voxel data-plane
 Engine's `packedStreamsLeV1` presentation resources. Canonical schema-1 voxel-object JSON remains
 unchanged; the resource cache is disposable and regenerates from the admitted object. Checked
 `evidence/format-study-*.json` files retain their original Engine revision as historical decision
-evidence. The live gate recomputes the study against the current provider pin instead of treating
-those older measurements as current certification.
+evidence. The live gate recomputes the study against the adjacent Engine
+checkout instead of treating those older measurements as current certification.
 
 Open/read, conversion candidate, discard, and applied-instance playback responses carry the
 manifest for the exact projection they return. The adapter retains the canonical manifest across
@@ -182,8 +182,9 @@ Findings on the checked corpus, with the harness's stated interpretation limits:
   encoding as a secondary multiplier.
 
 On the high-fidelity corpus, the former complete projection was 54,564,714 JSON bytes. At the
-current provider pin, greedy meshing plus resource publication returns a roughly 24.7 KiB complete
-Studio response and 11,712,856 raw resource bytes; steady-state playback remains about 1.2 KiB. The
+current adjacent Engine provider contents, greedy meshing plus resource
+publication returns a roughly 24.7 KiB complete Studio response and 11,712,856
+raw resource bytes; steady-state playback remains about 1.2 KiB. The
 older exact response, resource, Node, and Chromium measurements remain in
 `evidence/mesh-data-plane.json` under their recorded Engine revision; timings are observations rather
 than thresholds.
