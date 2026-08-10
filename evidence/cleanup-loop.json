@@ -12,7 +12,6 @@
   "character": "rifleman",
   "clip": "run",
   "dslOperationKinds": 17,
-  "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
   "forearmRepair": {
     "afterVoxels": 1391,
     "beforeVoxels": 1390,

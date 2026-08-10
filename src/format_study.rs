@@ -29,7 +29,6 @@ use serde::Serialize;
 use svc_mesh::MeshPayload;
 
 use crate::base64::{decode as base64_decode, encode as base64_encode};
-use crate::provider_pin::engine_revision;
 use crate::runtime::{load_runtime_project, RuntimeProject};
 
 /// Round-trips each encoding implementation through several repetitions so
@@ -80,7 +79,6 @@ pub struct TimingEvidence {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FormatStudyEvidence {
-    pub engine_revision: String,
     pub project_file: String,
     pub project_hash: String,
     pub asset_id: String,
@@ -144,7 +142,6 @@ pub fn run_format_study(
     let timing = measure_timing(&expanded_json, &packed_base64)?;
 
     Ok(FormatStudyEvidence {
-        engine_revision: engine_revision()?,
         project_file: relative_project.to_owned(),
         project_hash: runtime.loaded.project_hash.clone(),
         asset_id: object.asset_id().to_owned(),

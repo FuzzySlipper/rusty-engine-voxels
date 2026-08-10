@@ -54,7 +54,6 @@ use crate::kit::{
     IdentityInvariants, KitCell, KitPart, PaletteGroup, Socket, VoxelKit, KIT_SCHEMA_VERSION,
 };
 use crate::project::{atomic_write, read_bounded, safe_join, sha256, MAX_SOURCE_BYTES};
-use crate::provider_pin::engine_revision;
 
 /// Highest cells-per-unit a piece may bake at: the conversion grid admits at
 /// most 256 cells per axis, and resolution is `1 + ceil(span * rate)`.
@@ -180,7 +179,6 @@ pub struct KitBakeSocket {
 #[serde(rename_all = "camelCase")]
 pub struct KitBakeEvidence {
     pub schema_version: u32,
-    pub engine_revision: String,
     pub kit_id: String,
     pub source_asset_id: String,
     pub source_path: String,
@@ -521,7 +519,6 @@ pub fn run_kit_bake(root: &Path, relative_spec: &str) -> Result<KitBakeOutput, S
     let (front_view, side_view) = render_views(&assembled);
     let evidence = KitBakeEvidence {
         schema_version: 1,
-        engine_revision: engine_revision()?,
         kit_id: spec.kit_id.clone(),
         source_asset_id: spec.source.asset_id.clone(),
         source_path: spec.source.path.clone(),

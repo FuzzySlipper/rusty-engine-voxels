@@ -20,7 +20,6 @@ use crate::project::{
     atomic_write, load_project, read_bounded, safe_join, save_project, sha256, LoadedProject,
     MAX_SOURCE_BYTES,
 };
-use crate::provider_pin::engine_revision;
 use crate::quality::{analyze_prepared_quality, VoxelQualityEvidence};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -36,7 +35,6 @@ pub struct ClipConversionEvidence {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConversionEvidence {
-    pub engine_revision: String,
     pub source_sha256: String,
     pub plan_hash: String,
     pub settings_sha256: String,
@@ -209,7 +207,6 @@ pub fn publish_project_conversion(
     };
 
     Ok(ConversionEvidence {
-        engine_revision: engine_revision()?,
         source_sha256: candidate.source_sha256.clone(),
         plan_hash: prepared.prepared.plan().plan_hash.clone(),
         settings_sha256: candidate.settings_sha256.clone(),

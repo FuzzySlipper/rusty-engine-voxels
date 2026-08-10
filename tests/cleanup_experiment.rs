@@ -562,7 +562,6 @@ fn checked_rifleman_forearm_defect_is_fixed_by_replayable_dsl_diff() {
 
     let report = json!({
         "schemaVersion": 1,
-        "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
         "character": kit.id,
         "clip": "run",
         "frameTimeMicroseconds": defective.time_microseconds,

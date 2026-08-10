@@ -41,7 +41,6 @@ use voxel_object_runtime::{admit_voxel_object_json, VoxelObjectRuntimeLimits};
 use crate::conversion::{object_path, publish_immutable};
 use crate::model::{experiment_color, ProjectMaterial};
 use crate::project::{atomic_write, read_bounded, safe_join, sha256, MAX_SOURCE_BYTES};
-use crate::provider_pin::engine_revision;
 use crate::runtime::projection_for_object;
 
 const SILHOUETTE_RESOLUTION: u32 = 48;
@@ -82,7 +81,6 @@ pub struct DensityBakeSpec {
 #[serde(rename_all = "camelCase")]
 pub struct DensityEvidence {
     pub schema_version: u32,
-    pub engine_revision: String,
     pub experiment_id: String,
     pub source_asset_id: String,
     pub source_path: String,
@@ -177,7 +175,6 @@ pub fn run_density_experiment(root: &Path, relative_spec: &str) -> Result<Densit
     }
     Ok(DensityEvidence {
         schema_version: 1,
-        engine_revision: engine_revision()?,
         experiment_id: spec.experiment_id.clone(),
         source_asset_id: spec.source.asset_id.clone(),
         source_path: spec.source.path.clone(),

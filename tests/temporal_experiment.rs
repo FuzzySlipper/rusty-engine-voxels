@@ -116,7 +116,6 @@ fn finished_run_passes_identity_churn_and_generates_flicker_review() {
     assert!(artifacts.palette_flicker_svg.contains("Palette flicker"));
     let report = json!({
         "schemaVersion": 1,
-        "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
         "character": kit.id,
         "clip": "run",
         "frameCount": evidence.frame_count,

@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-VOXEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export CARGO_TARGET_DIR="$VOXEL_ROOT/target/engine-revision"
-cd "$VOXEL_ROOT"
-exec cargo run --quiet --locked \
-  --manifest-path "$VOXEL_ROOT/tools/engine-revision/Cargo.toml" -- "$@"

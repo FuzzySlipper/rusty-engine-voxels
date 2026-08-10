@@ -2,7 +2,6 @@ use std::fs;
 use std::path::PathBuf;
 
 use rusty_engine_voxels::project::atomic_write;
-use rusty_engine_voxels::provider_pin::engine_revision;
 use rusty_engine_voxels::surface_evidence::build_textured_voxel_report;
 
 fn main() -> Result<(), String> {
@@ -11,7 +10,6 @@ fn main() -> Result<(), String> {
     let output_path = root.join("evidence/textured-voxel-surfaces.json");
     let report = build_textured_voxel_report(
         &fs::read(&fixture_path).map_err(|error| format!("{}: {error}", fixture_path.display()))?,
-        &engine_revision()?,
     )?;
     let bytes = format!(
         "{}\n",

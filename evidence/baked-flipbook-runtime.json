@@ -4,7 +4,6 @@
   "assetId": "voxel-object/rifleman-baked",
   "clip": "run",
   "contentHash": "sha256:7ea427728ec6ce1de5751587cac805f082d4cd3d91fb7d8dcd12b6bd25c1fb06",
-  "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
   "hitRegionsPerClipFrame": 2,
   "nonclaims": [
     "Payload bytes count deterministic Rust mesh arrays and exclude allocator overhead.",

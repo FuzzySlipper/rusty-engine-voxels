@@ -259,7 +259,6 @@ fn fused_run_compiles_publishes_and_plays_without_a_rig() {
         .sum::<usize>();
     let report = json!({
         "schemaVersion": 1,
-        "engineRevision": "07a648a545b13bf3f3bb82c7a77c92958c1b0feb",
         "assetId": compiled.asset.asset_id,
         "contentHash": compiled.asset.content_hash,
         "artifactBytes": compiled.canonical_json.len(),

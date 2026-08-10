@@ -11,10 +11,7 @@ use svc_volume::VoxelChunk;
 
 use crate::project::sha256;
 
-pub fn build_textured_voxel_report(
-    texture_bytes: &[u8],
-    provider_revision: &str,
-) -> Result<Value, String> {
+pub fn build_textured_voxel_report(texture_bytes: &[u8]) -> Result<Value, String> {
     let texture = TextureDescriptor::admit_png_rgba8_resource(
         "texture/directional-atlas".to_owned(),
         texture_bytes,
@@ -80,7 +77,6 @@ pub fn build_textured_voxel_report(
     let adjacent = adjacent_chunk_readout()?;
     Ok(json!({
         "schemaVersion": 1,
-        "providerRevision": provider_revision,
         "fixture": {
             "path": "content/textures/directional-atlas.png",
             "contentHash": texture.content_hash,
@@ -266,10 +262,9 @@ mod tests {
 
     #[test]
     fn checked_texture_drives_bounded_directional_greedy_evidence() {
-        let report = build_textured_voxel_report(
-            include_bytes!("../content/textures/directional-atlas.png"),
-            "0000000000000000000000000000000000000000",
-        )
+        let report = build_textured_voxel_report(include_bytes!(
+            "../content/textures/directional-atlas.png"
+        ))
         .expect("checked report");
         assert_eq!(report["largeGreedySurfaces"]["wall48x32x1"]["quads"], 6);
         assert_eq!(
