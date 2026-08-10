@@ -1,8 +1,8 @@
 # Rusty Engine Voxels
 
 `rusty-engine-voxels` is the dedicated downstream Studio project for voxel conversion, animated
-voxel-object playback, quality experiments, and future voxel-specific feature proof. It depends on
-an exact public Rusty Engine revision and does not inspect `../rusty-engine` or
+voxel-object playback, quality experiments, and future voxel-specific feature proof. It consumes
+the adjacent `../rusty-engine` checkout exactly as it stands and does not inspect
 `../rusty-engine-demo` during ordinary work.
 
 The first checked experiment converts Kenney's CC0 retro character GLB into a canonical voxel
@@ -205,19 +205,6 @@ or atlas parser here.
 ## Commands
 
 ```bash
-# Check the rolling facade declaration and exact source/lock projection.
-./scripts/engine-revision check
-
-# Resolve/report the rolling development source and verify an applied resolution.
-./scripts/engine-revision dev sync --report-only --json
-./scripts/engine-revision dev check
-
-# Prove an exact public revision and preview the bounded carrier diff.
-./scripts/engine-revision update <40-character-public-sha> --dry-run
-
-# Prepare the same validated revision update in the working tree.
-./scripts/engine-revision update <40-character-public-sha>
-
 # Rebuild the canonical object and update its content-addressed project reference.
 cargo run --locked --bin voxel-lab -- convert
 
@@ -227,42 +214,30 @@ cargo run --locked --bin voxel-lab -- load
 # Run all deterministic and integration checks.
 ./scripts/verify.sh
 
-# Validate this adapter against the pinned Studio protocol decoder.
-./scripts/verify-studio.sh
-
-# After an Engine reverse-pin descendant exists, run the consumer-owned real
-# Chromium certification against that exact provider revision.
-./scripts/verify-studio-browser.sh <40-character-reverse-provider-commit>
-
-# Launch the pinned Rusty Engine Studio with this project's adapter.
-./scripts/studio.sh
-
-# Bind the same Studio project for trusted-LAN use.
-./scripts/studio.sh --host 0.0.0.0 --port 4310
-
-# Or let den-serve own the process and LAN address.
-den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels
+# From the Engine repository, run the Engine-owned real Chromium gate.
+cd /home/dev/rusty-engine
+./scripts/verify-studio-voxel-integration.sh /home/dev/rusty-engine-voxels
 ```
 
-`Cargo.toml` has one rolling dependency on the complete `rusty-engine` facade. `Cargo.lock` and
-`engine-source.json` record one matching exact resolution for Rust builds, evidence attribution,
-and the Engine-owned Studio checkout. The update command changes only that exact resolution; it
-does not rewrite historical evidence, protocol compatibility, or prose. See
-[`docs/engine-revision-updates.md`](docs/engine-revision-updates.md) for the failure, dry-run, and
-rollback contract.
+`Cargo.toml` has one unconditional path dependency on the complete adjacent `rusty-engine` facade.
+`Cargo.lock` records path resolution and third-party package versions, not an Engine Git identity.
+This repository has no provider pin, updater, freshness gate, or command that mutates the adjacent
+checkout. See the [adjacent Engine dependency contract](docs/adjacent-engine-dependency.md).
 
-`studio.sh` checks out the exact provider revision from `engine-source.json` into the ignored
-`.studio-cache`, installs and builds its locked Studio workspace, builds this repository's Rust
-adapter, and launches Studio's explicit-adapter host with an auto-open URL for the checked voxel-lab
-project. The project can therefore use Studio without an operational sibling checkout or a copy of
-Studio source; the managed Loading Bay adapter is not involved.
+Studio is an Engine-owned product. This repository supplies only `.rusty-studio.json`, project
+data, and the Rust adapter command it names. Use the persistent Engine Studio service or an
+Engine-owned host, then open:
+
+```text
+http://127.0.0.1:4310/?root=%2Fhome%2Fdev%2Frusty-engine-voxels&project=content%2Fprojects%2Fvoxel-lab.project.json
+```
 
 The Studio project file is
 `content/projects/voxel-lab.project.json`. The adapter owns this schema and supports opening,
 reading, inspecting sources, preparing/previewing/applying/discarding voxel-object conversions,
 attaching transformed voxel-object instances, authoring repeat or atlas-backed PNG voxel surfaces,
 and transiently playing reopened applied instances. Runtime textures are deliberately separate from
-the mesh image used by conversion sampling. Other protocol-14 operations fail with a typed
+the mesh image used by conversion sampling. Other protocol-15 operations fail with a typed
 unsupported-operation rejection rather than a generic command tunnel.
 
 A third checked project, `content/projects/knight-flipbook.project.json`, loads the posed

@@ -1,5 +1,10 @@
 # Reference-media voxel review
 
+> Historical workflow record. The downstream Studio launcher and review-harness
+> script described by the original experiment were removed when Studio hosting
+> moved fully into Rusty Engine. The checked manifest and captures remain
+> evidence; the commands are not a current operator path.
+
 The review harness is an authoring aid for people and agents. It does not
 convert reference media into voxels and it does not publish candidate edits.
 It opens a canonical downstream project through the real Studio adapter,
@@ -43,18 +48,10 @@ direction correspondence, depth, palette, or frame matching. Those are the
 things a human or an agent should be able to revise while inspecting the
 result.
 
-## Run a review pass
+## Review the retained pack
 
-From the repository root:
-
-```bash
-./scripts/reference-media-review.sh \
-  content/reviews/directional-sentinel-reference-review.json
-```
-
-The script resolves the exact provider from `engine-source.json`, builds the
-downstream adapter if needed, opens the candidate project through Studio, and
-writes disposable output under `local/reference-media-review/` by default:
+The retired harness wrote disposable output under
+`local/reference-media-review/` by default:
 
 - `reference-media-review.json` records source paths and hashes, candidate
   object/frame identity, camera identity, renderer frame hashes, screenshot
@@ -63,11 +60,11 @@ writes disposable output under `local/reference-media-review/` by default:
   renderer capture for fast visual scanning;
 - one PNG per reference entry preserves the actual shared-renderer view.
 
-The output is a review pack, not canonical project state. Edit the voxel model
-through the normal Studio/adapter workflow, rerun the command, and compare the
-new pack against the previous one. Agents can use the JSON manifest to select
-the next frame/view and the SVG/PNGs to decide what to change. Humans can use
-the same files as a compact side-by-side art review.
+The output is a review pack, not canonical project state. Agents can use the
+JSON manifest and retained SVG/PNGs to inspect the historical comparison. New
+interactive review uses the Engine-owned Studio service and this repository's
+`.rusty-studio.json` adapter bootstrap; new automated capture belongs in an
+Engine-owned integration gate.
 
 ## What this makes possible
 

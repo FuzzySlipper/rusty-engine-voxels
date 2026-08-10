@@ -114,32 +114,24 @@ bounded 2.5D slab experiment. The overhead Studio view is the acceptance check
 for whether the fixed depth reads well; a future relief/depth-mask pass must be
 authored locally if the slab is visually insufficient.
 
-To open the bounded authored experiment in the human Studio UI, pass the
-project explicitly. The launcher keeps the normal host/adapter path and does
-not alter project authority:
+To open the bounded authored experiment in the human Studio UI, use the
+Engine-owned persistent service or development host and select this repository
+through its `.rusty-studio.json` bootstrap:
 
-```bash
-./scripts/studio.sh \\
-  --project content/projects/directional-sprite-experiment.project.json
+```text
+http://127.0.0.1:4310/?root=%2Fhome%2Fdev%2Frusty-engine-voxels&project=content%2Fprojects%2Fdirectional-sprite-experiment.project.json
 ```
 
-The reviewable browser certification uses the exact pinned provider and the
-actual shared renderer. Set `RUSTY_STUDIO_PROVIDER_ROOT` to the checkout
-resolved by `scripts/studio-provider.sh`, then run:
+The Engine repository owns the reviewable browser certification and actual
+shared renderer. Its aggregate consumer gate is:
 
 ```bash
-export RUSTY_STUDIO_PROJECT_ROOT="$PWD"
-export RUSTY_STUDIO_PROJECT_FILE=content/projects/directional-sprite-experiment.project.json
-export RUSTY_STUDIO_CAPTURE_ROOT="$PWD/evidence/directional-studio"
-export RUSTY_STUDIO_PROVIDER_COMMIT=c02754812d53df5363c9e6475c685c54e532f5e5
-export RUSTY_STUDIO_ENGINE_COMMIT=c02754812d53df5363c9e6475c685c54e532f5e5
-export RUSTY_STUDIO_ADAPTER_BINARY="$PWD/target/debug/rusty-engine-voxels-studio-adapter"
-export RUSTY_STUDIO_SETTINGS_ROOT="$(mktemp -d /tmp/rusty-studio-settings.XXXXXX)"
-pnpm --dir "$RUSTY_STUDIO_PROVIDER_ROOT/studio" exec playwright test \
-  --config "$PWD/scripts/directional-studio-playwright.config.mjs"
+cd /home/dev/rusty-engine
+./scripts/verify-studio-voxel-integration.sh /home/dev/rusty-engine-voxels
 ```
 
-It writes 16 canvas PNGs and a manifest under `evidence/directional-studio/`:
+The checked historical directional review pack contains 16 canvas PNGs and a
+manifest under `evidence/directional-studio/`:
 all eight explicit frames from the initial perspective camera and after a
 primary-button orbit toward overhead. The manifest pairs each PNG and
 normalized RGBA hash with the canonical `voxelDataHash`, renderer frame hash,

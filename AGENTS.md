@@ -2,8 +2,9 @@
 
 This repository is a standalone downstream Studio project and voxel experimentation space. It owns
 its project schema, source corpus, experiment settings, instance/playback choices, evidence, and
-Studio adapter. Rusty Engine is an exact public provider dependency; do not add sibling-checkout
-dependencies on `rusty-engine` or `rusty-engine-demo`.
+Studio adapter. Consume Rusty Engine through the one unconditional adjacent facade path in
+`Cargo.toml`; use that checkout exactly as it stands and never mutate, pull, or synchronize it from
+this repository. Do not depend on `rusty-engine-demo`.
 
 - Use the Engine owners for mesh import, animation sampling, voxel conversion, canonical assets,
   runtime admission, playback, and renderer-neutral projection. Do not reproduce those semantics.
@@ -12,7 +13,7 @@ dependencies on `rusty-engine` or `rusty-engine-demo`.
 - Keep animation playback caller-driven with explicit time. Do not add component callbacks or a
   universal scheduler.
 - Checked source assets must retain their adjacent license and provenance.
-- Experiments should be reproducible from the checked source and exact provider revision. Record
+- Experiments should be reproducible from checked source plus the adjacent Engine facade. Record
   measured results without turning machine-specific timings into CI thresholds.
 - The Studio adapter may reject unrelated protocol operations, but responses for supported
   operations must remain closed, bounded, and attributable to a named owner.

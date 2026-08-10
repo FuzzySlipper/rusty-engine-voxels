@@ -73,22 +73,16 @@ Use `--release`: debug assembly is tens of seconds per kit-scale pose.
 
 The checked project is `content/projects/knight-flipbook.project.json` — one
 instance of the posed object at the origin, palette materials bound from the
-kit. Launch Studio normally:
-
-```bash
-./scripts/studio.sh
-```
-
-then open the same URL it prints but with the project query parameter swapped:
+kit. Use the Engine-owned Studio service or host and open:
 
 ```text
-http://<host>:4310/?root=<repo>&project=content%2Fprojects%2Fknight-flipbook.project.json
+http://127.0.0.1:4310/?root=%2Fhome%2Fdev%2Frusty-engine-voxels&project=content%2Fprojects%2Fknight-flipbook.project.json
 ```
 
 The voxel-object inspector scrubs and plays `clip/walk` through the existing
-`previewVoxelObjectInstance` path (verified by
-`scripts/posed-flipbook-smoke.mjs`, run the same way as
-`scripts/verify-studio.sh`).
+`previewVoxelObjectInstance` path. `scripts/posed-flipbook-smoke.mjs` provides
+the downstream protocol smoke; the Engine-owned Studio integration gate owns
+the real browser proof.
 
 Two schema notes, honestly: project schema v3 requires a well-formed
 `conversion` block even when unused, so the knight project carries the knight

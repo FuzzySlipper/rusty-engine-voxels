@@ -1,5 +1,10 @@
 # Handoff: posed flipbook in Studio (2026-08-03)
 
+> Historical session record. Launcher, provider-pin, and cache commands below
+> describe the 2026-08-03 environment and are not current operator guidance.
+> Use `README.md` and `docs/adjacent-engine-dependency.md` for the current
+> adjacent-facade and Engine-owned Studio workflow.
+
 Notes for the next agent. What changed, why, and the environment traps.
 
 ## What this session delivered
@@ -75,9 +80,9 @@ task, not downstream).
     `pnpm install --frozen-lockfile` + `pnpm run build` there; host launched
     with `pnpm run host -- --adapter-binary <adapter> --host 127.0.0.1 --port 4310`
   - `.studio-cache/pnpm-store` local pnpm store
-- On the real dev machine none of this is needed: `./scripts/studio.sh` works,
-  then swap the URL's project param to
-  `content%2Fprojects%2Fknight-flipbook.project.json`.
+- On the current dev machine none of this historical setup is needed: use the
+  Engine-owned Studio service, then select this repository and
+  `content/projects/knight-flipbook.project.json`.
 - `/home/stash/mesh-resources` does not exist on the desktop machine.
 
 ## Gotchas discovered

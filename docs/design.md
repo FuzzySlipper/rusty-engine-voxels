@@ -78,32 +78,19 @@ the typed Voxel Object capability and its durable initial pose; Studio's entity-
 only the disposable player posture. This project-specific entity record proves the explicit owner
 link without requiring a generic downstream component schema.
 
-## Provider pin
+## Adjacent provider
 
-`Cargo.toml` declares one unconditional `rusty-engine` facade from the canonical public `main`
-branch. Engine libraries remain visible through their preserved namespaces (for example,
-`rusty_engine::voxel_convert`); this project neither selects individual Engine crates nor imports
-the renderer implementation. `Cargo.lock` records the exact Engine commit used by a build, and
-`engine-source.json` selects that same commit for runtime evidence and the managed Engine-owned
-Studio checkout. `scripts/engine-revision check` strictly validates this coherent projection;
-`scripts/engine-revision update <sha>` prepares a bounded exact-resolution change through a
-disposable worktree. It does not infer or rewrite Studio protocol compatibility, historical
-evidence, or prose. Those remain intentional work followed by both `scripts/verify.sh` and
-`scripts/verify-studio.sh`.
+`Cargo.toml` declares one unconditional `rusty-engine` facade at
+`../rusty-engine/rust/crates/rusty-engine`. Engine libraries remain visible through their preserved
+namespaces (for example, `rusty_engine::voxel_convert`); this project neither selects individual
+Engine crates nor imports the renderer implementation. The adjacent checkout is consumed exactly
+as it stands. No project command fetches, updates, or mutates it, and Engine revision identity does
+not enter the project schema, adapter protocol, or checked evidence.
 
-For early downstream work, `engine-development.json` is the explicit rolling intent. Use
-`scripts/engine-revision dev sync` to resolve/report one current public or local Engine SHA and
-`scripts/engine-revision dev check` to verify the saved resolution against the active carriers.
-Development reports are operational compatibility evidence. The ordinary verification gate
-resolves public `main` and fails loudly when the checked lock/source projection is stale. Bounded
-review, reproduction, and rollback can still select an exact public SHA through the separate
-`certify check`/`certify update` spelling.
-
-The managed Studio launcher clones that revision into `.studio-cache`. It never inspects a sibling
-`rusty-engine` checkout, and the ordinary Rust gate has no Node or browser dependency.
-
-The complete operator and rollback contract is in
-[`engine-revision-updates.md`](engine-revision-updates.md).
+The ordinary Rust gate has no Node or browser dependency. Engine owns Studio and its real Chromium
+integration gate; this repository contributes only `.rusty-studio.json`, project data, and its Rust
+adapter. The complete workspace and operator boundary is in
+[the adjacent Engine dependency contract](adjacent-engine-dependency.md).
 
 ## Future experiments
 

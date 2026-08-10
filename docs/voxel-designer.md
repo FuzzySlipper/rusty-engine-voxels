@@ -25,19 +25,21 @@ Unless the current task specifies another project, use:
 
 - Repository: `/home/dev/rusty-engine-voxels`
 - Project file: `content/projects/voxel-lab.project.json`
-- Engine identity: `engine-source.json`
-- Studio launcher: `./scripts/studio.sh`
-- LAN launcher: `./scripts/studio.sh --host 0.0.0.0 --port 4310`
-- Managed launcher:
-  `den-serve up rusty-engine-voxels -repo /home/dev/rusty-engine-voxels`
+- Engine provider: adjacent `/home/dev/rusty-engine` checkout, consumed as-is
+- Studio host: the Engine-owned persistent service or an Engine-owned development host
+- Project bootstrap: `.rusty-studio.json`
 
 When Studio is running on port 4310, the usual project URL is:
 
 `http://<host>:4310/?root=%2Fhome%2Fdev%2Frusty-engine-voxels&project=content%2Fprojects%2Fvoxel-lab.project.json`
 
-Prefer the URL printed by the launcher or `den-serve`; do not assume a stale address is still serving the correct adapter.
+Confirm `/health` and `/api/studio-status` before trusting a remembered address.
 
-The repository is a downstream Studio project. Rusty Engine is an exact public dependency. Do not add a sibling-checkout dependency on `/home/dev/rusty-engine`, and do not silently advance `engine-source.json`.
+The repository is a downstream Studio project. It consumes the adjacent Engine
+facade exactly as the operator has provisioned it. Do not fetch, pull, reset,
+or otherwise mutate `/home/dev/rusty-engine` while opening or editing this
+project. This repository must not install or import Engine Studio or renderer
+TypeScript packages.
 
 ## Startup procedure
 
@@ -47,8 +49,8 @@ Before manipulating content:
 2. Read `/home/dev/rusty-engine-voxels/AGENTS.md`.
 3. Inspect `git status` and preserve unrelated changes.
 4. If the task has a Den ID, load its current Den context and acceptance criteria.
-5. Start or reconnect to Studio using the project’s normal launcher.
-6. Confirm the exact project, Engine revision, adapter identity, protocol version, and project revision shown by Studio.
+5. Start or reconnect to the Engine-owned Studio service and open the root/project URL above.
+6. Confirm the exact project, Engine host identity, adapter identity, protocol version, and project revision shown by Studio.
 7. If available, verify `/api/studio-status` or the Studio title-bar identity before trusting the session.
 8. Confirm the intended asset or scene is loaded before editing.
 
