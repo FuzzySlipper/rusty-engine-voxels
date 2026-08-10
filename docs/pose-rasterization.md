@@ -118,7 +118,7 @@ The first review round (3507) corrected three things and redirected one upstream
   narrow Engine node-pose provider seam landed as rusty-engine #6348 (approved at exact SHA
   `a867fa9c`) and is now consumed: this module's evaluator is a thin adapter over
   `evaluate_clip_node_poses`, and the divergent local channel evaluator is deleted. Historically,
-  the Engine pin advanced to `a867fa9c` to take the seam. Equivalence regressions prove
+  the Engine pin advanced to `a867fa9c`. That change took the seam. Equivalence regressions prove
   out-of-range times are rejected (not clamped), the adapter's rigid poses match the Engine seam up to the admitted
   uniform scale, and a one-axis-stretched transform is rejected as non-uniform while the real
   rig is admitted.

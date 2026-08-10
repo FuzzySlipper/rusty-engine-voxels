@@ -14,25 +14,19 @@ test('rejects current provider-pin guidance', () => {
 });
 
 test('rejects a current claim beside historical evidence', () => {
-  for (const [historical, current] of [
-    [
-      'Historical evidence records an Engine pin',
-      'production now uses the Engine provider pin',
-    ],
-    [
-      'Production now uses the Engine provider pin',
-      'although historical evidence records an older Engine pin',
-    ],
+  for (const guidance of [
+    'Historical evidence records an Engine pin. Production now uses the Engine provider pin.',
+    'Historical evidence records an Engine pin; production now uses the Engine provider pin.',
+    'Historical evidence records an Engine pin, but production now uses the Engine provider pin.',
+    'Production now uses the Engine provider pin, although historical evidence records an older Engine pin.',
+    'Historical evidence records an Engine pin and builds use the Engine provider pin.',
+    'Historical evidence records an Engine pin and deployment uses the Engine provider pin.',
+    'Historical evidence records an Engine pin, however builds use the Engine provider pin.',
   ]) {
-    for (const separator of ['. ', '; ', ', but ']) {
-      assert.throws(
-        () =>
-          validateAdjacentEngineDocs({
-            'docs/design.md': `${historical}${separator}${current}.`,
-          }),
-        /stale current Engine dependency guidance/,
-      );
-    }
+    assert.throws(
+      () => validateAdjacentEngineDocs({ 'docs/design.md': guidance }),
+      /stale current Engine dependency guidance/,
+    );
   }
 });
 
