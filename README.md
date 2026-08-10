@@ -221,8 +221,9 @@ cd /home/dev/rusty-engine
 
 `Cargo.toml` has one unconditional path dependency on the complete adjacent `rusty-engine` facade.
 `Cargo.lock` records path resolution and third-party package versions, not an Engine Git identity.
-This repository has no provider pin, updater, freshness gate, or command that mutates the adjacent
-checkout. See the [adjacent Engine dependency contract](docs/adjacent-engine-dependency.md).
+This repository has no provider pin. It has no updater, freshness gate, or command that mutates
+the adjacent checkout. See the
+[adjacent Engine dependency contract](docs/adjacent-engine-dependency.md).
 
 Studio is an Engine-owned product. This repository supplies only `.rusty-studio.json`, project
 data, and the Rust adapter command it names. Use the persistent Engine Studio service or an

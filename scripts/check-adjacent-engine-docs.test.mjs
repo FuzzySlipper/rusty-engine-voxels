@@ -14,11 +14,39 @@ test('rejects current provider-pin guidance', () => {
 });
 
 test('rejects a current claim beside historical evidence', () => {
-  for (const separator of ['. ', '; ', ', but ']) {
+  for (const [historical, current] of [
+    [
+      'Historical evidence records an Engine pin',
+      'production now uses the Engine provider pin',
+    ],
+    [
+      'Production now uses the Engine provider pin',
+      'although historical evidence records an older Engine pin',
+    ],
+  ]) {
+    for (const separator of ['. ', '; ', ', but ']) {
+      assert.throws(
+        () =>
+          validateAdjacentEngineDocs({
+            'docs/design.md': `${historical}${separator}${current}.`,
+          }),
+        /stale current Engine dependency guidance/,
+      );
+    }
+  }
+});
+
+test('rejects qualified no-pin wording beside an affirmative pin', () => {
+  for (const guidance of [
+    'There is no provider pin rollback, but production uses the Engine provider pin.',
+    'Without a provider pin migration, the Engine provider remains pinned to revision abcdef1.',
+    'Production uses the Engine provider pin, although there is no provider pin rollback.',
+    'The Engine provider remains pinned to revision abcdef1, despite no provider pin migration.',
+  ]) {
     assert.throws(
       () =>
         validateAdjacentEngineDocs({
-          'docs/design.md': `Historical evidence records an Engine pin${separator}the current Engine provider is pinned to revision abcdef1.`,
+          'docs/design.md': guidance,
         }),
       /stale current Engine dependency guidance/,
     );
@@ -37,11 +65,15 @@ test('rejects unrelated negation of an unpinned provider', () => {
 });
 
 test('allows negative no-pin guidance', () => {
-  assert.doesNotThrow(() =>
-    validateAdjacentEngineDocs({
-      'README.md': 'This repository has no provider pin or Engine updater.',
-    }),
-  );
+  for (const guidance of [
+    'This repository has no provider pin.',
+    'There is no Engine pin.',
+    'Without a provider pin.',
+  ]) {
+    assert.doesNotThrow(() =>
+      validateAdjacentEngineDocs({ 'README.md': guidance }),
+    );
+  }
 });
 
 test('allows explicitly historical Engine revision evidence', () => {

@@ -13,6 +13,21 @@ export function validateAdjacentEngineDocs(documents) {
         paragraph.replace(/\n+/gu, ' ').split(/(?<=[.!?;])(?:\s+|$)/u),
       )
       .map((statement) => statement.trim())
+      .filter(Boolean)
+      .flatMap((statement) => {
+        const clauses = statement.split(
+          /,\s*(?=(?:and|although|but|despite|though|while|whereas|yet)\b)/iu,
+        );
+        return clauses.flatMap((clause) => {
+          const introductoryAbsence = clause.match(
+            /^\s*(without\b[^,]*),\s*(.+)$/iu,
+          );
+          return introductoryAbsence
+            ? [introductoryAbsence[1], introductoryAbsence[2]]
+            : [clause];
+        });
+      })
+      .map((clause) => clause.trim())
       .filter(Boolean);
 
     for (const statement of statements) {
@@ -27,11 +42,10 @@ export function validateAdjacentEngineDocs(documents) {
         /\bexact public Rusty Engine\b/iu.test(statement) ||
         removedCarrier.test(statement);
       const explicitlyHistorical =
-        /\b(?:historical|historically|older|previous|retired)\b/iu.test(
-          statement,
-        ) && !/\bcurrent\b/iu.test(statement);
+        /^(?:historical(?:ly)?|older|previous|retired)\b/iu.test(statement) &&
+        !/\b(?:current|live|now|present|production|today)\b/iu.test(statement);
       const explicitlyAbsent =
-        /\b(?:has|have|there is) no (?:provider|Engine) pin\b|\bwithout (?:an? )?(?:provider|Engine) pin\b/iu.test(
+        /^(?:(?:this|the) (?:project|repository) )?(?:has|have) no (?:provider|Engine) pin[.!?;]?$|^there is no (?:provider|Engine) pin[.!?;]?$|^without (?:an? )?(?:provider|Engine) pin[.!?;]?$/iu.test(
           statement,
         );
 

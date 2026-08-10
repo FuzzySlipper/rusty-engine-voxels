@@ -5,8 +5,8 @@ repository. `Cargo.toml` declares the complete Rust facade at
 `../rusty-engine/rust/crates/rusty-engine`. The project compiles against the
 checkout's current files exactly as they stand.
 
-There is no Engine pin manifest, revision synchronizer, freshness comparison,
-or provider update command in this repository. Project scripts must not fetch,
+There is no Engine pin. This repository has no revision synchronizer, freshness
+comparison, or provider update command. Project scripts must not fetch,
 pull, reset, or otherwise mutate the adjacent checkout. CI creates the required
 sibling shape ephemerally before running the Rust gate.
 
