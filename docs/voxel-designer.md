@@ -205,7 +205,7 @@ A more detailed model is not automatically a better model. Prefer the least expe
 For meaningful work, record:
 
 - Repository and project path.
-- Exact Engine and adapter identities.
+- Engine host, adapter, and protocol identities.
 - Source asset or written description.
 - Source license/provenance when applicable.
 - Important conversion or authoring settings.

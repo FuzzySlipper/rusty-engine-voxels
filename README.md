@@ -196,8 +196,8 @@ atlas publication, replacement, animated-frame continuity, and fresh-adapter
 reopen. They also reject malformed, missing, oversized, stale, overlapping,
 out-of-bounds, insufficiently padded, and failed-reimport inputs before project
 publication. This repository's dispatch-only `studio-browser` job accepts one
-exact reverse-provider revision that pins this consumer and runs its real
-Chromium integration. That consumer-owned path records deterministic visible
+explicit consumer checkout and runs its real Chromium integration. The selected
+consumer-owned path records deterministic visible
 repeat/atlas/reopen pixels, retained resource counts, replacement lifecycle,
 and final cleanup through the Engine renderer without duplicating the renderer
 or atlas parser here.

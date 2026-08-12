@@ -1,3 +1,10 @@
+# Historical session transcript
+
+This file preserves an old agent transcript for provenance. Its dependency and
+revision statements are historical context, not current guidance. Use
+`AGENTS.md`, `README.md`, and `docs/adjacent-engine-dependency.md` for the
+current adjacent-facade and Engine-hosted Studio boundary.
+
 in the /home/dev/rusty-engine-voxels/ work has been completed to allow for complicated process of baking models to voxels as different pieces that then would be combined into animations. Unfortunately I think that agent session didn't produce any straighforward documentation on the process but you can find some details by looking at den task 6334 and its sub tasks as well as various md files in docs/. The aim is to test converting a much more complicated model than the existing tests of the simple retro character. Since we are aiming for more of a pixel art feel to the final voxel character rather than blocky minecraft the idea is to make these characters kind of an absurd number of voxels (tens of thousands or hundreds of thousands). Hopefully the landed work is sufficient to support that, but if there are any issues discovered its important not to make changes outside of the rusty-engine-voxels dir but instead create tasks in project rusty-engine so the agent in that repo can take care of it. If the voxel code within the rusty-engine-voxels repo needs changes to support the work feel free to do so. There are some random character meshes in /home/stash/mesh-resources/characters/ that can be used as the source mesh to test I'm indifferent to which just whatever works best since testing for how much detail is realistic to support is the aim. You will have to adjust the scale of the model vs the voxel grid size in order to bake significant details to to voxels. Let me know if there is anything confusing about that. For longer work tasks can be created in project rusty-engine-voxels in den.
 
 AS
